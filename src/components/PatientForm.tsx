@@ -144,7 +144,39 @@ export function PatientForm({ user }: { user: any }) {
             categories: data.categories || [],
             clinicalData: {
               ...formData.clinicalData,
-              ...data.clinical_data
+              ...data.clinical_data,
+              // Ensure nested arrays exist even if missing in DB
+              gestante: {
+                ...formData.clinicalData.gestante,
+                ...(data.clinical_data?.gestante || {}),
+                consultas: data.clinical_data?.gestante?.consultas || [],
+                visitasAcs: data.clinical_data?.gestante?.visitasAcs || [],
+                visitasAcsDiabetes: data.clinical_data?.gestante?.visitasAcsDiabetes || []
+              },
+              crianca: {
+                ...formData.clinicalData.crianca,
+                ...(data.clinical_data?.crianca || {}),
+                consultas: data.clinical_data?.crianca?.consultas || [],
+                vacinas: {
+                  ...formData.clinicalData.crianca.vacinas,
+                  ...(data.clinical_data?.crianca?.vacinas || {})
+                }
+              },
+              acamadodomiciliado: {
+                ...formData.clinicalData.acamadodomiciliado,
+                ...(data.clinical_data?.acamadodomiciliado || {}),
+                visitasAcsDiabetes: data.clinical_data?.acamadodomiciliado?.visitasAcsDiabetes || []
+              },
+              adulto: {
+                ...formData.clinicalData.adulto,
+                ...(data.clinical_data?.adulto || {}),
+                visitasAcsDiabetes: data.clinical_data?.adulto?.visitasAcsDiabetes || []
+              },
+              idoso: {
+                ...formData.clinicalData.idoso,
+                ...(data.clinical_data?.idoso || {}),
+                visitasAcsDiabetes: data.clinical_data?.idoso?.visitasAcsDiabetes || []
+              }
             }
           });
         }
@@ -898,7 +930,7 @@ export function PatientForm({ user }: { user: any }) {
                       </button>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {formData.clinicalData.gestante.consultas.map((date, idx) => (
+                      {formData.clinicalData.gestante.consultas?.map((date, idx) => (
                         <div key={idx} className="relative group">
                           <input 
                             type="date" 
@@ -930,7 +962,7 @@ export function PatientForm({ user }: { user: any }) {
                       </button>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {formData.clinicalData.gestante.visitasAcs.map((date, idx) => (
+                      {formData.clinicalData.gestante.visitasAcs?.map((date, idx) => (
                         <div key={idx} className="relative group">
                           <input 
                             type="date" 
@@ -1136,7 +1168,7 @@ export function PatientForm({ user }: { user: any }) {
                         </button>
                       </div>
                       <div className="grid grid-cols-3 gap-2">
-                        {formData.clinicalData.crianca.consultas.map((date, idx) => (
+                        {formData.clinicalData.crianca.consultas?.map((date, idx) => (
                           <input 
                             key={idx}
                             type="date" 
@@ -1193,7 +1225,7 @@ export function PatientForm({ user }: { user: any }) {
                   <div className="space-y-4">
                     <label className="block text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500">Calendário Vacinal</label>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {Object.entries(formData.clinicalData.crianca.vacinas).map(([key, value]) => (
+                      {formData.clinicalData.crianca.vacinas && Object.entries(formData.clinicalData.crianca.vacinas).map(([key, value]) => (
                         <div key={key}>
                           <label className="block text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">
                             {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
