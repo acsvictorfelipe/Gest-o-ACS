@@ -33,7 +33,7 @@ export function PatientForm({ user }: { user: any }) {
     isFamilyResponsible: false,
     birthDate: '',
     gender: 'Feminino',
-    visitDate: new Date().toISOString().split('T')[0],
+    visitDate: '',
     visitType: 'Rotina',
     visitSummary: '',
     address: '',
@@ -133,7 +133,7 @@ export function PatientForm({ user }: { user: any }) {
             isFamilyResponsible: data.is_family_responsible || false,
             birthDate: data.birth_date || '',
             gender: data.gender || 'Feminino',
-            visitDate: data.visit_date || new Date().toISOString().split('T')[0],
+            visitDate: data.visit_date || '',
             visitType: 'Rotina',
             visitSummary: '',
             address: hData.address || '',
@@ -272,7 +272,7 @@ export function PatientForm({ user }: { user: any }) {
         is_family_responsible: formData.isFamilyResponsible,
         birth_date: formData.birthDate,
         gender: formData.gender,
-        visit_date: formData.visitDate,
+        visit_date: formData.visitDate || null,
         contact: formData.contact,
         message_contact: formData.messageContact,
         household_id: householdId,
@@ -280,9 +280,13 @@ export function PatientForm({ user }: { user: any }) {
         microarea: user.microarea,
         area_color: user.color || '#00488d',
         agent_id: user.id,
-        last_visit_at: new Date().toISOString(),
         clinical_data: formData.clinicalData
       };
+
+      // Only update last_visit_at if a visit date was provided
+      if (formData.visitDate) {
+        (patientData as any).last_visit_at = new Date().toISOString();
+      }
 
       let finalPatientId = id;
 
@@ -302,19 +306,21 @@ export function PatientForm({ user }: { user: any }) {
         finalPatientId = newP.id;
       }
 
-      // 3. Record the visit
-      const { error: vError } = await supabase
-        .from('visits')
-        .insert([{
-          patient_id: finalPatientId,
-          agent_id: user.id,
-          date: formData.visitDate,
-          type: formData.visitType,
-          summary: formData.visitSummary,
-          microarea: user.microarea,
-          area_color: user.color || '#00488d'
-        }]);
-      if (vError) throw vError;
+      // 3. Record the visit if date is provided
+      if (formData.visitDate) {
+        const { error: vError } = await supabase
+          .from('visits')
+          .insert([{
+            patient_id: finalPatientId,
+            agent_id: user.id,
+            date: formData.visitDate,
+            type: formData.visitType,
+            summary: formData.visitSummary,
+            microarea: user.microarea,
+            area_color: user.color || '#00488d'
+          }]);
+        if (vError) throw vError;
+      }
 
       navigate('/');
     } catch (error: any) {
@@ -530,7 +536,6 @@ export function PatientForm({ user }: { user: any }) {
             <div className="md:col-span-4">
               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Data da Visita</label>
               <input 
-                required
                 type="date" 
                 value={formData.visitDate}
                 onChange={e => setFormData({...formData, visitDate: e.target.value})}
