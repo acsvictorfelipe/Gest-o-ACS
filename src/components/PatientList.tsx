@@ -150,15 +150,15 @@ export function PatientList({ user }: { user: any }) {
       }
 
       // 1. If this patient is the responsible, update household
-      if (patient?.is_family_responsible) {
-        await supabase
+      if (patient?.is_family_responsible && patient.household_id) {
+        const { error: hError } = await supabase
           .from('households')
           .update({ 
             responsible_name: 'Responsável não cadastrado',
             last_update_at: new Date().toISOString()
           })
-          .eq('responsible_cns', patient.cns)
-          .eq('microarea', user.microarea);
+          .eq('id', patient.household_id);
+        if (hError) console.error("Error updating household during delete:", hError);
       }
 
       // 2. First delete visits related to this patient

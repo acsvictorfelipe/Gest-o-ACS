@@ -287,15 +287,14 @@ export function PatientForm({ user }: { user: any }) {
       }
 
       // 1. If this patient is the responsible, update household
-      if (formData.isFamilyResponsible) {
+      if (formData.isFamilyResponsible && formData.householdId) {
         const { error: hError } = await supabase
           .from('households')
           .update({ 
             responsible_name: 'Responsável não cadastrado',
             last_update_at: new Date().toISOString()
           })
-          .eq('responsible_cns', formData.cns)
-          .eq('microarea', user.microarea);
+          .eq('id', formData.householdId);
         if (hError) console.error("Error updating household during delete:", hError);
       }
 

@@ -83,16 +83,18 @@ export function HouseholdList({ user }: { user: any }) {
         const patientIds = patientsInH.map(p => p.id);
         
         // 2. Delete visits for these patients
-        await supabase
+        const { error: vError } = await supabase
           .from('visits')
           .delete()
           .in('patient_id', patientIds);
+        if (vError) throw vError;
 
         // 3. Delete patients
-        await supabase
+        const { error: pError } = await supabase
           .from('patients')
           .delete()
           .eq('household_id', deleteConfirm);
+        if (pError) throw pError;
       }
 
       // 4. Delete household

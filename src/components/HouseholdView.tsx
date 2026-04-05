@@ -144,9 +144,12 @@ export function HouseholdView({ user }: { user: any }) {
       // 1. Delete visits of all residents
       if (residents.length > 0) {
         const residentIds = residents.map(r => r.id);
-        await supabase.from('visits').delete().in('patient_id', residentIds);
+        const { error: vError } = await supabase.from('visits').delete().in('patient_id', residentIds);
+        if (vError) throw vError;
+        
         // 2. Delete residents
-        await supabase.from('patients').delete().eq('household_id', id);
+        const { error: pError } = await supabase.from('patients').delete().eq('household_id', id);
+        if (pError) throw pError;
       }
       // 3. Delete household
       const { error } = await supabase.from('households').delete().eq('id', id);
