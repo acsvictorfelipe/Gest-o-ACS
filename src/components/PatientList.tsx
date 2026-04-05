@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { syncService } from '../lib/syncService';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   User, 
@@ -18,7 +19,8 @@ import {
   Filter,
   X,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  AlertCircle
 } from 'lucide-react';
 
 export function PatientList({ user }: { user: any }) {
@@ -33,8 +35,12 @@ export function PatientList({ user }: { user: any }) {
 
   useEffect(() => {
     const filter = searchParams.get('filter');
+    const search = searchParams.get('search');
     if (filter) {
       setActiveFilter(filter);
+    }
+    if (search) {
+      setSearchTerm(search);
     }
   }, [searchParams]);
 
@@ -122,7 +128,36 @@ export function PatientList({ user }: { user: any }) {
     if (!deleteConfirm) return;
     setDeleting(true);
     try {
-      // First delete visits related to this patient
+      const patient = patients.find(p => p.id === deleteConfirm);
+      
+      if (!navigator.onLine) {
+        if (patient?.is_family_responsible) {
+          await syncService.addToQueue('households', 'UPDATE', {
+            id: patient.household_id,
+            responsible_name: 'Responsável não cadastrado',
+            last_update_at: new Date().toISOString()
+          });
+        }
+        await syncService.addToQueue('patients', 'DELETE', { id: deleteConfirm });
+        setPatients(patients.filter(p => p.id !== deleteConfirm));
+        setDeleteConfirm(null);
+        alert('Exclusão agendada para sincronização.');
+        return;
+      }
+
+      // 1. If this patient is the responsible, update household
+      if (patient?.is_family_responsible) {
+        await supabase
+          .from('households')
+          .update({ 
+            responsible_name: 'Responsável não cadastrado',
+            last_update_at: new Date().toISOString()
+          })
+          .eq('responsible_cns', patient.cns)
+          .eq('microarea', user.microarea);
+      }
+
+      // 2. First delete visits related to this patient
       const { error: vError } = await supabase
         .from('visits')
         .delete()
@@ -130,7 +165,7 @@ export function PatientList({ user }: { user: any }) {
       
       if (vError) throw vError;
 
-      // Then delete the patient
+      // 3. Then delete the patient
       const { error: pError } = await supabase
         .from('patients')
         .delete()
@@ -142,6 +177,7 @@ export function PatientList({ user }: { user: any }) {
       setDeleteConfirm(null);
     } catch (error) {
       console.error("Error deleting patient:", error);
+      alert("Erro ao excluir paciente.");
     } finally {
       setDeleting(false);
     }
@@ -178,15 +214,15 @@ export function PatientList({ user }: { user: any }) {
       </div>
 
       {/* Search Bar & Filters */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
           <input 
             type="text" 
             placeholder="Pesquisar por Nome ou CNS..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl py-4 pl-12 pr-6 shadow-sm focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium text-on-surface"
+            className="w-full bg-white dark:bg-slate-900 border-none rounded-xl py-3 pl-11 pr-6 shadow-sm focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium text-on-surface"
           />
         </div>
 
@@ -224,7 +260,8 @@ export function PatientList({ user }: { user: any }) {
         </div>
       ) : (
         <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Desktop Table View */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
                 <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
@@ -269,6 +306,36 @@ export function PatientList({ user }: { user: any }) {
                                 <Copy className="w-3 h-3" />
                               </button>
                             </div>
+                            {(p.contact || p.message_contact) && (
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                                {p.contact && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[9px] font-bold text-primary uppercase">Tel:</span>
+                                    <span className="text-[9px] text-slate-400">{p.contact}</span>
+                                    <button 
+                                      onClick={(e) => copyToClipboard(p.contact, e)}
+                                      className="p-1 text-slate-300 hover:text-primary transition-colors"
+                                      title="Copiar Contato"
+                                    >
+                                      <Copy className="w-2.5 h-2.5" />
+                                    </button>
+                                  </div>
+                                )}
+                                {p.message_contact && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[9px] font-bold text-orange-500 uppercase">Recado:</span>
+                                    <span className="text-[9px] text-slate-400">{p.message_contact}</span>
+                                    <button 
+                                      onClick={(e) => copyToClipboard(p.message_contact, e)}
+                                      className="p-1 text-slate-300 hover:text-primary transition-colors"
+                                      title="Copiar Contato de Recado"
+                                    >
+                                      <Copy className="w-2.5 h-2.5" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -296,6 +363,24 @@ export function PatientList({ user }: { user: any }) {
                           {(!p.last_visit_at || new Date(p.last_visit_at) < new Date(new Date().setDate(new Date().getDate() - 30))) && (
                             <span className="text-[9px] font-bold text-red-500 uppercase mt-1">Pendente</span>
                           )}
+                          {p.categories?.includes('Criança') && (() => {
+                            if (!p.birth_date) return null;
+                            const birth = new Date(p.birth_date);
+                            const sixMonthsDate = new Date(birth);
+                            sixMonthsDate.setMonth(birth.getMonth() + 6);
+                            const now = new Date();
+                            const diffDays = Math.ceil((sixMonthsDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                            
+                            if (diffDays <= 15 && diffDays >= -15) {
+                              return (
+                                <div className="flex items-center gap-1 mt-1 text-red-500 animate-pulse">
+                                  <AlertCircle className="w-3 h-3" />
+                                  <span className="text-[9px] font-bold uppercase">Visita 6 Meses Próxima</span>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                           {p.categories?.includes('Criança') && Object.values(p.clinical_data?.crianca?.vacinas || {}).some(v => !v) && (
                             <span className="text-[9px] font-bold text-orange-500 uppercase mt-1">Vacina Atrasada</span>
                           )}
@@ -339,6 +424,104 @@ export function PatientList({ user }: { user: any }) {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="lg:hidden divide-y divide-slate-50 dark:divide-slate-800">
+            {filteredPatients.length > 0 ? (
+              filteredPatients.map((p) => (
+                <div 
+                  key={p.id} 
+                  className="p-6 space-y-4 active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors"
+                  onClick={() => navigate(`/domicilio/${p.household_id}`)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-primary/10`} style={{ backgroundColor: p.area_color || '#00488d' }}>
+                        {p.name.charAt(0)}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-base font-bold text-on-surface">{p.name}</span>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">{p.gender}, {p.birth_date}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/editar-paciente/${p.id}`);
+                        }}
+                        className="p-2 text-slate-400"
+                      >
+                        <Pencil className="w-5 h-5" />
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirm(p.id);
+                        }}
+                        className="p-2 text-slate-400"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">CNS</span>
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{p.cns}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Última Visita</span>
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                        {p.last_visit_at ? new Date(p.last_visit_at).toLocaleDateString('pt-BR') : 'Nunca'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {p.categories?.map((cat: string) => (
+                      <div key={cat} className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                        {getCategoryIcon([cat])}
+                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">{cat}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {(p.contact || p.message_contact) && (
+                    <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl space-y-2">
+                      {p.contact && (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-primary uppercase">Contato:</span>
+                            <span className="text-xs text-slate-600 dark:text-slate-400">{p.contact}</span>
+                          </div>
+                          <button onClick={(e) => copyToClipboard(p.contact, e)} className="p-1 text-slate-400">
+                            <Copy className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                      {p.message_contact && (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-orange-500 uppercase">Recado:</span>
+                            <span className="text-xs text-slate-600 dark:text-slate-400">{p.message_contact}</span>
+                          </div>
+                          <button onClick={(e) => copyToClipboard(p.message_contact, e)} className="p-1 text-slate-400">
+                            <Copy className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="px-8 py-20 text-center text-slate-400">
+                Nenhum cidadão encontrado.
+              </div>
+            )}
           </div>
         </div>
       )}

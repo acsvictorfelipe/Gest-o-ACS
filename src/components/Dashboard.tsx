@@ -22,7 +22,8 @@ export function Dashboard({ user }: { user: any }) {
     acamados: 0,
     idosos: 0,
     pendingVisits: 0,
-    lateVaccines: 0
+    lateVaccines: 0,
+    childVisitAlerts: 0
   });
   const [recentPatients, setRecentPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,10 +48,12 @@ export function Dashboard({ user }: { user: any }) {
         
         if (error) throw error;
 
-        const newStats = { gestantes: 0, criancas: 0, acamados: 0, idosos: 0, hipertensos: 0, diabeticos: 0, pendingVisits: 0, lateVaccines: 0 };
+        const newStats = { gestantes: 0, criancas: 0, acamados: 0, idosos: 0, hipertensos: 0, diabeticos: 0, pendingVisits: 0, lateVaccines: 0, childVisitAlerts: 0 };
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         
+        const now = new Date();
+
         patients?.forEach(p => {
           const clinical = p.clinical_data || {};
           const categories = p.categories || [];
@@ -63,6 +66,16 @@ export function Dashboard({ user }: { user: any }) {
 
           if (categories.includes('Criança')) {
             newStats.criancas++;
+            // Check for 6 month visit alert
+            if (p.birth_date) {
+              const birth = new Date(p.birth_date);
+              const sixMonthsDate = new Date(birth);
+              sixMonthsDate.setMonth(birth.getMonth() + 6);
+              const diffDays = Math.ceil((sixMonthsDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+              if (diffDays <= 15 && diffDays >= -15) {
+                newStats.childVisitAlerts++;
+              }
+            }
             // Simple check for late vaccines: if any vaccine field is empty in a child
             const vaccines = clinical.crianca?.vacinas || {};
             const hasEmptyVaccine = Object.values(vaccines).some(v => !v);
@@ -158,7 +171,7 @@ export function Dashboard({ user }: { user: any }) {
       </section>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 lg:gap-6">
         {statCards.map((card, i) => (
           <Link 
             key={i} 
@@ -218,6 +231,23 @@ export function Dashboard({ user }: { user: any }) {
                 </Link>
               </div>
             </div>
+            {stats.childVisitAlerts > 0 && (
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border-l-4 border-orange-500 flex items-start gap-4 animate-pulse">
+                <Baby className="w-5 h-5 text-orange-500 mt-1" />
+                <div>
+                  <h5 className="text-sm font-bold text-on-surface">Visitas de 6 Meses</h5>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    {stats.childVisitAlerts} {stats.childVisitAlerts === 1 ? 'criança próxima' : 'crianças próximas'} da visita de 6 meses.
+                  </p>
+                  <Link 
+                    to="/pacientes?filter=crianças"
+                    className="mt-3 inline-block text-xs font-bold text-primary hover:underline"
+                  >
+                    Ver Lista
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 

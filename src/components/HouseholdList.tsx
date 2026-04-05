@@ -94,11 +94,15 @@ export function HouseholdList({ user }: { user: any }) {
     }
   };
 
-  const filteredHouseholds = households.filter(h => 
-    h.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    h.responsible_cns?.includes(searchTerm) ||
-    h.address?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredHouseholds = households.filter(h => {
+    const matchesSearch = h.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      h.responsible_cns?.includes(searchTerm) ||
+      h.address?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const isImportedPlaceholder = h.responsible_name === 'Responsável Importado';
+    
+    return matchesSearch && !isImportedPlaceholder;
+  });
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">

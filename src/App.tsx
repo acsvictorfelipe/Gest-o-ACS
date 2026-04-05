@@ -13,25 +13,17 @@ import { Reports } from './components/Reports';
 import { UserManagement } from './components/UserManagement';
 import { VisitHistory } from './components/VisitHistory';
 import { ImportTool } from './components/ImportTool';
+import { SecurityProvider, SecurityLock } from './components/SecurityLock';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    const saved = localStorage.getItem('theme');
-    return (saved as 'light' | 'dark') || 'light';
-  });
 
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  };
+    root.classList.remove('dark');
+    root.classList.add('light');
+  }, []);
 
   useEffect(() => {
     // 1. Check current session
@@ -101,35 +93,38 @@ export default function App() {
   }
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-        <Route
-          path="/*"
-          element={
-            user ? (
-              <Layout user={user} theme={theme} toggleTheme={toggleTheme}>
-                <Routes>
-                  <Route path="/" element={<Dashboard user={user} />} />
-                  <Route path="/pacientes" element={<PatientList user={user} />} />
-                  <Route path="/domicilios" element={<HouseholdList user={user} />} />
-                  <Route path="/configuracoes" element={<Settings user={user} />} />
-                  <Route path="/relatorios" element={<Reports user={user} />} />
-                  <Route path="/historico" element={<VisitHistory user={user} />} />
-                  <Route path="/novo-cadastro" element={<PatientForm user={user} />} />
-                  <Route path="/editar-paciente/:id" element={<PatientForm user={user} />} />
-                  <Route path="/domicilio/:id" element={<HouseholdView user={user} />} />
-                  <Route path="/usuarios" element={<UserManagement currentUser={user} />} />
-                  <Route path="/importar" element={<ImportTool user={user} />} />
-                  <Route path="*" element={<Navigate to="/" />} />
-                </Routes>
-              </Layout>
-            ) : (
-              <Navigate to="/login" />
-            )
-          }
-        />
-      </Routes>
-    </Router>
+    <SecurityProvider>
+      <Router>
+        <SecurityLock />
+        <Routes>
+          <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+          <Route
+            path="/*"
+            element={
+              user ? (
+                <Layout user={user}>
+                  <Routes>
+                    <Route path="/" element={<Dashboard user={user} />} />
+                    <Route path="/pacientes" element={<PatientList user={user} />} />
+                    <Route path="/domicilios" element={<HouseholdList user={user} />} />
+                    <Route path="/configuracoes" element={<Settings user={user} />} />
+                    <Route path="/relatorios" element={<Reports user={user} />} />
+                    <Route path="/historico" element={<VisitHistory user={user} />} />
+                    <Route path="/novo-cadastro" element={<PatientForm user={user} />} />
+                    <Route path="/editar-paciente/:id" element={<PatientForm user={user} />} />
+                    <Route path="/domicilio/:id" element={<HouseholdView user={user} />} />
+                    <Route path="/usuarios" element={<UserManagement currentUser={user} />} />
+                    <Route path="/importar" element={<ImportTool user={user} />} />
+                    <Route path="*" element={<Navigate to="/" />} />
+                  </Routes>
+                </Layout>
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+        </Routes>
+      </Router>
+    </SecurityProvider>
   );
 }

@@ -71,13 +71,13 @@ export function Reports({ user }: { user: any }) {
       
       // Testes Rápidos
       let tests = [];
-      if (g.sifilis === 'Sim') tests.push('Sífilis');
-      if (g.hiv === 'Sim') tests.push('HIV');
-      if (g.hepatiteB === 'Sim') tests.push('HepB');
+      if (g.sifilis && g.sifilis !== 'Não Realizado') tests.push('Sífilis');
+      if (g.hiv && g.hiv !== 'Não Realizado') tests.push('HIV');
+      if (g.hepatiteB && g.hepatiteB !== 'Não Realizado') tests.push('HepB');
+      if (g.hepatiteC && g.hepatiteC !== 'Não Realizado') tests.push('HepC');
       if (tests.length > 0) info.push(`Testes: ${tests.join(',')}`);
 
-      // Saúde Bucal
-      if (g.saudeBucal) info.push(`Odonto: ${g.saudeBucal}`);
+      if (g.dtpa === 'Sim') info.push('dTpa OK');
       
       if (g.diabetes === 'Sim') info.push('Diabetes');
       if (g.pressaoAlta === 'Sim') info.push('Hipertensão');
@@ -118,6 +118,68 @@ export function Reports({ user }: { user: any }) {
     return info.length > 0 ? info.join(' | ') : 'Sem dados clínicos';
   };
 
+  const getGestanteStats = (p: any) => {
+    const g = p.clinical_data?.gestante || {};
+    const consultas = g.consultas?.filter((c: string) => c).length || 0;
+    
+    const tests = [
+      { name: 'Sífilis', value: g.sifilis },
+      { name: 'HIV', value: g.hiv },
+      { name: 'Hepatite B', value: g.hepatiteB },
+      { name: 'Hepatite C', value: g.hepatiteC }
+    ];
+    
+    const realizados = tests.filter(t => t.value && t.value !== 'Não Realizado').map(t => t.name);
+    const pendentes = tests.filter(t => !t.value || t.value === 'Não Realizado').map(t => t.name);
+    
+    const vacinasTomadas = g.dtpa === 'Sim' ? ['dTpa'] : [];
+    const vacinasPendentes = g.dtpa !== 'Sim' ? ['dTpa'] : [];
+    
+    return { 
+      consultas, 
+      realizados, 
+      pendentes, 
+      vacinasTomadas, 
+      vacinasPendentes,
+      dum: g.dum ? new Date(g.dum).toLocaleDateString('pt-BR') : 'N/A',
+      dpp: g.dpp ? new Date(g.dpp).toLocaleDateString('pt-BR') : 'N/A',
+      saudeBucal: g.saudeBucal ? new Date(g.saudeBucal).toLocaleDateString('pt-BR') : 'Não Realizada'
+    };
+  };
+
+  const getCriancaStats = (p: any) => {
+    const c = p.clinical_data?.crianca || {};
+    const consultas = c.consultas?.filter((v: string) => v).length || 0;
+    
+    const vacinas = c.vacinas || {};
+    const tomadasKeys = Object.entries(vacinas).filter(([_, v]) => v).map(([k, _]) => k);
+    
+    const vaccineLabels: Record<string, string> = {
+      penta2m: 'Penta 2 Meses',
+      penta4m: 'Penta 4 Meses',
+      penta6m: 'Penta 6 Meses',
+      dtp15m: 'DTP 15 meses',
+      dtp4y: 'DTP 4 anos',
+      hepB: 'Hepatite B',
+      vip2m: 'VIP 2 meses',
+      vip4m: 'VIP 4 meses',
+      vip6m: 'VIP 6 meses',
+      vop15m: 'VOP 15 meses',
+      vop4y: 'VOP 4 anos',
+      scr2m: 'SCR 2 meses',
+      scr15m: 'SCR 15 meses',
+      pneumo2m: 'Pneumo10 2 meses',
+      pneumo4m: 'Pneumo10 4 meses',
+      pneumo12m: 'Pneumo10 12 meses',
+    };
+
+    const tomadas = tomadasKeys.map(k => vaccineLabels[k] || k);
+    const todas = Object.values(vaccineLabels);
+    const pendentes = todas.filter(v => !tomadas.includes(v));
+    
+    return { consultas, tomadas, pendentes };
+  };
+
   const generatePDF = () => {
     const doc = new jsPDF();
     
@@ -131,21 +193,133 @@ export function Reports({ user }: { user: any }) {
     doc.text(`Agente: ${user.name} | Microárea: ${user.microarea} | Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
     doc.text(`Filtro: ${categoryFilter} | Total: ${filteredPatients.length} pacientes`, 14, 36);
 
-    const tableData = filteredPatients.map(p => [
-      p.name,
-      p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : 'N/A',
-      p.categories?.join(', ') || 'N/A',
-      getClinicalSummary(p)
-    ]);
+    const gestantes = filteredPatients.filter(p => p.categories?.includes('Gestante'));
+    const criancas = filteredPatients.filter(p => p.categories?.includes('Criança'));
 
-    autoTable(doc, {
-      startY: 45,
-      head: [['Nome', 'Nascimento', 'Categorias', 'Informações Clínicas']],
-      body: tableData,
-      headStyles: { fillColor: [0, 72, 141] },
-      styles: { fontSize: 8, cellPadding: 3 },
-      alternateRowStyles: { fillColor: [245, 247, 250] }
-    });
+    if (categoryFilter === 'Gestante') {
+      const gestanteData = gestantes.map(p => {
+        const stats = getGestanteStats(p);
+        return [
+          p.name,
+          p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : 'N/A',
+          stats.dum,
+          stats.dpp,
+          stats.consultas,
+          stats.realizados.join(', ') || 'Nenhum',
+          stats.pendentes.join(', ') || 'Nenhum',
+          stats.vacinasTomadas.join(', ') || 'Nenhuma',
+          stats.saudeBucal
+        ];
+      });
+
+      autoTable(doc, {
+        startY: 45,
+        head: [['Nome', 'Nascimento', 'DUM', 'DPP', 'Consultas', 'Testes Realizados', 'Testes Pendentes', 'Vacinas', 'Saúde Bucal']],
+        body: gestanteData,
+        headStyles: { fillColor: [0, 72, 141] },
+        styles: { fontSize: 6, cellPadding: 1.5 },
+        alternateRowStyles: { fillColor: [245, 247, 250] }
+      });
+    } else if (categoryFilter === 'Criança') {
+      const criancaData = criancas.map(p => {
+        const stats = getCriancaStats(p);
+        return [
+          p.name,
+          p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : 'N/A',
+          stats.consultas,
+          stats.tomadas.join(', ') || 'Nenhuma',
+          stats.pendentes.join(', ') || 'Nenhuma'
+        ];
+      });
+
+      autoTable(doc, {
+        startY: 45,
+        head: [['Nome', 'Nascimento', 'Consultas', 'Vacinas Tomadas', 'Vacinas Pendentes']],
+        body: criancaData,
+        headStyles: { fillColor: [0, 72, 141] },
+        styles: { fontSize: 7, cellPadding: 2 },
+        alternateRowStyles: { fillColor: [245, 247, 250] }
+      });
+    } else {
+      const mainTableData = filteredPatients.map(p => [
+        p.name,
+        p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : 'N/A',
+        p.categories?.join(', ') || 'N/A',
+        getClinicalSummary(p)
+      ]);
+
+      autoTable(doc, {
+        startY: 45,
+        head: [['Nome', 'Nascimento', 'Categorias', 'Informações Clínicas']],
+        body: mainTableData,
+        headStyles: { fillColor: [0, 72, 141] },
+        styles: { fontSize: 8, cellPadding: 3 },
+        alternateRowStyles: { fillColor: [245, 247, 250] }
+      });
+
+      let currentY = (doc as any).lastAutoTable.finalY + 15;
+
+      if (categoryFilter === 'Todas') {
+        if (gestantes.length > 0) {
+          if (currentY > 250) { doc.addPage(); currentY = 20; }
+          doc.setFontSize(14);
+          doc.setTextColor(0, 72, 141);
+          doc.text('Acompanhamento de Gestantes', 14, currentY);
+          currentY += 5;
+
+          const gestanteData = gestantes.map(p => {
+            const stats = getGestanteStats(p);
+            return [
+              p.name,
+              p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : 'N/A',
+              stats.dum,
+              stats.dpp,
+              stats.consultas,
+              stats.realizados.join(', ') || 'Nenhum',
+              stats.pendentes.join(', ') || 'Nenhum',
+              stats.vacinasTomadas.join(', ') || 'Nenhuma',
+              stats.saudeBucal
+            ];
+          });
+
+          autoTable(doc, {
+            startY: currentY,
+            head: [['Nome', 'Nascimento', 'DUM', 'DPP', 'Consultas', 'Testes Realizados', 'Testes Pendentes', 'Vacinas', 'Saúde Bucal']],
+            body: gestanteData,
+            headStyles: { fillColor: [59, 130, 246] },
+            styles: { fontSize: 6, cellPadding: 1.5 }
+          });
+          currentY = (doc as any).lastAutoTable.finalY + 15;
+        }
+
+        if (criancas.length > 0) {
+          if (currentY > 250) { doc.addPage(); currentY = 20; }
+          doc.setFontSize(14);
+          doc.setTextColor(0, 72, 141);
+          doc.text('Acompanhamento de Crianças', 14, currentY);
+          currentY += 5;
+
+          const criancaData = criancas.map(p => {
+            const stats = getCriancaStats(p);
+            return [
+              p.name,
+              p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : 'N/A',
+              stats.consultas,
+              stats.tomadas.join(', ') || 'Nenhuma',
+              stats.pendentes.join(', ') || 'Nenhuma'
+            ];
+          });
+
+          autoTable(doc, {
+            startY: currentY,
+            head: [['Nome', 'Nascimento', 'Consultas', 'Vacinas Tomadas', 'Vacinas Pendentes']],
+            body: criancaData,
+            headStyles: { fillColor: [34, 197, 94] },
+            styles: { fontSize: 7, cellPadding: 2 }
+          });
+        }
+      }
+    }
 
     doc.save(`Relatorio_Microarea_${user.microarea}_${categoryFilter}.pdf`);
   };
@@ -170,30 +344,30 @@ export function Reports({ user }: { user: any }) {
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 space-y-6">
-        <div className="flex items-center gap-2 text-primary mb-2">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 space-y-4">
+        <div className="flex items-center gap-2 text-primary mb-1">
           <Filter className="w-4 h-4" />
-          <span className="text-xs font-bold uppercase tracking-widest">Filtros de Relatório</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest">Filtros</span>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="relative group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
             <input 
               type="text" 
-              placeholder="Pesquisar por nome ou CNS..."
+              placeholder="Pesquisar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
+              className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-2 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
             />
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
             {categories.map(cat => (
               <button
                 key={cat}
                 onClick={() => setCategoryFilter(cat)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${
                   categoryFilter === cat 
                     ? 'bg-primary text-white shadow-md' 
                     : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -212,8 +386,13 @@ export function Reports({ user }: { user: any }) {
           <p className="font-medium">Carregando dados para o relatório...</p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="space-y-8">
+          <div className="flex items-center gap-2 text-primary">
+            <Activity className="w-5 h-5" />
+            <h3 className="text-lg font-bold font-headline">Lista Geral de Pacientes</h3>
+          </div>
+          <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
                 <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
@@ -263,6 +442,7 @@ export function Reports({ user }: { user: any }) {
             </table>
           </div>
         </div>
+      </div>
       )}
     </div>
   );

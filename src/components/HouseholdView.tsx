@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { syncService } from '../lib/syncService';
 import { 
   Home, 
   Users, 
@@ -14,7 +15,8 @@ import {
   Pencil,
   Trash2,
   AlertTriangle,
-  Loader2
+  Loader2,
+  X
 } from 'lucide-react';
 
 export function HouseholdView({ user }: { user: any }) {
@@ -26,6 +28,14 @@ export function HouseholdView({ user }: { user: any }) {
   const [loading, setLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showVisitModal, setShowVisitModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    address: '',
+    number: '',
+    complement: '',
+    responsible_name: ''
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -73,10 +83,63 @@ export function HouseholdView({ user }: { user: any }) {
     fetchData();
   }, [id, user.microarea]);
 
+  useEffect(() => {
+    if (household) {
+      setEditForm({
+        address: household.address || '',
+        number: household.number || '',
+        complement: household.complement || '',
+        responsible_name: household.responsible_name || ''
+      });
+    }
+  }, [household]);
+
+  const handleUpdateHousehold = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id) return;
+    setLoading(true);
+    try {
+      if (!navigator.onLine) {
+        await syncService.addToQueue('households', 'UPDATE', { id, ...editForm });
+        setHousehold({ ...household, ...editForm });
+        setIsEditing(false);
+        alert('Alterações salvas localmente.');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('households')
+        .update(editForm)
+        .eq('id', id);
+      
+      if (error) throw error;
+      setHousehold({ ...household, ...editForm });
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating household:", error);
+      alert("Erro ao atualizar domicílio.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!id) return;
     setDeleting(true);
     try {
+      if (!navigator.onLine) {
+        // Queue deletions
+        if (residents.length > 0) {
+          for (const r of residents) {
+            await syncService.addToQueue('patients', 'DELETE', { id: r.id });
+          }
+        }
+        await syncService.addToQueue('households', 'DELETE', { id });
+        alert('Exclusão agendada para sincronização.');
+        navigate('/domicilios');
+        return;
+      }
+
       // 1. Delete visits of all residents
       if (residents.length > 0) {
         const residentIds = residents.map(r => r.id);
@@ -126,7 +189,10 @@ export function HouseholdView({ user }: { user: any }) {
             >
               <Trash2 className="w-6 h-6" />
             </button>
-            <button className="bg-white text-primary px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-slate-50 transition-all active:scale-95 flex items-center gap-2">
+            <button 
+              onClick={() => setIsEditing(true)}
+              className="bg-white text-primary px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-slate-50 transition-all active:scale-95 flex items-center gap-2"
+            >
               Atualizar Domicílio
             </button>
           </div>
@@ -141,7 +207,16 @@ export function HouseholdView({ user }: { user: any }) {
               <div>
                 <h4 className="text-lg font-bold font-headline mb-2">Próxima Visita Agendada</h4>
                 <p className="text-sm opacity-80 mb-6">O protocolo recomenda retorno em 30 dias para acompanhamento de rotina.</p>
-                <button className="bg-green-600 dark:bg-green-700 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-md hover:bg-green-700 dark:hover:bg-green-600 transition-all flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    if (residents.length === 1) {
+                      navigate(`/editar-paciente/${residents[0].id}?nova-visita=true`);
+                    } else {
+                      setShowVisitModal(true);
+                    }
+                  }}
+                  className="bg-green-600 dark:bg-green-700 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-md hover:bg-green-700 dark:hover:bg-green-600 transition-all flex items-center gap-2"
+                >
                   <PlusCircle className="w-4 h-4" />
                   Registrar Nova Visita
                 </button>
@@ -270,6 +345,126 @@ export function HouseholdView({ user }: { user: any }) {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Edit Household Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-300">
+            <form onSubmit={handleUpdateHousehold} className="space-y-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-3 bg-primary/10 rounded-2xl text-primary">
+                  <Home className="w-6 h-6" />
+                </div>
+                <h3 className="text-2xl font-black text-on-surface font-headline">Editar Domicílio</h3>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Endereço</label>
+                  <input 
+                    type="text"
+                    value={editForm.address}
+                    onChange={e => setEditForm({...editForm, address: e.target.value})}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-1">
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Nº</label>
+                    <input 
+                      type="text"
+                      value={editForm.number}
+                      onChange={e => setEditForm({...editForm, number: e.target.value})}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
+                      required
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Complemento</label>
+                    <input 
+                      type="text"
+                      value={editForm.complement}
+                      onChange={e => setEditForm({...editForm, complement: e.target.value})}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Nome do Responsável</label>
+                  <input 
+                    type="text"
+                    value={editForm.responsible_name}
+                    onChange={e => setEditForm({...editForm, responsible_name: e.target.value})}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 pt-4">
+                <button 
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-4 bg-primary text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Salvar Alterações'}
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Visit Selection Modal */}
+      {showVisitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-black text-on-surface font-headline">Registrar Visita</h3>
+              <button 
+                onClick={() => setShowVisitModal(false)}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Selecione o morador que recebeu a visita:</p>
+            
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-2 scrollbar-hide">
+              {residents.map(r => (
+                <button
+                  key={r.id}
+                  onClick={() => navigate(`/editar-paciente/${r.id}?nova-visita=true`)}
+                  className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-left group"
+                >
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm group-hover:bg-primary group-hover:text-white transition-all">
+                    {r.name?.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-on-surface">{r.name}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider">SUS: {r.cns}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            
+            <button 
+              onClick={() => setShowVisitModal(false)}
+              className="w-full mt-6 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+            >
+              Cancelar
+            </button>
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { useNavigate, useParams } from 'react-router-dom';
+import { syncService } from '../lib/syncService';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { 
   Save, 
   X, 
@@ -17,12 +18,36 @@ import {
   RefreshCw,
   Copy,
   AlertTriangle,
-  Loader2
+  Loader2,
+  FileText,
+  Download
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+const vaccineLabels: Record<string, string> = {
+  penta2m: 'Penta 2 Meses',
+  penta4m: 'Penta 4 Meses',
+  penta6m: 'Penta 6 Meses',
+  dtp15m: 'DTP 15 meses',
+  dtp4y: 'DTP 4 anos',
+  hepB: 'Hepatite B',
+  vip2m: 'VIP 2 meses',
+  vip4m: 'VIP 4 meses',
+  vip6m: 'VIP 6 meses',
+  vop15m: 'VOP 15 meses',
+  vop4y: 'VOP 4 anos',
+  scr2m: 'SCR 2 meses',
+  scr15m: 'SCR 15 meses',
+  pneumo2m: 'Pneumo10 2 meses',
+  pneumo4m: 'Pneumo10 4 meses',
+  pneumo12m: 'Pneumo10 12 meses',
+};
 
 export function PatientForm({ user }: { user: any }) {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -189,6 +214,25 @@ export function PatientForm({ user }: { user: any }) {
     fetchPatient();
   }, [id]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('nova-visita') === 'true') {
+      setFormData(prev => ({
+        ...prev,
+        visitDate: new Date().toISOString().split('T')[0],
+        visitType: 'Rotina'
+      }));
+      
+      // Scroll to visit section after a short delay to ensure rendering
+      setTimeout(() => {
+        const visitSection = document.getElementById('secao-visita');
+        if (visitSection) {
+          visitSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 500);
+    }
+  }, [location.search]);
+
   const calculateAge = (birthDate: string) => {
     if (!birthDate) return '';
     const today = new Date();
@@ -213,8 +257,8 @@ export function PatientForm({ user }: { user: any }) {
     setFormData(prev => ({
       ...prev,
       categories: prev.categories.includes(cat) 
-        ? [] 
-        : [cat]
+        ? prev.categories.filter(c => c !== cat)
+        : [...prev.categories, cat]
     }));
   };
 
@@ -222,17 +266,125 @@ export function PatientForm({ user }: { user: any }) {
     if (!id) return;
     setDeleting(true);
     try {
-      // Delete visits
-      await supabase.from('visits').delete().eq('patient_id', id);
-      // Delete patient
-      const { error } = await supabase.from('patients').delete().eq('id', id);
-      if (error) throw error;
+      // 1. If this patient is the responsible, update household
+      if (formData.isFamilyResponsible) {
+        await supabase
+          .from('households')
+          .update({ 
+            responsible_name: 'Responsável não cadastrado',
+            last_update_at: new Date().toISOString()
+          })
+          .eq('responsible_cns', formData.cns)
+          .eq('microarea', user.microarea);
+      }
+
+      // 2. Delete visits
+      const { error: vError } = await supabase.from('visits').delete().eq('patient_id', id);
+      if (vError) throw vError;
+      
+      // 3. Delete patient
+      const { error: pError } = await supabase.from('patients').delete().eq('id', id);
+      if (pError) throw pError;
+      
       navigate('/pacientes');
     } catch (error) {
       console.error("Error deleting patient:", error);
+      alert("Erro ao excluir paciente.");
     } finally {
       setDeleting(false);
     }
+  };
+
+  const generatePatientPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(0, 72, 141);
+    doc.text('Ficha Individual do Paciente', pageWidth / 2, 20, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 14, 28, { align: 'right' });
+    
+    // Personal Info
+    doc.setFontSize(14);
+    doc.setTextColor(0, 72, 141);
+    doc.text('Informações Pessoais', 14, 40);
+    
+    const personalData = [
+      ['Nome', formData.name || 'N/A'],
+      ['CNS', formData.cns || 'N/A'],
+      ['Data de Nascimento', formData.birthDate ? new Date(formData.birthDate).toLocaleDateString('pt-BR') : 'N/A'],
+      ['Gênero', formData.gender || 'N/A'],
+      ['Contato', formData.contact || 'N/A'],
+      ['Recado', formData.messageContact || 'N/A'],
+      ['Endereço', `${formData.address}, ${formData.number}`],
+      ['Categorias', formData.categories.join(', ') || 'N/A']
+    ];
+
+    autoTable(doc, {
+      startY: 45,
+      body: personalData,
+      theme: 'plain',
+      styles: { fontSize: 10, cellPadding: 2 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } }
+    });
+
+    let currentY = (doc as any).lastAutoTable.finalY + 10;
+
+    // Clinical Data
+    formData.categories.forEach(cat => {
+      const catId = cat.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const clinical = (formData.clinicalData as any)[catId];
+      
+      if (!clinical) return;
+
+      if (currentY > 250) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      doc.setFontSize(14);
+      doc.setTextColor(0, 72, 141);
+      doc.text(`Dados Clínicos: ${cat}`, 14, currentY);
+      currentY += 5;
+
+      const clinicalRows: string[][] = [];
+      Object.entries(clinical).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          if (value.length > 0) {
+            clinicalRows.push([key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()), value.join(', ')]);
+          }
+        } else if (typeof value === 'object' && value !== null) {
+          // Handle nested objects like vacinas
+          Object.entries(value).forEach(([subKey, subValue]) => {
+            if (subValue) {
+              const label = vaccineLabels[subKey] || subKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+              clinicalRows.push([label, String(subValue)]);
+            }
+          });
+        } else if (value) {
+          clinicalRows.push([key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()), String(value)]);
+        }
+      });
+
+      if (clinicalRows.length > 0) {
+        autoTable(doc, {
+          startY: currentY,
+          body: clinicalRows,
+          theme: 'striped',
+          styles: { fontSize: 9, cellPadding: 2 },
+          columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } }
+        });
+        currentY = (doc as any).lastAutoTable.finalY + 10;
+      } else {
+        currentY += 10;
+      }
+    });
+
+    doc.save(`Ficha_${formData.name.replace(/\s+/g, '_')}.pdf`);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -246,6 +398,64 @@ export function PatientForm({ user }: { user: any }) {
 
       if (!targetCns) {
         throw new Error("CNS do Responsável é obrigatório para vincular a família.");
+      }
+
+      if (!navigator.onLine) {
+        // Offline mode: We can't easily handle the household/patient relationship without IDs
+        // So we generate temporary UUIDs
+        const existingHouseholdId = formData.householdId;
+        if (!existingHouseholdId) {
+          householdId = crypto.randomUUID();
+          const householdData = {
+            id: householdId,
+            address: formData.address,
+            number: formData.number,
+            complement: formData.complement,
+            microarea: user.microarea,
+            area_color: user.color || '#00488d',
+            agent_id: user.id,
+            responsible_cns: targetCns,
+            responsible_name: formData.isFamilyResponsible ? formData.name : 'Responsável não cadastrado'
+          };
+          await syncService.addToQueue('households', 'INSERT', householdData);
+        } else {
+          householdId = existingHouseholdId;
+          if (formData.isFamilyResponsible) {
+            await syncService.addToQueue('households', 'UPDATE', {
+              id: householdId,
+              responsible_name: formData.name,
+              address: formData.address,
+              number: formData.number,
+              complement: formData.complement,
+              last_update_at: new Date().toISOString()
+            });
+          }
+        }
+
+        const patientData = {
+          id: id || crypto.randomUUID(),
+          name: formData.name,
+          cns: formData.cns,
+          responsible_cns: targetCns,
+          is_family_responsible: formData.isFamilyResponsible,
+          birth_date: formData.birthDate,
+          gender: formData.gender,
+          visit_date: formData.visitDate || null,
+          contact: formData.contact,
+          message_contact: formData.messageContact,
+          household_id: householdId,
+          categories: formData.categories,
+          microarea: user.microarea,
+          area_color: user.color || '#00488d',
+          agent_id: user.id,
+          clinical_data: formData.clinicalData,
+          last_visit_at: formData.visitDate ? new Date().toISOString() : undefined
+        };
+
+        await syncService.addToQueue('patients', id ? 'UPDATE' : 'INSERT', patientData);
+        alert('Dados salvos localmente. Serão sincronizados quando houver internet.');
+        navigate('/');
+        return;
       }
 
       const { data: householdData, error: hError } = await supabase
@@ -469,7 +679,6 @@ export function PatientForm({ user }: { user: any }) {
                 {formData.isFamilyResponsible ? 'Seu CNS (Responsável)' : 'CNS do Responsável Familiar'}
               </label>
               <input 
-                required={!formData.isFamilyResponsible}
                 type="text" 
                 value={formData.isFamilyResponsible ? formData.cns : formData.responsibleCns}
                 onChange={e => setFormData({...formData, responsibleCns: e.target.value})}
@@ -505,7 +714,6 @@ export function PatientForm({ user }: { user: any }) {
                 </button>
               </div>
               <input 
-                required
                 type="text" 
                 value={formData.name}
                 onChange={e => setFormData({...formData, name: e.target.value})}
@@ -516,7 +724,6 @@ export function PatientForm({ user }: { user: any }) {
             <div className="md:col-span-4">
               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">SUS do Cidadão</label>
               <input 
-                required
                 type="text" 
                 value={formData.cns}
                 onChange={e => setFormData({...formData, cns: e.target.value})}
@@ -549,7 +756,6 @@ export function PatientForm({ user }: { user: any }) {
                 </button>
               </div>
               <input 
-                required
                 type="date" 
                 value={formData.birthDate}
                 onChange={e => setFormData({...formData, birthDate: e.target.value})}
@@ -565,7 +771,7 @@ export function PatientForm({ user }: { user: any }) {
                 className="w-full bg-slate-100 border-none rounded-xl p-3 text-sm text-slate-500" 
               />
             </div>
-            <div className="md:col-span-4">
+            <div id="secao-visita" className="md:col-span-4">
               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Data da Visita</label>
               <input 
                 type="date" 
@@ -601,7 +807,6 @@ export function PatientForm({ user }: { user: any }) {
             <div className="md:col-span-5">
               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Endereço</label>
               <input 
-                required
                 type="text" 
                 value={formData.address}
                 onChange={e => setFormData({...formData, address: e.target.value})}
@@ -611,7 +816,6 @@ export function PatientForm({ user }: { user: any }) {
             <div className="md:col-span-1">
               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Nº</label>
               <input 
-                required
                 type="text" 
                 value={formData.number}
                 onChange={e => setFormData({...formData, number: e.target.value})}
@@ -628,7 +832,22 @@ export function PatientForm({ user }: { user: any }) {
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Contato</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Contato</label>
+                {formData.contact && (
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(formData.contact);
+                      alert('Contato copiado!');
+                    }}
+                    className="text-primary hover:text-primary/80 transition-colors"
+                    title="Copiar Contato"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
               <input 
                 type="text" 
                 value={formData.contact}
@@ -638,7 +857,22 @@ export function PatientForm({ user }: { user: any }) {
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Recado</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Recado</label>
+                {formData.messageContact && (
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(formData.messageContact);
+                      alert('Contato de recado copiado!');
+                    }}
+                    className="text-primary hover:text-primary/80 transition-colors"
+                    title="Copiar Contato de Recado"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
               <input 
                 type="text" 
                 value={formData.messageContact}
@@ -982,62 +1216,95 @@ export function PatientForm({ user }: { user: any }) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:col-span-2">
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">dTpa Aplicada?</label>
-                      <select 
-                        value={formData.clinicalData.gestante.dtpa}
-                        onChange={e => setFormData({
-                          ...formData, 
-                          clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, dtpa: e.target.value } }
-                        })}
-                        className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
-                      >
-                        <option>Não</option>
-                        <option>Sim</option>
-                      </select>
+                  <div className="md:col-span-2 border-t border-slate-100 pt-6 mt-4">
+                    <h4 className="text-xs font-bold uppercase text-slate-400 mb-4 flex items-center gap-2">
+                      <Stethoscope className="w-4 h-4" />
+                      Testes Rápidos
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-2">Sífilis</label>
+                        <select 
+                          value={formData.clinicalData.gestante.sifilis}
+                          onChange={e => setFormData({
+                            ...formData, 
+                            clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, sifilis: e.target.value } }
+                          })}
+                          className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+                        >
+                          <option>Não Realizado</option>
+                          <option>Não Reagente</option>
+                          <option>Reagente</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-2">HIV</label>
+                        <select 
+                          value={formData.clinicalData.gestante.hiv}
+                          onChange={e => setFormData({
+                            ...formData, 
+                            clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, hiv: e.target.value } }
+                          })}
+                          className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+                        >
+                          <option>Não Realizado</option>
+                          <option>Não Reagente</option>
+                          <option>Reagente</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-2">Hepatite B</label>
+                        <select 
+                          value={formData.clinicalData.gestante.hepatiteB}
+                          onChange={e => setFormData({
+                            ...formData, 
+                            clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, hepatiteB: e.target.value } }
+                          })}
+                          className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+                        >
+                          <option>Não Realizado</option>
+                          <option>Não Reagente</option>
+                          <option>Reagente</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-2">Hepatite C</label>
+                        <select 
+                          value={formData.clinicalData.gestante.hepatiteC}
+                          onChange={e => setFormData({
+                            ...formData, 
+                            clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, hepatiteC: e.target.value } }
+                          })}
+                          className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+                        >
+                          <option>Não Realizado</option>
+                          <option>Não Reagente</option>
+                          <option>Reagente</option>
+                        </select>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Sífilis?</label>
-                      <select 
-                        value={formData.clinicalData.gestante.sifilis}
-                        onChange={e => setFormData({
-                          ...formData, 
-                          clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, sifilis: e.target.value } }
-                        })}
-                        className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
-                      >
-                        <option>Não</option>
-                        <option>Sim</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 mb-2">Hepatite B?</label>
-                      <select 
-                        value={formData.clinicalData.gestante.hepatiteB}
-                        onChange={e => setFormData({
-                          ...formData, 
-                          clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, hepatiteB: e.target.value } }
-                        })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm text-on-surface"
-                      >
-                        <option>Não</option>
-                        <option>Sim</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 mb-2">HIV?</label>
-                      <select 
-                        value={formData.clinicalData.gestante.hiv}
-                        onChange={e => setFormData({
-                          ...formData, 
-                          clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, hiv: e.target.value } }
-                        })}
-                        className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm text-on-surface"
-                      >
-                        <option>Não</option>
-                        <option>Sim</option>
-                      </select>
+                  </div>
+
+                  <div className="md:col-span-2 border-t border-slate-100 pt-6 mt-4">
+                    <h4 className="text-xs font-bold uppercase text-slate-400 mb-4 flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4" />
+                      Vacinas
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-2">dTpa Aplicada?</label>
+                        <select 
+                          value={formData.clinicalData.gestante.dtpa}
+                          onChange={e => setFormData({
+                            ...formData, 
+                            clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, dtpa: e.target.value } }
+                          })}
+                          className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+                        >
+                          <option>Não</option>
+                          <option>Sim</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
 
@@ -1228,7 +1495,7 @@ export function PatientForm({ user }: { user: any }) {
                       {formData.clinicalData.crianca.vacinas && Object.entries(formData.clinicalData.crianca.vacinas).map(([key, value]) => (
                         <div key={key}>
                           <label className="block text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">
-                            {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                            {vaccineLabels[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                           </label>
                           <input 
                             type="date" 
@@ -1337,8 +1604,18 @@ export function PatientForm({ user }: { user: any }) {
           {id && (
             <button 
               type="button"
+              onClick={generatePatientPDF}
+              className="flex items-center gap-2 px-6 py-3 bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 rounded-2xl transition-all"
+            >
+              <FileText className="w-5 h-5" />
+              Gerar PDF
+            </button>
+          )}
+          {id && (
+            <button 
+              type="button"
               onClick={() => setDeleteConfirm(true)}
-              className="mr-auto flex items-center gap-2 px-6 py-3 text-red-500 font-bold hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl transition-all"
+              className="mr-auto flex items-center gap-2 px-6 py-3 text-red-500 font-bold hover:bg-red-50 rounded-2xl transition-all"
             >
               <Trash2 className="w-5 h-5" />
               Excluir Cadastro
