@@ -66,6 +66,7 @@ export function PatientForm({ user }: { user: any }) {
     complement: '',
     contact: '',
     messageContact: '',
+    householdId: '',
     categories: [] as string[],
     clinicalData: {
       visitasGerais: [] as string[],
@@ -166,6 +167,7 @@ export function PatientForm({ user }: { user: any }) {
             complement: hData.complement || '',
             contact: data.contact || '',
             messageContact: data.message_contact || '',
+            householdId: data.household_id || '',
             categories: data.categories || [],
             clinicalData: {
               ...formData.clinicalData,
@@ -266,9 +268,27 @@ export function PatientForm({ user }: { user: any }) {
     if (!id) return;
     setDeleting(true);
     try {
+      if (!navigator.onLine) {
+        if (formData.isFamilyResponsible) {
+          await syncService.addToQueue('households', 'UPDATE', {
+            id: formData.householdId,
+            responsible_name: 'Responsável não cadastrado',
+            last_update_at: new Date().toISOString()
+          });
+        }
+        // Queue visit deletion by patient_id
+        await syncService.addToQueue('visits', 'DELETE', { filter: { patient_id: id } });
+        // Queue patient deletion
+        await syncService.addToQueue('patients', 'DELETE', { id });
+        
+        alert('Exclusão agendada para sincronização.');
+        navigate('/pacientes');
+        return;
+      }
+
       // 1. If this patient is the responsible, update household
       if (formData.isFamilyResponsible) {
-        await supabase
+        const { error: hError } = await supabase
           .from('households')
           .update({ 
             responsible_name: 'Responsável não cadastrado',
@@ -276,6 +296,7 @@ export function PatientForm({ user }: { user: any }) {
           })
           .eq('responsible_cns', formData.cns)
           .eq('microarea', user.microarea);
+        if (hError) console.error("Error updating household during delete:", hError);
       }
 
       // 2. Delete visits
@@ -287,9 +308,9 @@ export function PatientForm({ user }: { user: any }) {
       if (pError) throw pError;
       
       navigate('/pacientes');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting patient:", error);
-      alert("Erro ao excluir paciente.");
+      alert(error.message || "Erro ao excluir paciente.");
     } finally {
       setDeleting(false);
     }

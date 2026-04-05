@@ -138,7 +138,11 @@ export function PatientList({ user }: { user: any }) {
             last_update_at: new Date().toISOString()
           });
         }
+        // Queue visit deletion by patient_id
+        await syncService.addToQueue('visits', 'DELETE', { filter: { patient_id: deleteConfirm } });
+        // Queue patient deletion
         await syncService.addToQueue('patients', 'DELETE', { id: deleteConfirm });
+        
         setPatients(patients.filter(p => p.id !== deleteConfirm));
         setDeleteConfirm(null);
         alert('Exclusão agendada para sincronização.');

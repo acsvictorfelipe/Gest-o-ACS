@@ -131,6 +131,7 @@ export function HouseholdView({ user }: { user: any }) {
         // Queue deletions
         if (residents.length > 0) {
           for (const r of residents) {
+            await syncService.addToQueue('visits', 'DELETE', { filter: { patient_id: r.id } });
             await syncService.addToQueue('patients', 'DELETE', { id: r.id });
           }
         }

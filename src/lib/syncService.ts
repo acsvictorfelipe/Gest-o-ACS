@@ -53,7 +53,15 @@ class SyncService {
         } else if (item.action === 'UPDATE') {
           ({ error } = await supabase.from(item.table).update(item.data).eq('id', item.data.id));
         } else if (item.action === 'DELETE') {
-          ({ error } = await supabase.from(item.table).delete().eq('id', item.data.id));
+          const query = supabase.from(item.table).delete();
+          if (item.data.id) {
+            ({ error } = await query.eq('id', item.data.id));
+          } else if (item.data.filter) {
+            ({ error } = await query.match(item.data.filter));
+          } else {
+            // Fallback for safety
+            ({ error } = await query.eq('id', item.data.id));
+          }
         }
 
         if (error) throw error;

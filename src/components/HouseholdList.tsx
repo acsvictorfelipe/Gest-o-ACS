@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { syncService } from '../lib/syncService';
 import { useNavigate } from 'react-router-dom';
 import { 
   Home, 
@@ -55,6 +56,23 @@ export function HouseholdList({ user }: { user: any }) {
     if (!deleteConfirm) return;
     setDeleting(true);
     try {
+      if (!navigator.onLine) {
+        // Queue deletions
+        const patientsInH = households.find(h => h.id === deleteConfirm)?.patients || [];
+        if (patientsInH.length > 0) {
+          for (const r of patientsInH) {
+            await syncService.addToQueue('visits', 'DELETE', { filter: { patient_id: r.id } });
+            await syncService.addToQueue('patients', 'DELETE', { id: r.id });
+          }
+        }
+        await syncService.addToQueue('households', 'DELETE', { id: deleteConfirm });
+        
+        setHouseholds(households.filter(h => h.id !== deleteConfirm));
+        setDeleteConfirm(null);
+        alert('Exclusão agendada para sincronização.');
+        return;
+      }
+
       // 1. Get all patients in this household
       const { data: patientsInH } = await supabase
         .from('patients')
