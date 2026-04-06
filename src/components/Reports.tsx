@@ -71,10 +71,10 @@ export function Reports({ user }: { user: any }) {
       
       // Testes Rápidos
       let tests = [];
-      if (g.sifilis && g.sifilis !== 'Não Realizado') tests.push('Sífilis');
-      if (g.hiv && g.hiv !== 'Não Realizado') tests.push('HIV');
-      if (g.hepatiteB && g.hepatiteB !== 'Não Realizado') tests.push('HepB');
-      if (g.hepatiteC && g.hepatiteC !== 'Não Realizado') tests.push('HepC');
+      if (g.sifilis && g.sifilis !== 'NÃO REALIZADO') tests.push('Sífilis');
+      if (g.hiv && g.hiv !== 'NÃO REALIZADO') tests.push('HIV');
+      if (g.hepatiteB && g.hepatiteB !== 'NÃO REALIZADO') tests.push('HepB');
+      if (g.hepatiteC && g.hepatiteC !== 'NÃO REALIZADO') tests.push('HepC');
       if (tests.length > 0) info.push(`Testes: ${tests.join(',')}`);
 
       if (g.dtpa === 'Sim') info.push('dTpa OK');
@@ -129,8 +129,8 @@ export function Reports({ user }: { user: any }) {
       { name: 'Hepatite C', value: g.hepatiteC }
     ];
     
-    const realizados = tests.filter(t => t.value && t.value !== 'Não Realizado').map(t => t.name);
-    const pendentes = tests.filter(t => !t.value || t.value === 'Não Realizado').map(t => t.name);
+    const realizados = tests.filter(t => t.value && t.value !== 'NÃO REALIZADO').map(t => t.name);
+    const pendentes = tests.filter(t => !t.value || t.value === 'NÃO REALIZADO').map(t => t.name);
     
     const vacinasTomadas = g.dtpa === 'Sim' ? ['dTpa'] : [];
     const vacinasPendentes = g.dtpa !== 'Sim' ? ['dTpa'] : [];

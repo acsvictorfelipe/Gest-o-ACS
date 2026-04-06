@@ -88,10 +88,10 @@ export function PatientForm({ user }: { user: any }) {
         visitasAcs: [] as string[],
         visitasAcsDiabetes: [] as string[],
         dtpa: 'Não',
-        sifilis: 'Não',
-        hepatiteB: 'Não',
-        hiv: 'Não',
-        hepatiteC: 'Não',
+        sifilis: 'NÃO REALIZADO',
+        hepatiteB: 'NÃO REALIZADO',
+        hiv: 'NÃO REALIZADO',
+        hepatiteC: 'NÃO REALIZADO',
         puerperioConsulta: '',
         puerperioVisita: '',
         saudeBucal: '',
@@ -1252,9 +1252,8 @@ export function PatientForm({ user }: { user: any }) {
                           })}
                           className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                         >
-                          <option>Não Realizado</option>
-                          <option>Não Reagente</option>
-                          <option>Reagente</option>
+                          <option>NÃO REALIZADO</option>
+                          <option>REALIZADO</option>
                         </select>
                       </div>
                       <div>
@@ -1267,9 +1266,8 @@ export function PatientForm({ user }: { user: any }) {
                           })}
                           className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                         >
-                          <option>Não Realizado</option>
-                          <option>Não Reagente</option>
-                          <option>Reagente</option>
+                          <option>NÃO REALIZADO</option>
+                          <option>REALIZADO</option>
                         </select>
                       </div>
                       <div>
@@ -1282,9 +1280,8 @@ export function PatientForm({ user }: { user: any }) {
                           })}
                           className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                         >
-                          <option>Não Realizado</option>
-                          <option>Não Reagente</option>
-                          <option>Reagente</option>
+                          <option>NÃO REALIZADO</option>
+                          <option>REALIZADO</option>
                         </select>
                       </div>
                       <div>
@@ -1297,9 +1294,8 @@ export function PatientForm({ user }: { user: any }) {
                           })}
                           className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                         >
-                          <option>Não Realizado</option>
-                          <option>Não Reagente</option>
-                          <option>Reagente</option>
+                          <option>NÃO REALIZADO</option>
+                          <option>REALIZADO</option>
                         </select>
                       </div>
                     </div>

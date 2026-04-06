@@ -108,9 +108,10 @@ export function ImportTool({ user }: { user: any }) {
                   formatDate(row['8 Consulta']),
                   formatDate(row['9 Consulta'])
                 ].filter(d => d),
-                hiv: row['HIV'] || 'Não',
-                hepatiteB: row['Hepatite B'] || 'Não',
-                sifilis: row['Sifilis'] || 'Não',
+                hiv: row['HIV'] || 'NÃO REALIZADO',
+                hepatiteB: row['Hepatite B'] || 'NÃO REALIZADO',
+                hepatiteC: row['Hepatite C'] || 'NÃO REALIZADO',
+                sifilis: row['Sifilis'] || 'NÃO REALIZADO',
                 dtpa: row['dTpa'] || 'Não',
                 diabetes: row['Tem Diabete?'] || 'Não',
                 pressaoAlta: row['Tem Pressão Alta?'] || 'Não'
