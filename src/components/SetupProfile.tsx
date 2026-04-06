@@ -6,12 +6,14 @@ import {
   Save, 
   CheckCircle2,
   Loader2,
-  LogOut
+  LogOut,
+  User
 } from 'lucide-react';
 
 export function SetupProfile({ user, onComplete }: { user: any, onComplete: () => void }) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
+    name: user.name || '',
     microarea: user.microarea || '',
     color: user.color || '#00488d'
   });
@@ -26,6 +28,10 @@ export function SetupProfile({ user, onComplete }: { user: any, onComplete: () =
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name) {
+      alert("Por favor, informe seu nome.");
+      return;
+    }
     if (user.role === 'Agente' && !formData.microarea) {
       alert("Por favor, informe sua microárea.");
       return;
@@ -36,6 +42,7 @@ export function SetupProfile({ user, onComplete }: { user: any, onComplete: () =
       const { error } = await supabase
         .from('profiles')
         .update({
+          name: formData.name,
           microarea: formData.microarea,
           color: formData.color
         })
@@ -65,6 +72,21 @@ export function SetupProfile({ user, onComplete }: { user: any, onComplete: () =
 
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Seu Nome Completo</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input 
+                    required
+                    type="text" 
+                    value={formData.name}
+                    onChange={e => setFormData({...formData, name: e.target.value})}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all"
+                    placeholder="Como você quer ser chamado?"
+                  />
+                </div>
+              </div>
+
               {user.role === 'Agente' && (
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Sua Microárea</label>

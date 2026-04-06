@@ -13,7 +13,7 @@ import {
   Loader2
 } from 'lucide-react';
 
-export function Settings({ user }: { user: any }) {
+export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate?: () => void }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   
@@ -67,6 +67,9 @@ export function Settings({ user }: { user: any }) {
       
       // Clear password fields
       setFormData(prev => ({ ...prev, newPassword: '', confirmPassword: '' }));
+      
+      // Refresh parent profile
+      if (onProfileUpdate) onProfileUpdate();
       
     } catch (error: any) {
       console.error("Error updating settings:", error);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useSync } from '../lib/useSync';
 import { 
@@ -28,11 +28,11 @@ import {
 import { SetupProfile } from './SetupProfile';
 
 interface LayoutProps {
-  children: React.ReactNode;
   user: any;
+  onProfileUpdate?: () => void;
 }
 
-export function Layout({ children, user }: LayoutProps) {
+export function Layout({ user, onProfileUpdate }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -40,6 +40,11 @@ export function Layout({ children, user }: LayoutProps) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const { isOnline, pendingCount, isSyncing, sync } = useSync();
   const [showSetup, setShowSetup] = useState(false);
+
+  const handleSetupComplete = () => {
+    setShowSetup(false);
+    if (onProfileUpdate) onProfileUpdate();
+  };
 
   useEffect(() => {
     // Check if setup is needed
@@ -230,10 +235,7 @@ export function Layout({ children, user }: LayoutProps) {
       {showSetup && (
         <SetupProfile 
           user={user} 
-          onComplete={() => {
-            setShowSetup(false);
-            window.location.reload();
-          }} 
+          onComplete={handleSetupComplete} 
         />
       )}
       {/* Desktop Sidebar */}
@@ -356,7 +358,7 @@ export function Layout({ children, user }: LayoutProps) {
 
         <div className="p-4 lg:p-8 flex-1 pb-24 lg:pb-8">
           <div className="max-w-7xl mx-auto">
-            {children}
+            <Outlet />
           </div>
         </div>
 

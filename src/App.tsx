@@ -95,31 +95,25 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-        <Route
-          path="/*"
-          element={
-            user ? (
-              <Layout user={user}>
-                <Routes>
-                  <Route path="/" element={<Dashboard user={user} />} />
-                  <Route path="/pacientes" element={<PatientList user={user} />} />
-                  <Route path="/domicilios" element={<HouseholdList user={user} />} />
-                  <Route path="/configuracoes" element={<Settings user={user} />} />
-                  <Route path="/relatorios" element={<Reports user={user} />} />
-                  <Route path="/historico" element={<VisitHistory user={user} />} />
-                  <Route path="/novo-cadastro" element={<PatientForm user={user} />} />
-                  <Route path="/editar-paciente/:id" element={<PatientForm user={user} />} />
-                  <Route path="/domicilio/:id" element={<HouseholdView user={user} />} />
-                  <Route path="/usuarios" element={<UserManagement currentUser={user} />} />
-                  <Route path="/importar" element={<ImportTool user={user} />} />
-                  <Route path="*" element={<Navigate to="/" />} />
-                </Routes>
-              </Layout>
-            ) : (
-              <Navigate to="/login" />
-            )
-          }
-        />
+        
+        {user ? (
+          <Route element={<Layout user={user} onProfileUpdate={() => fetchProfile(user)} />}>
+            <Route path="/" element={<Dashboard user={user} />} />
+            <Route path="/pacientes" element={<PatientList user={user} />} />
+            <Route path="/domicilios" element={<HouseholdList user={user} />} />
+            <Route path="/configuracoes" element={<Settings user={user} onProfileUpdate={() => fetchProfile(user)} />} />
+            <Route path="/relatorios" element={<Reports user={user} />} />
+            <Route path="/historico" element={<VisitHistory user={user} />} />
+            <Route path="/novo-cadastro" element={<PatientForm user={user} />} />
+            <Route path="/editar-paciente/:id" element={<PatientForm user={user} />} />
+            <Route path="/domicilio/:id" element={<HouseholdView user={user} />} />
+            <Route path="/usuarios" element={<UserManagement currentUser={user} />} />
+            <Route path="/importar" element={<ImportTool user={user} />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Route>
+        ) : (
+          <Route path="*" element={<Navigate to="/login" />} />
+        )}
       </Routes>
     </Router>
   );
