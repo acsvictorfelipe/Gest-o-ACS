@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useSync } from '../lib/useSync';
-import { useSecurity } from './SecurityLock';
 import { 
   LayoutDashboard, 
   Users, 
@@ -23,10 +22,10 @@ import {
   FileUp,
   AlertCircle,
   Baby,
-  Lock,
   Wifi,
   WifiOff
 } from 'lucide-react';
+import { SetupProfile } from './SetupProfile';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -40,7 +39,18 @@ export function Layout({ children, user }: LayoutProps) {
   const [criticalAlerts, setCriticalAlerts] = useState<any[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const { isOnline, pendingCount, isSyncing, sync } = useSync();
-  const { lock } = useSecurity();
+  const [showSetup, setShowSetup] = useState(false);
+
+  useEffect(() => {
+    // Check if setup is needed
+    if (user.role === 'Agente' && (!user.microarea || !user.color)) {
+      setShowSetup(true);
+    } else if (user.role === 'Gestor' && !user.color) {
+      setShowSetup(true);
+    } else {
+      setShowSetup(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     const fetchAlerts = async () => {
@@ -206,9 +216,6 @@ export function Layout({ children, user }: LayoutProps) {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={lock} className="p-2 text-slate-400 hover:text-primary transition-colors" title="Bloquear Tela">
-              <Lock className="w-4 h-4" />
-            </button>
             <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-error transition-colors" title="Sair">
               <LogOut className="w-4 h-4" />
             </button>
@@ -220,6 +227,15 @@ export function Layout({ children, user }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-surface flex flex-col lg:flex-row">
+      {showSetup && (
+        <SetupProfile 
+          user={user} 
+          onComplete={() => {
+            setShowSetup(false);
+            window.location.reload();
+          }} 
+        />
+      )}
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-64 fixed left-0 top-0 h-full bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex-col py-6 z-50">
         <SidebarContent />

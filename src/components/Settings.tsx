@@ -127,19 +127,21 @@ export function Settings({ user }: { user: any }) {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">Microárea de Atuação</label>
-              <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
-                <input 
-                  type="text" 
-                  value={formData.microarea}
-                  onChange={e => setFormData({...formData, microarea: e.target.value})}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-3 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
-                  placeholder="Ex: 001"
-                />
+            {user.role !== 'Administrador' && (
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">Microárea de Atuação</label>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
+                  <input 
+                    type="text" 
+                    value={formData.microarea}
+                    onChange={e => setFormData({...formData, microarea: e.target.value})}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-3 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
+                    placeholder="Ex: 001"
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">Função no Sistema</label>
@@ -164,32 +166,34 @@ export function Settings({ user }: { user: any }) {
               </p>
             </div>
 
-            <div className="md:col-span-2 space-y-4">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1 flex items-center gap-2">
-                <Palette className="w-3 h-3" />
-                Cor de Identificação
-              </label>
-              <div className="flex flex-wrap gap-3">
-                {colors.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setFormData({...formData, color: c.value})}
-                    className={`group relative w-12 h-12 rounded-2xl transition-all ${
-                      formData.color === c.value ? 'ring-4 ring-primary/20 scale-110 shadow-lg' : 'hover:scale-105'
-                    }`}
-                    style={{ backgroundColor: c.value }}
-                    title={c.name}
-                  >
-                    {formData.color === c.value && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <CheckCircle2 className="w-5 h-5 text-white drop-shadow-md" />
-                      </div>
-                    )}
-                  </button>
-                ))}
+            {user.role !== 'Administrador' && (
+              <div className="md:col-span-2 space-y-4">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1 flex items-center gap-2">
+                  <Palette className="w-3 h-3" />
+                  Cor de Identificação
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  {colors.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setFormData({...formData, color: c.value})}
+                      className={`group relative w-12 h-12 rounded-2xl transition-all ${
+                        formData.color === c.value ? 'ring-4 ring-primary/20 scale-110 shadow-lg' : 'hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: c.value }}
+                      title={c.name}
+                    >
+                      {formData.color === c.value && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <CheckCircle2 className="w-5 h-5 text-white drop-shadow-md" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

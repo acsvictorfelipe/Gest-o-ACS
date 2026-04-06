@@ -11,7 +11,9 @@ import {
   MapPin,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Pencil,
+  X as CloseIcon
 } from 'lucide-react';
 
 export function UserManagement({ currentUser }: { currentUser: any }) {
@@ -27,6 +29,14 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
     role: 'Agente',
     color: '#00488d',
     microarea: ''
+  });
+
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    role: '',
+    microarea: '',
+    color: ''
   });
 
   useEffect(() => {
@@ -57,6 +67,7 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
 
     try {
       // 1. Create Auth Record
+      const isSystemAdmin = formData.role === 'Administrador';
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -64,8 +75,8 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
           data: {
             name: formData.name,
             role: formData.role,
-            color: formData.color,
-            microarea: formData.microarea
+            color: isSystemAdmin ? null : formData.color,
+            microarea: isSystemAdmin ? '' : formData.microarea
           }
         }
       });
@@ -81,8 +92,8 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
           .update({
             name: formData.name,
             role: formData.role,
-            color: formData.color,
-            microarea: formData.microarea
+            color: isSystemAdmin ? '#64748b' : formData.color, // Use a neutral color for admins if needed
+            microarea: isSystemAdmin ? '' : formData.microarea
           })
           .eq('id', authData.user.id);
         
@@ -123,6 +134,44 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
     } catch (error) {
       console.error("Error deleting user profile:", error);
       setMessage({ type: 'error', text: 'Erro ao remover perfil.' });
+    }
+  };
+
+  const handleEditUser = (user: any) => {
+    setEditingUser(user);
+    setEditFormData({
+      name: user.name || '',
+      role: user.role || 'Agente',
+      microarea: user.microarea || '',
+      color: user.color || '#00488d'
+    });
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const isSystemAdmin = editFormData.role === 'Administrador';
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: editFormData.name,
+          role: editFormData.role,
+          microarea: isSystemAdmin ? '' : editFormData.microarea,
+          color: isSystemAdmin ? '#64748b' : editFormData.color
+        })
+        .eq('id', editingUser.id);
+
+      if (error) throw error;
+      
+      setMessage({ type: 'success', text: 'Usuário atualizado com sucesso.' });
+      setEditingUser(null);
+      fetchUsers();
+    } catch (error) {
+      console.error("Error updating user:", error);
+      setMessage({ type: 'error', text: 'Erro ao atualizar usuário.' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -207,54 +256,17 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Função</label>
-                  <select 
-                    value={formData.role}
-                    onChange={e => setFormData({...formData, role: e.target.value})}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 px-3 text-sm focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="Agente">Agente (ACS)</option>
-                    <option value="Gestor">Gestor de Área</option>
-                    <option value="Administrador">Administrador</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Microárea</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input 
-                      type="text" 
-                      value={formData.microarea}
-                      onChange={e => setFormData({...formData, microarea: e.target.value})}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 pl-10 text-sm focus:ring-2 focus:ring-primary/20"
-                      placeholder="Ex: 001"
-                    />
-                  </div>
-                </div>
-              </div>
-
               <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Cor da Área</label>
-                <div className="flex flex-wrap gap-3">
-                  {[
-                    { color: '#00488d', label: 'Azul' },
-                    { color: '#eab308', label: 'Amarelo' },
-                    { color: '#64748b', label: 'Cinza' },
-                    { color: '#db2777', label: 'Rosa' },
-                    { color: '#78350f', label: 'Marrom' }
-                  ].map((c) => (
-                    <button
-                      key={c.color}
-                      type="button"
-                      onClick={() => setFormData({...formData, color: c.color})}
-                      className={`w-8 h-8 rounded-full transition-all ${formData.color === c.color ? 'ring-4 ring-primary/20 scale-110' : 'opacity-50 hover:opacity-100'}`}
-                      style={{ backgroundColor: c.color }}
-                      title={c.label}
-                    />
-                  ))}
-                </div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Função</label>
+                <select 
+                  value={formData.role}
+                  onChange={e => setFormData({...formData, role: e.target.value})}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 px-3 text-sm focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="Agente">Agente (ACS)</option>
+                  <option value="Gestor">Gestor de Área</option>
+                  <option value="Administrador">Administrador</option>
+                </select>
               </div>
             </div>
 
@@ -321,13 +333,22 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                           </div>
                         </td>
                         <td className="px-8 py-5">
-                          <button 
-                            onClick={() => handleDeleteUser(u.id)}
-                            className="p-2 text-slate-300 hover:text-red-500 transition-colors"
-                            title="Excluir Perfil"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={() => handleEditUser(u)}
+                              className="p-2 text-slate-300 hover:text-primary transition-colors"
+                              title="Editar Perfil"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteUser(u.id)}
+                              className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                              title="Excluir Perfil"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -338,6 +359,93 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
           </div>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {editingUser && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-primary font-headline">Editar Usuário</h3>
+              <button onClick={() => setEditingUser(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                <CloseIcon className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateUser} className="p-8 space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Nome Completo</label>
+                  <input 
+                    required
+                    type="text" 
+                    value={editFormData.name}
+                    onChange={e => setEditFormData({...editFormData, name: e.target.value})}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Função</label>
+                    <select 
+                      value={editFormData.role}
+                      onChange={e => setEditFormData({...editFormData, role: e.target.value})}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 px-3 text-sm focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="Agente">Agente (ACS)</option>
+                      <option value="Gestor">Gestor de Área</option>
+                      <option value="Administrador">Administrador</option>
+                    </select>
+                  </div>
+                  {editFormData.role !== 'Administrador' && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Microárea</label>
+                      <input 
+                        type="text" 
+                        value={editFormData.microarea}
+                        onChange={e => setEditFormData({...editFormData, microarea: e.target.value})}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20"
+                        placeholder="Ex: 001"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {editFormData.role !== 'Administrador' && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Cor da Área</label>
+                    <div className="flex flex-wrap gap-3">
+                      {[
+                        { color: '#00488d', label: 'Azul' },
+                        { color: '#eab308', label: 'Amarelo' },
+                        { color: '#64748b', label: 'Cinza' },
+                        { color: '#db2777', label: 'Rosa' },
+                        { color: '#78350f', label: 'Marrom' }
+                      ].map((c) => (
+                        <button
+                          key={c.color}
+                          type="button"
+                          onClick={() => setEditFormData({...editFormData, color: c.color})}
+                          className={`w-8 h-8 rounded-full transition-all ${editFormData.color === c.color ? 'ring-4 ring-primary/20 scale-110' : 'opacity-50 hover:opacity-100'}`}
+                          style={{ backgroundColor: c.color }}
+                          title={c.label}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <button 
+                type="submit"
+                disabled={submitting}
+                className="w-full py-4 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Salvar Alterações'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

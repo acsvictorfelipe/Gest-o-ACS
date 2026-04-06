@@ -146,7 +146,7 @@ export function Dashboard({ user }: { user: any }) {
     <div className="space-y-10 animate-in fade-in duration-500">
       <section>
         <h3 className="text-3xl font-bold tracking-tight text-on-surface font-headline">
-          Bom dia, {user.role === 'Administrador' ? 'Administrador' : user.role === 'Gestor' ? 'Gestor' : 'Agente'} {user.name?.split(' ')[0]}
+          Bom dia, {user.role === 'Administrador' ? 'Administrador' : user.role === 'Gestor' ? 'Gestor' : 'ACS'} {user.name?.split(' ')[0]}
         </h3>
         <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">
           {user.role === 'Administrador' ? (
