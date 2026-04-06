@@ -46,7 +46,7 @@ export function PatientList({ user }: { user: any }) {
 
   useEffect(() => {
     const fetchPatients = async () => {
-      if (!user.microarea && user.role !== 'Administrador') return;
+      if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
       setLoading(true);
       try {
         let query = supabase
@@ -392,26 +392,30 @@ export function PatientList({ user }: { user: any }) {
                       </td>
                       <td className="px-8 py-5">
                         <div className="flex items-center gap-2">
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/editar-paciente/${p.id}`);
-                            }}
-                            className="p-2 text-slate-300 dark:text-slate-600 hover:text-primary transition-colors"
-                            title="Editar Paciente"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteConfirm(p.id);
-                            }}
-                            className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors"
-                            title="Excluir Paciente"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {(user.role === 'Administrador' || (user.role === 'Agente' && p.agent_id === user.id)) && (
+                            <>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/editar-paciente/${p.id}`);
+                                }}
+                                className="p-2 text-slate-300 dark:text-slate-600 hover:text-primary transition-colors"
+                                title="Editar Paciente"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteConfirm(p.id);
+                                }}
+                                className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors"
+                                title="Excluir Paciente"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
                           <button className="p-2 text-slate-300 dark:text-slate-600 group-hover:text-primary transition-colors">
                             <ChevronRight className="w-5 h-5" />
                           </button>

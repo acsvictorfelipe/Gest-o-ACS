@@ -30,8 +30,8 @@ export function Dashboard({ user }: { user: any }) {
 
   useEffect(() => {
     const fetchData = async () => {
-      // Admins might not have a microarea, but they should see all data
-      if (!user.microarea && user.role !== 'Administrador') return;
+      // Admins and Gestors might not have a microarea, but they should see data
+      if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
       
       try {
         let query = supabase.from('patients').select('*');

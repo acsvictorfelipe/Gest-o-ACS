@@ -58,7 +58,7 @@ export default function App() {
       if (data) {
         let updatedProfile = data;
         // Bootstrap: Promote specific email to Administrador
-        if (supabaseUser.email === 'acsvictorfelipe@gmail.com' && data.role !== 'Administrador') {
+        if (supabaseUser.email === 'victorfelipe2012@gmail.com' && data.role !== 'Administrador') {
           const { data: promotedData, error: promoError } = await supabase
             .from('profiles')
             .update({ role: 'Administrador' })

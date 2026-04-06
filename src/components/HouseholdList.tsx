@@ -24,7 +24,7 @@ export function HouseholdList({ user }: { user: any }) {
 
   useEffect(() => {
     const fetchHouseholds = async () => {
-      if (!user.microarea && user.role !== 'Administrador') return;
+      if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
       setLoading(true);
       try {
         let query = supabase
@@ -171,16 +171,18 @@ export function HouseholdList({ user }: { user: any }) {
                     <Home className="w-6 h-6" />
                   </div>
                   <div className="flex items-center gap-2">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteConfirm(h.id);
-                      }}
-                      className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors"
-                      title="Excluir Domicílio"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {(user.role === 'Administrador' || (user.role === 'Agente' && h.agent_id === user.id)) && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirm(h.id);
+                        }}
+                        className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors"
+                        title="Excluir Domicílio"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                     <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-primary transition-colors" />
                   </div>
                 </div>
