@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom';
 
 export function Dashboard({ user }: { user: any }) {
   const [stats, setStats] = useState({
+    totalPatients: 0,
     gestantes: 0,
     criancas: 0,
     hipertensos: 0,
@@ -34,7 +35,7 @@ export function Dashboard({ user }: { user: any }) {
       if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
       
       try {
-        let query = supabase.from('patients').select('*');
+        let query = supabase.from('patients').select('*').range(0, 4999);
         
         if (user.role === 'Administrador') {
           // No filters for Admin
@@ -48,7 +49,7 @@ export function Dashboard({ user }: { user: any }) {
         
         if (error) throw error;
 
-        const newStats = { gestantes: 0, criancas: 0, acamados: 0, idosos: 0, hipertensos: 0, diabeticos: 0, pendingVisits: 0, lateVaccines: 0, childVisitAlerts: 0 };
+        const newStats = { totalPatients: patients?.length || 0, gestantes: 0, criancas: 0, acamados: 0, idosos: 0, hipertensos: 0, diabeticos: 0, pendingVisits: 0, lateVaccines: 0, childVisitAlerts: 0 };
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         
@@ -134,12 +135,12 @@ export function Dashboard({ user }: { user: any }) {
   }, [user.microarea, user.id, user.role, user.color]);
 
   const statCards = [
-    { label: 'Gestantes', value: stats.gestantes, icon: Baby, color: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400', trend: '+2 este mês' },
-    { label: 'Crianças < 2a', value: stats.criancas, icon: Stethoscope, color: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400', trend: 'Acompanhamento regular' },
-    { label: 'Acamados', value: stats.acamados, icon: Activity, color: 'bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400', trend: 'Acompanhamento regular' },
-    { label: 'Idosos', value: stats.idosos, icon: HeartPulse, color: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400', trend: '8 pendentes' },
-    { label: 'Hipertensos', value: stats.hipertensos, icon: Activity, color: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400', trend: 'Acompanhamento' },
-    { label: 'Diabéticos', value: stats.diabeticos, icon: HeartPulse, color: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400', trend: 'Acompanhamento' },
+    { label: 'Gestantes', value: stats.gestantes, icon: Baby, color: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' },
+    { label: 'Crianças', value: stats.criancas, icon: Stethoscope, color: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' },
+    { label: 'Acamados', value: stats.acamados, icon: Activity, color: 'bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400' },
+    { label: 'Idosos', value: stats.idosos, icon: HeartPulse, color: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' },
+    { label: 'Hipertensos', value: stats.hipertensos, icon: Activity, color: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' },
+    { label: 'Diabéticos', value: stats.diabeticos, icon: HeartPulse, color: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' },
   ];
 
   return (
@@ -171,26 +172,36 @@ export function Dashboard({ user }: { user: any }) {
       </section>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 lg:gap-6">
-        {statCards.map((card, i) => (
-          <Link 
-            key={i} 
-            to={`/pacientes?filter=${card.label.toLowerCase().replace(/ < 2a/g, '').replace(/ /g, '_')}`}
-            className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group cursor-pointer"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className={`p-3 rounded-xl ${card.color}`}>
-                <card.icon className="w-6 h-6" />
-              </div>
-              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{card.label}</span>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <div className="bg-white dark:bg-slate-900 px-6 py-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center gap-4">
+            <div className="p-2 bg-primary/10 text-primary rounded-lg">
+              <TrendingUp className="w-5 h-5" />
             </div>
-            <p className="text-4xl font-extrabold text-on-surface">{card.value}</p>
-            <p className="text-xs font-semibold mt-2 flex items-center gap-1 text-slate-400 dark:text-slate-500">
-              <TrendingUp className="w-3 h-3" />
-              {card.trend}
-            </p>
-          </Link>
-        ))}
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total de Pacientes</p>
+              <p className="text-2xl font-black text-on-surface">{stats.totalPatients}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 lg:gap-6">
+          {statCards.map((card, i) => (
+            <Link 
+              key={i} 
+              to={`/pacientes?filter=${card.label.toLowerCase().replace(/ /g, '_')}`}
+              className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group cursor-pointer"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <div className={`p-3 rounded-xl ${card.color}`}>
+                  <card.icon className="w-6 h-6" />
+                </div>
+              </div>
+              <p className="text-3xl font-extrabold text-on-surface">{card.value}</p>
+              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">{card.label}</p>
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

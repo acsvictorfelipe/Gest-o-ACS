@@ -39,7 +39,7 @@ export function Reports({ user }: { user: any }) {
           query = query.eq('agent_id', user.id);
         }
 
-        const { data, error } = await query;
+        const { data, error } = await query.range(0, 4999);
         if (error) throw error;
         setPatients(data || []);
       } catch (error) {

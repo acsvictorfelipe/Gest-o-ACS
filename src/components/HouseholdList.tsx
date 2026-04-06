@@ -40,7 +40,7 @@ export function HouseholdList({ user }: { user: any }) {
           query = query.eq('agent_id', user.id);
         }
 
-        const { data, error } = await query;
+        const { data, error } = await query.range(0, 4999);
         if (error) throw error;
         setHouseholds(data || []);
       } catch (error) {
@@ -129,7 +129,12 @@ export function HouseholdList({ user }: { user: any }) {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-extrabold text-primary tracking-tight font-headline">Gestão de Domicílios</h2>
-          <p className="text-slate-500 mt-1 font-medium">Visualize e gerencie as unidades familiares da sua microárea.</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-slate-500 font-medium">Visualize e gerencie as unidades familiares da sua microárea.</p>
+            <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-bold rounded-full border border-slate-200 dark:border-slate-700">
+              {households.length} Total
+            </span>
+          </div>
         </div>
         <button 
           onClick={() => navigate('/novo-cadastro')}
