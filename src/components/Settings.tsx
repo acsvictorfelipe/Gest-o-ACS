@@ -122,7 +122,7 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                 <input 
                   type="text" 
-                  value={formData.name}
+                  value={formData.name || ''}
                   onChange={e => setFormData({...formData, name: e.target.value})}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-3 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
                   placeholder="Seu nome completo"
@@ -137,7 +137,7 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
                   <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                   <input 
                     type="text" 
-                    value={formData.microarea}
+                    value={formData.microarea || ''}
                     onChange={e => setFormData({...formData, microarea: e.target.value})}
                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-3 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
                     placeholder="Ex: 001"
@@ -216,7 +216,7 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                 <input 
                   type="email" 
-                  value={formData.email}
+                  value={formData.email || ''}
                   onChange={e => setFormData({...formData, email: e.target.value})}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-3 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
                   placeholder="seu@email.com"
@@ -230,7 +230,7 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                 <input 
                   type="password" 
-                  value={formData.newPassword}
+                  value={formData.newPassword || ''}
                   onChange={e => setFormData({...formData, newPassword: e.target.value})}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-3 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
                   placeholder="Deixe em branco para manter"
@@ -244,7 +244,7 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                 <input 
                   type="password" 
-                  value={formData.confirmPassword}
+                  value={formData.confirmPassword || ''}
                   onChange={e => setFormData({...formData, confirmPassword: e.target.value})}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-3 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
                   placeholder="Repita a nova senha"

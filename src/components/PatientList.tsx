@@ -89,7 +89,12 @@ export function PatientList({ user }: { user: any }) {
       const isChild = p.categories?.includes('Criança');
       const clinical = p.clinical_data || {};
       const vaccines = clinical.crianca?.vacinas || {};
-      const hasEmptyVaccine = Object.values(vaccines).some(v => !v);
+      const hasEmptyVaccine = Object.entries(vaccines).some(([key, v]) => {
+        // Ignore 4-year vaccines
+        if (key === 'dtp4y' || key === 'vop4y') return false;
+        // Check if not taken ('Sim' or legacy date string)
+        return v !== 'Sim' && !(typeof v === 'string' && v.length > 5);
+      });
       return matchesSearch && isChild && hasEmptyVaccine;
     }
 

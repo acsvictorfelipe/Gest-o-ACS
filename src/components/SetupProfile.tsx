@@ -79,7 +79,7 @@ export function SetupProfile({ user, onComplete }: { user: any, onComplete: () =
                   <input 
                     required
                     type="text" 
-                    value={formData.name}
+                    value={formData.name || ''}
                     onChange={e => setFormData({...formData, name: e.target.value})}
                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all"
                     placeholder="Como você quer ser chamado?"
@@ -95,7 +95,7 @@ export function SetupProfile({ user, onComplete }: { user: any, onComplete: () =
                     <input 
                       required
                       type="text" 
-                      value={formData.microarea}
+                      value={formData.microarea || ''}
                       onChange={e => setFormData({...formData, microarea: e.target.value})}
                       className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all"
                       placeholder="Ex: 001"

@@ -152,7 +152,9 @@ export function Reports({ user }: { user: any }) {
     const consultas = c.consultas?.filter((v: string) => v).length || 0;
     
     const vacinas = c.vacinas || {};
-    const tomadasKeys = Object.entries(vacinas).filter(([_, v]) => v).map(([k, _]) => k);
+    const tomadasKeys = Object.entries(vacinas)
+      .filter(([_, v]) => v === 'Sim' || (typeof v === 'string' && v.length > 5)) // Handle 'Sim' or legacy date strings
+      .map(([k, _]) => k);
     
     const vaccineLabels: Record<string, string> = {
       penta2m: 'Penta 2 Meses',
@@ -174,8 +176,13 @@ export function Reports({ user }: { user: any }) {
     };
 
     const tomadas = tomadasKeys.map(k => vaccineLabels[k] || k);
-    const todas = Object.values(vaccineLabels);
-    const pendentes = todas.filter(v => !tomadas.includes(v));
+    
+    // Filter out vaccines for 4 years old (dtp4y and vop4y)
+    const todasAte2Anos = Object.entries(vaccineLabels)
+      .filter(([key, _]) => key !== 'dtp4y' && key !== 'vop4y')
+      .map(([_, label]) => label);
+      
+    const pendentes = todasAte2Anos.filter(v => !tomadas.includes(v));
     
     return { consultas, tomadas, pendentes };
   };

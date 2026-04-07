@@ -77,9 +77,14 @@ export function Dashboard({ user }: { user: any }) {
                 newStats.childVisitAlerts++;
               }
             }
-            // Simple check for late vaccines: if any vaccine field is empty in a child
+            // Simple check for late vaccines: if any vaccine field (up to 2 years) is empty or 'Não'
             const vaccines = clinical.crianca?.vacinas || {};
-            const hasEmptyVaccine = Object.values(vaccines).some(v => !v);
+            const hasEmptyVaccine = Object.entries(vaccines).some(([key, v]) => {
+              // Ignore 4-year vaccines
+              if (key === 'dtp4y' || key === 'vop4y') return false;
+              // Check if not taken ('Sim' or legacy date string)
+              return v !== 'Sim' && !(typeof v === 'string' && v.length > 5);
+            });
             if (hasEmptyVaccine) {
               newStats.lateVaccines++;
             }
@@ -89,7 +94,6 @@ export function Dashboard({ user }: { user: any }) {
             if (clinical.gestante?.diabetes === 'Sim') newStats.diabeticos++;
             if (clinical.gestante?.pressaoAlta === 'Sim') newStats.hipertensos++;
           }
-          if (categories.includes('Criança')) newStats.criancas++;
           if (categories.includes('AcamadoDomiciliado')) {
             newStats.acamados++;
             if (clinical.acamadodomiciliado?.diabetes === 'Sim') newStats.diabeticos++;

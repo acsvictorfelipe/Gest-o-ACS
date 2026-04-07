@@ -700,7 +700,7 @@ export function PatientForm({ user }: { user: any }) {
               </label>
               <input 
                 type="text" 
-                value={formData.isFamilyResponsible ? formData.cns : formData.responsibleCns}
+                value={(formData.isFamilyResponsible ? formData.cns : formData.responsibleCns) || ''}
                 onChange={e => setFormData({...formData, responsibleCns: e.target.value})}
                 disabled={formData.isFamilyResponsible}
                 className={`w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20 ${formData.isFamilyResponsible ? 'opacity-50 cursor-not-allowed' : ''}`} 
@@ -735,7 +735,7 @@ export function PatientForm({ user }: { user: any }) {
               </div>
               <input 
                 type="text" 
-                value={formData.name}
+                value={formData.name || ''}
                 onChange={e => setFormData({...formData, name: e.target.value})}
                 className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
                 placeholder="Nome do paciente" 
@@ -745,7 +745,7 @@ export function PatientForm({ user }: { user: any }) {
               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">SUS do Cidadão</label>
               <input 
                 type="text" 
-                value={formData.cns}
+                value={formData.cns || ''}
                 onChange={e => setFormData({...formData, cns: e.target.value})}
                 className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
                 placeholder="000 0000 0000 0000" 
@@ -777,7 +777,7 @@ export function PatientForm({ user }: { user: any }) {
               </div>
               <input 
                 type="date" 
-                value={formData.birthDate}
+                value={formData.birthDate || ''}
                 onChange={e => setFormData({...formData, birthDate: e.target.value})}
                 className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
               />
@@ -787,7 +787,7 @@ export function PatientForm({ user }: { user: any }) {
               <input 
                 disabled
                 type="text" 
-                value={calculateAge(formData.birthDate)}
+                value={calculateAge(formData.birthDate) || ''}
                 className="w-full bg-slate-100 border-none rounded-xl p-3 text-sm text-slate-500" 
               />
             </div>
@@ -795,7 +795,7 @@ export function PatientForm({ user }: { user: any }) {
               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Data da Visita</label>
               <input 
                 type="date" 
-                value={formData.visitDate}
+                value={formData.visitDate || ''}
                 onChange={e => setFormData({...formData, visitDate: e.target.value})}
                 className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
               />
@@ -818,7 +818,7 @@ export function PatientForm({ user }: { user: any }) {
               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Resumo da Visita</label>
               <input 
                 type="text" 
-                value={formData.visitSummary}
+                value={formData.visitSummary || ''}
                 onChange={e => setFormData({...formData, visitSummary: e.target.value})}
                 className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
                 placeholder="Ex: Paciente estável, orientações sobre medicação..."
@@ -828,7 +828,7 @@ export function PatientForm({ user }: { user: any }) {
               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Endereço</label>
               <input 
                 type="text" 
-                value={formData.address}
+                value={formData.address || ''}
                 onChange={e => setFormData({...formData, address: e.target.value})}
                 className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
               />
@@ -837,7 +837,7 @@ export function PatientForm({ user }: { user: any }) {
               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Nº</label>
               <input 
                 type="text" 
-                value={formData.number}
+                value={formData.number || ''}
                 onChange={e => setFormData({...formData, number: e.target.value})}
                 className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
               />
@@ -846,7 +846,7 @@ export function PatientForm({ user }: { user: any }) {
               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Complemento</label>
               <input 
                 type="text" 
-                value={formData.complement}
+                value={formData.complement || ''}
                 onChange={e => setFormData({...formData, complement: e.target.value})}
                 className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
               />
@@ -870,7 +870,7 @@ export function PatientForm({ user }: { user: any }) {
               </div>
               <input 
                 type="text" 
-                value={formData.contact}
+                value={formData.contact || ''}
                 onChange={e => setFormData({...formData, contact: e.target.value})}
                 className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
                 placeholder="(00) 00000-0000"
@@ -895,7 +895,7 @@ export function PatientForm({ user }: { user: any }) {
               </div>
               <input 
                 type="text" 
-                value={formData.messageContact}
+                value={formData.messageContact || ''}
                 onChange={e => setFormData({...formData, messageContact: e.target.value})}
                 className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
               />
@@ -925,7 +925,7 @@ export function PatientForm({ user }: { user: any }) {
               <div key={index} className="relative group">
                 <input 
                   type="date" 
-                  value={date}
+                  value={date || ''}
                   onChange={e => updateDateInList('root', 'visitasGerais', index, e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
                 />
@@ -1513,8 +1513,7 @@ export function PatientForm({ user }: { user: any }) {
                           <label className="block text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">
                             {vaccineLabels[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                           </label>
-                          <input 
-                            type="date" 
+                          <select 
                             value={value}
                             onChange={e => setFormData({
                               ...formData, 
@@ -1527,7 +1526,11 @@ export function PatientForm({ user }: { user: any }) {
                               }
                             })}
                             className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-lg p-2 text-[10px] text-on-surface"
-                          />
+                          >
+                            <option value="">Selecione</option>
+                            <option value="Não">Não</option>
+                            <option value="Sim">Sim</option>
+                          </select>
                         </div>
                       ))}
                     </div>
