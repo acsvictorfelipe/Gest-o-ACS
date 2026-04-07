@@ -119,9 +119,9 @@ export function HouseholdList({ user }: { user: any }) {
       h.responsible_cns?.includes(searchTerm) ||
       h.address?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const isImportedPlaceholder = h.responsible_name === 'Responsável Importado';
+    const isPlaceholder = h.responsible_name === 'Responsável Importado' || h.responsible_name === 'Responsável não cadastrado';
     
-    return matchesSearch && !isImportedPlaceholder;
+    return matchesSearch && !isPlaceholder;
   });
 
   return (
@@ -132,7 +132,7 @@ export function HouseholdList({ user }: { user: any }) {
           <div className="flex items-center gap-3 mt-1">
             <p className="text-slate-500 font-medium">Visualize e gerencie as unidades familiares da sua microárea.</p>
             <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-bold rounded-full border border-slate-200 dark:border-slate-700">
-              {households.length} Total
+              {filteredHouseholds.length} Total
             </span>
           </div>
         </div>

@@ -48,6 +48,12 @@ export function VisitHistory({ user }: { user: any }) {
         const { data, error } = await query;
         if (error) throw error;
         setVisits(data || []);
+        
+        // Handle search from state
+        const locationState = window.history.state?.usr;
+        if (locationState?.search) {
+          setSearchTerm(locationState.search);
+        }
       } catch (error) {
         console.error("Error fetching visits:", error);
       } finally {

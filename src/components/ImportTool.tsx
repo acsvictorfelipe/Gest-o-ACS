@@ -63,24 +63,34 @@ export function ImportTool({ user }: { user: any }) {
 
             if (existingH) {
               householdId = existingH.id;
+              // If this row is the responsible, update the name (in case it was a placeholder)
+              if (isResp) {
+                await supabase.from('households').update({ responsible_name: name }).eq('id', householdId);
+              }
             } else {
-              const { data: newH, error: hError } = await supabase
-                .from('households')
-                .insert([{
-                  address,
-                  number,
-                  complement,
-                  microarea: user.microarea || '000',
-                  area_color: user.color || '#00488d',
-                  agent_id: user.id,
-                  responsible_cns: respCns,
-                  responsible_name: isResp ? name : 'Responsável Importado'
-                }])
-                .select()
-                .single();
-              
-              if (hError) throw hError;
-              householdId = newH.id;
+              // If not responsible and household doesn't exist, don't create it automatically
+              if (isResp) {
+                const { data: newH, error: hError } = await supabase
+                  .from('households')
+                  .insert([{
+                    address,
+                    number,
+                    complement,
+                    microarea: user.microarea || '000',
+                    area_color: user.color || '#00488d',
+                    agent_id: user.id,
+                    responsible_cns: respCns,
+                    responsible_name: name
+                  }])
+                  .select()
+                  .single();
+                
+                if (hError) throw hError;
+                householdId = newH.id;
+              } else {
+                // Patient without household (responsible not found)
+                householdId = null;
+              }
             }
 
             // 2. Map Categories
@@ -94,6 +104,12 @@ export function ImportTool({ user }: { user: any }) {
             
             // 3. Map Clinical Data
             const clinicalData: any = {
+              chronic: {
+                diabetes: row['Tem Diabete?'] || 'Não',
+                hipertensao: row['Tem Hipertensão?'] || row['Tem Pressão Alta?'] || 'Não',
+                diabetesData: { avaliacaoPes: 'Não', hemoglobinaGlicada: 'Não', visitaAcs1: '', visitaAcs2: '' },
+                hipertensaoData: { avaliacaoPes: 'Não', visitaAcs1: '', visitaAcs2: '' }
+              },
               gestante: {
                 dum: formatDate(row['DUM']),
                 dpp: formatDate(row['DPP']),
@@ -114,7 +130,7 @@ export function ImportTool({ user }: { user: any }) {
                 sifilis: row['Sifilis'] || 'NÃO REALIZADO',
                 dtpa: row['dTpa'] || 'Não',
                 diabetes: row['Tem Diabete?'] || 'Não',
-                pressaoAlta: row['Tem Pressão Alta?'] || 'Não'
+                hipertensao: row['Tem Hipertensão?'] || row['Tem Pressão Alta?'] || 'Não'
               },
               crianca: {
                 visita30dias: formatDate(row['Visita30dias']),
@@ -133,15 +149,15 @@ export function ImportTool({ user }: { user: any }) {
                 curativos: row['CurativosdeFeridasAbertas'] || 'Não',
                 cuidador: row['Cuidador Presente'] || 'Não',
                 diabetes: row['Tem Diabete?'] || 'Não',
-                pressaoAlta: row['Tem Pressão Alta?'] || 'Não'
+                hipertensao: row['Tem Hipertensão?'] || row['Tem Pressão Alta?'] || 'Não'
               },
               adulto: {
                 diabetes: row['Tem Diabete?'] || 'Não',
-                pressaoAlta: row['Tem Pressão Alta?'] || 'Não'
+                hipertensao: row['Tem Hipertensão?'] || row['Tem Pressão Alta?'] || 'Não'
               },
               idoso: {
                 diabetes: row['Tem Diabete?'] || 'Não',
-                pressaoAlta: row['Tem Pressão Alta?'] || 'Não'
+                hipertensao: row['Tem Hipertensão?'] || row['Tem Pressão Alta?'] || 'Não'
               }
             };
 

@@ -282,7 +282,12 @@ export function HouseholdView({ user }: { user: any }) {
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-xl font-bold font-headline text-on-surface">Histórico de Visitas</h3>
-              <button className="text-primary text-sm font-bold hover:underline">Ver tudo</button>
+              <button 
+                onClick={() => navigate('/historico')}
+                className="text-primary text-sm font-bold hover:underline"
+              >
+                Ver tudo
+              </button>
             </div>
             <div className="space-y-8">
               {visits.length > 0 ? visits.map((v, i) => (

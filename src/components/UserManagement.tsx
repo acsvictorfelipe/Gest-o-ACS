@@ -218,7 +218,7 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                   <input 
                     required
                     type="text" 
-                    value={formData.name}
+                    value={formData.name || ''}
                     onChange={e => setFormData({...formData, name: e.target.value})}
                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 pl-10 text-sm focus:ring-2 focus:ring-primary/20"
                     placeholder="Nome do Agente"
@@ -233,7 +233,7 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                   <input 
                     required
                     type="email" 
-                    value={formData.email}
+                    value={formData.email || ''}
                     onChange={e => setFormData({...formData, email: e.target.value})}
                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 pl-10 text-sm focus:ring-2 focus:ring-primary/20"
                     placeholder="agente@gestaoacs.com"
@@ -248,7 +248,7 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                   <input 
                     required
                     type="password" 
-                    value={formData.password}
+                    value={formData.password || ''}
                     onChange={e => setFormData({...formData, password: e.target.value})}
                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 pl-10 text-sm focus:ring-2 focus:ring-primary/20"
                     placeholder="Mínimo 6 caracteres"
@@ -259,7 +259,7 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
               <div className="space-y-1">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Função</label>
                 <select 
-                  value={formData.role}
+                  value={formData.role || 'Agente'}
                   onChange={e => setFormData({...formData, role: e.target.value})}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 px-3 text-sm focus:ring-2 focus:ring-primary/20"
                 >
@@ -377,7 +377,7 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                   <input 
                     required
                     type="text" 
-                    value={editFormData.name}
+                    value={editFormData.name || ''}
                     onChange={e => setEditFormData({...editFormData, name: e.target.value})}
                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20"
                   />
@@ -387,7 +387,7 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Função</label>
                     <select 
-                      value={editFormData.role}
+                      value={editFormData.role || 'Agente'}
                       onChange={e => setEditFormData({...editFormData, role: e.target.value})}
                       className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 px-3 text-sm focus:ring-2 focus:ring-primary/20"
                     >
@@ -401,7 +401,7 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                       <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Microárea</label>
                       <input 
                         type="text" 
-                        value={editFormData.microarea}
+                        value={editFormData.microarea || ''}
                         onChange={e => setEditFormData({...editFormData, microarea: e.target.value})}
                         className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20"
                         placeholder="Ex: 001"

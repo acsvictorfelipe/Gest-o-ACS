@@ -9,7 +9,11 @@ import {
   Calendar,
   ChevronRight,
   TrendingUp,
-  Plus
+  Plus,
+  Smile,
+  Bed,
+  Droplets,
+  Heart
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -89,25 +93,28 @@ export function Dashboard({ user }: { user: any }) {
               newStats.lateVaccines++;
             }
           }
-          if (categories.includes('Gestante')) {
-            newStats.gestantes++;
-            if (clinical.gestante?.diabetes === 'Sim') newStats.diabeticos++;
-            if (clinical.gestante?.pressaoAlta === 'Sim') newStats.hipertensos++;
-          }
-          if (categories.includes('AcamadoDomiciliado')) {
-            newStats.acamados++;
-            if (clinical.acamadodomiciliado?.diabetes === 'Sim') newStats.diabeticos++;
-            if (clinical.acamadodomiciliado?.pressaoAlta === 'Sim') newStats.hipertensos++;
-          }
-          if (categories.includes('Idoso')) {
-            newStats.idosos++;
-            if (clinical.idoso?.diabetes === 'Sim') newStats.diabeticos++;
-            if (clinical.idoso?.pressaoAlta === 'Sim') newStats.hipertensos++;
-          }
-          if (categories.includes('Adulto')) {
-            if (clinical.adulto?.diabetes === 'Sim') newStats.diabeticos++;
-            if (clinical.adulto?.pressaoAlta === 'Sim') newStats.hipertensos++;
-          }
+          const isDiabetico = clinical.chronic?.diabetes === 'Sim' || 
+                              clinical.gestante?.diabetes === 'Sim' || 
+                              clinical.acamadodomiciliado?.diabetes === 'Sim' || 
+                              clinical.idoso?.diabetes === 'Sim' || 
+                              clinical.adulto?.diabetes === 'Sim';
+          
+          const isHipertenso = clinical.chronic?.hipertensao === 'Sim' || 
+                               clinical.gestante?.hipertensao === 'Sim' || 
+                               clinical.gestante?.pressaoAlta === 'Sim' || 
+                               clinical.acamadodomiciliado?.hipertensao === 'Sim' || 
+                               clinical.acamadodomiciliado?.pressaoAlta === 'Sim' || 
+                               clinical.idoso?.hipertensao === 'Sim' || 
+                               clinical.idoso?.pressaoAlta === 'Sim' || 
+                               clinical.adulto?.hipertensao === 'Sim' || 
+                               clinical.adulto?.pressaoAlta === 'Sim';
+
+          if (isDiabetico) newStats.diabeticos++;
+          if (isHipertenso) newStats.hipertensos++;
+
+          if (categories.includes('Gestante')) newStats.gestantes++;
+          if (categories.includes('AcamadoDomiciliado')) newStats.acamados++;
+          if (categories.includes('Idoso')) newStats.idosos++;
         });
         setStats(newStats);
 
@@ -140,11 +147,11 @@ export function Dashboard({ user }: { user: any }) {
 
   const statCards = [
     { label: 'Gestantes', value: stats.gestantes, icon: Baby, color: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' },
-    { label: 'Crianças', value: stats.criancas, icon: Stethoscope, color: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' },
-    { label: 'Acamados', value: stats.acamados, icon: Activity, color: 'bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400' },
+    { label: 'Crianças', value: stats.criancas, icon: Smile, color: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' },
+    { label: 'Acamados', value: stats.acamados, icon: Bed, color: 'bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400' },
     { label: 'Idosos', value: stats.idosos, icon: HeartPulse, color: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' },
-    { label: 'Hipertensos', value: stats.hipertensos, icon: Activity, color: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' },
-    { label: 'Diabéticos', value: stats.diabeticos, icon: HeartPulse, color: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' },
+    { label: 'Hipertensos', value: stats.hipertensos, icon: Heart, color: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' },
+    { label: 'Diabéticos', value: stats.diabeticos, icon: Droplets, color: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' },
   ];
 
   return (

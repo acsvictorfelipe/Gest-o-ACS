@@ -20,7 +20,9 @@ import {
   X,
   Trash2,
   AlertTriangle,
-  AlertCircle
+  AlertCircle,
+  Smile,
+  Bed
 } from 'lucide-react';
 
 export function PatientList({ user }: { user: any }) {
@@ -105,15 +107,21 @@ export function PatientList({ user }: { user: any }) {
     if (activeFilter === 'hipertensos') {
       const clinical = p.clinical_data || {};
       return matchesSearch && (
+        clinical.chronic?.hipertensao === 'Sim' ||
+        clinical.gestante?.hipertensao === 'Sim' ||
         clinical.gestante?.pressaoAlta === 'Sim' || 
+        clinical.acamadodomiciliado?.hipertensao === 'Sim' ||
         clinical.acamadodomiciliado?.pressaoAlta === 'Sim' || 
+        clinical.adulto?.hipertensao === 'Sim' ||
         clinical.adulto?.pressaoAlta === 'Sim' || 
+        clinical.idoso?.hipertensao === 'Sim' ||
         clinical.idoso?.pressaoAlta === 'Sim'
       );
     }
     if (activeFilter === 'diabéticos') {
       const clinical = p.clinical_data || {};
       return matchesSearch && (
+        clinical.chronic?.diabetes === 'Sim' ||
         clinical.gestante?.diabetes === 'Sim' || 
         clinical.acamadodomiciliado?.diabetes === 'Sim' || 
         clinical.adulto?.diabetes === 'Sim' || 
@@ -200,8 +208,8 @@ export function PatientList({ user }: { user: any }) {
 
   const getCategoryIcon = (categories: string[]) => {
     if (categories?.includes('Gestante')) return <Baby className="w-4 h-4 text-blue-500" />;
-    if (categories?.includes('Criança')) return <Stethoscope className="w-4 h-4 text-green-500" />;
-    if (categories?.includes('AcamadoDomiciliado')) return <Activity className="w-4 h-4 text-teal-500" />;
+    if (categories?.includes('Criança')) return <Smile className="w-4 h-4 text-green-500" />;
+    if (categories?.includes('AcamadoDomiciliado')) return <Bed className="w-4 h-4 text-teal-500" />;
     if (categories?.includes('Idoso')) return <HeartPulse className="w-4 h-4 text-red-500" />;
     return <User className="w-4 h-4 text-slate-400" />;
   };
@@ -287,7 +295,7 @@ export function PatientList({ user }: { user: any }) {
                     <tr 
                       key={p.id} 
                       className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
-                      onClick={() => navigate(`/domicilio/${p.household_id}`)}
+                      onClick={() => p.household_id ? navigate(`/domicilio/${p.household_id}`) : navigate(`/editar-paciente/${p.id}`)}
                     >
                       <td className="px-8 py-5">
                         <div className="flex items-center gap-4">
@@ -446,7 +454,7 @@ export function PatientList({ user }: { user: any }) {
                 <div 
                   key={p.id} 
                   className="p-6 space-y-4 active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors"
-                  onClick={() => navigate(`/domicilio/${p.household_id}`)}
+                  onClick={() => p.household_id ? navigate(`/domicilio/${p.household_id}`) : navigate(`/editar-paciente/${p.id}`)}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">

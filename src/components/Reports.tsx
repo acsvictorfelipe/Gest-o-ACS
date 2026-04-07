@@ -7,49 +7,68 @@ import {
   FileDown, 
   Loader2,
   Baby,
-  Stethoscope,
-  Activity,
   HeartPulse,
-  User
+  User,
+  Smile,
+  Bed,
+  Activity
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export function Reports({ user }: { user: any }) {
   const [patients, setPatients] = useState<any[]>([]);
+  const [households, setHouseholds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('Todas');
+  const [streetFilter, setStreetFilter] = useState('');
 
   useEffect(() => {
-    const fetchPatients = async () => {
+    const fetchData = async () => {
       if (!user.microarea && user.role !== 'Administrador') return;
       setLoading(true);
       try {
-        let query = supabase
+        // Fetch Patients
+        let pQuery = supabase
           .from('patients')
           .select('*')
           .order('name', { ascending: true });
 
+        // Fetch Households
+        let hQuery = supabase
+          .from('households')
+          .select('*, patients(id)')
+          .order('address', { ascending: true });
+
         if (user.role === 'Administrador') {
-          // No filters for Admin
+          // No filters
         } else if (user.role === 'Gestor') {
-          query = query.eq('area_color', user.color);
+          pQuery = pQuery.eq('area_color', user.color);
+          hQuery = hQuery.eq('area_color', user.color);
         } else {
-          query = query.eq('agent_id', user.id);
+          pQuery = pQuery.eq('agent_id', user.id);
+          hQuery = hQuery.eq('agent_id', user.id);
         }
 
-        const { data, error } = await query.range(0, 4999);
-        if (error) throw error;
-        setPatients(data || []);
+        const [pRes, hRes] = await Promise.all([
+          pQuery.range(0, 4999),
+          hQuery.range(0, 4999)
+        ]);
+
+        if (pRes.error) throw pRes.error;
+        if (hRes.error) throw hRes.error;
+
+        setPatients(pRes.data || []);
+        setHouseholds(hRes.data || []);
       } catch (error) {
-        console.error("Error fetching patients for reports:", error);
+        console.error("Error fetching data for reports:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchPatients();
-  }, [user.microarea]);
+    fetchData();
+  }, [user.microarea, user.id, user.role, user.color]);
 
   const filteredPatients = patients.filter(p => {
     const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || p.cns?.includes(searchTerm);
@@ -57,9 +76,35 @@ export function Reports({ user }: { user: any }) {
     return matchesSearch && matchesCategory;
   });
 
+  const filteredHouseholds = households.filter(h => {
+    const matchesSearch = h.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          h.address?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStreet = !streetFilter || h.address?.toLowerCase().includes(streetFilter.toLowerCase());
+    return matchesSearch && matchesStreet;
+  });
+
   const getClinicalSummary = (p: any) => {
     const clinical = p.clinical_data || {};
     let info = [];
+
+    const isDiabetico = clinical.chronic?.diabetes === 'Sim' || 
+                        clinical.gestante?.diabetes === 'Sim' || 
+                        clinical.acamadodomiciliado?.diabetes === 'Sim' || 
+                        clinical.idoso?.diabetes === 'Sim' || 
+                        clinical.adulto?.diabetes === 'Sim';
+    
+    const isHipertenso = clinical.chronic?.hipertensao === 'Sim' || 
+                         clinical.gestante?.hipertensao === 'Sim' || 
+                         clinical.gestante?.pressaoAlta === 'Sim' || 
+                         clinical.acamadodomiciliado?.hipertensao === 'Sim' || 
+                         clinical.acamadodomiciliado?.pressaoAlta === 'Sim' || 
+                         clinical.idoso?.hipertensao === 'Sim' || 
+                         clinical.idoso?.pressaoAlta === 'Sim' || 
+                         clinical.adulto?.hipertensao === 'Sim' || 
+                         clinical.adulto?.pressaoAlta === 'Sim';
+
+    if (isDiabetico) info.push('Diabetes');
+    if (isHipertenso) info.push('Hipertensão');
 
     if (p.categories?.includes('Gestante')) {
       const g = clinical.gestante || {};
@@ -78,9 +123,6 @@ export function Reports({ user }: { user: any }) {
       if (tests.length > 0) info.push(`Testes: ${tests.join(',')}`);
 
       if (g.dtpa === 'Sim') info.push('dTpa OK');
-      
-      if (g.diabetes === 'Sim') info.push('Diabetes');
-      if (g.pressaoAlta === 'Sim') info.push('Hipertensão');
     }
     if (p.categories?.includes('Criança')) {
       const c = clinical.crianca || {};
@@ -106,13 +148,11 @@ export function Reports({ user }: { user: any }) {
     }
     if (p.categories?.includes('Idoso')) {
       const i = clinical.idoso || {};
-      if (i.diabetes === 'Sim') info.push('Diabetes');
-      if (i.pressaoAlta === 'Sim') info.push('Hipertensão');
+      // No extra info needed here as chronic is handled above
     }
     if (p.categories?.includes('Adulto')) {
       const ad = clinical.adulto || {};
-      if (ad.diabetes === 'Sim') info.push('Diabetes');
-      if (ad.pressaoAlta === 'Sim') info.push('Hipertensão');
+      // No extra info needed here as chronic is handled above
     }
 
     return info.length > 0 ? info.join(' | ') : 'Sem dados clínicos';
@@ -198,12 +238,29 @@ export function Reports({ user }: { user: any }) {
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Agente: ${user.name} | Microárea: ${user.microarea} | Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
-    doc.text(`Filtro: ${categoryFilter} | Total: ${filteredPatients.length} pacientes`, 14, 36);
+    doc.text(`Filtro: ${categoryFilter} | Total: ${categoryFilter === 'Domicílios' ? filteredHouseholds.length : filteredPatients.length} registros`, 14, 36);
 
     const gestantes = filteredPatients.filter(p => p.categories?.includes('Gestante'));
     const criancas = filteredPatients.filter(p => p.categories?.includes('Criança'));
 
-    if (categoryFilter === 'Gestante') {
+    if (categoryFilter === 'Domicílios') {
+      const householdData = filteredHouseholds.map(h => [
+        h.address,
+        h.number,
+        h.complement || '-',
+        h.responsible_name,
+        h.patients?.length || 0
+      ]);
+
+      autoTable(doc, {
+        startY: 45,
+        head: [['Endereço', 'Nº', 'Comp.', 'Responsável', 'Moradores']],
+        body: householdData,
+        headStyles: { fillColor: [0, 72, 141] },
+        styles: { fontSize: 8, cellPadding: 3 },
+        alternateRowStyles: { fillColor: [245, 247, 250] }
+      });
+    } else if (categoryFilter === 'Gestante') {
       const gestanteData = gestantes.map(p => {
         const stats = getGestanteStats(p);
         return [
@@ -331,7 +388,7 @@ export function Reports({ user }: { user: any }) {
     doc.save(`Relatorio_Microarea_${user.microarea}_${categoryFilter}.pdf`);
   };
 
-  const categories = ['Todas', 'Gestante', 'Criança', 'AcamadoDomiciliado', 'Idoso', 'Adulto'];
+  const categories = ['Todas', 'Gestante', 'Criança', 'AcamadoDomiciliado', 'Idoso', 'Adulto', 'Domicílios'];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -357,19 +414,32 @@ export function Reports({ user }: { user: any }) {
           <span className="text-[10px] font-bold uppercase tracking-widest">Filtros</span>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="relative group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
             <input 
               type="text" 
-              placeholder="Pesquisar..."
+              placeholder={categoryFilter === 'Domicílios' ? "Pesquisar endereço ou responsável..." : "Pesquisar nome ou CNS..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-2 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
             />
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {categoryFilter === 'Domicílios' && (
+            <div className="relative group">
+              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
+              <input 
+                type="text" 
+                placeholder="Filtrar por rua..."
+                value={streetFilter}
+                onChange={(e) => setStreetFilter(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-2 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
+              />
+            </div>
+          )}
+
+          <div className={`flex gap-2 overflow-x-auto pb-1 scrollbar-hide ${categoryFilter === 'Domicílios' ? 'md:col-span-1' : 'md:col-span-1'}`}>
             {categories.map(cat => (
               <button
                 key={cat}
@@ -396,54 +466,98 @@ export function Reports({ user }: { user: any }) {
         <div className="space-y-8">
           <div className="flex items-center gap-2 text-primary">
             <Activity className="w-5 h-5" />
-            <h3 className="text-lg font-bold font-headline">Lista Geral de Pacientes</h3>
+            <h3 className="text-lg font-bold font-headline">
+              {categoryFilter === 'Domicílios' ? 'Lista de Domicílios' : 'Lista Geral de Pacientes'}
+            </h3>
           </div>
           <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
             <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
                 <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Cidadão</th>
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Nascimento</th>
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Categorias</th>
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Resumo Clínico</th>
+                  {categoryFilter === 'Domicílios' ? (
+                    <>
+                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Endereço</th>
+                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Nº / Comp.</th>
+                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Responsável</th>
+                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Moradores</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Cidadão</th>
+                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Nascimento</th>
+                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Categorias</th>
+                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Resumo Clínico</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                {filteredPatients.length > 0 ? (
-                  filteredPatients.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                      <td className="px-8 py-5">
-                        <p className="text-sm font-bold text-on-surface">{p.name}</p>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{p.cns}</p>
-                      </td>
-                      <td className="px-8 py-5">
-                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                          {p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : 'N/A'}
-                        </span>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex flex-wrap gap-1">
-                          {p.categories?.map((cat: string) => (
-                            <span key={cat} className="text-[9px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded uppercase">
-                              {cat}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <span className="text-xs font-medium text-slate-600 dark:text-slate-400 italic">
-                          {getClinicalSummary(p)}
-                        </span>
+                {categoryFilter === 'Domicílios' ? (
+                  filteredHouseholds.length > 0 ? (
+                    filteredHouseholds.map((h) => (
+                      <tr key={h.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td className="px-8 py-5">
+                          <p className="text-sm font-bold text-on-surface">{h.address}</p>
+                        </td>
+                        <td className="px-8 py-5">
+                          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                            {h.number} {h.complement ? ` - ${h.complement}` : ''}
+                          </span>
+                        </td>
+                        <td className="px-8 py-5">
+                          <p className="text-sm font-bold text-on-surface">{h.responsible_name}</p>
+                        </td>
+                        <td className="px-8 py-5">
+                          <span className="px-3 py-1 bg-primary/5 text-primary text-xs font-bold rounded-full">
+                            {h.patients?.length || 0} pessoas
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="px-8 py-20 text-center text-slate-400 dark:text-slate-500 font-medium">
+                        Nenhum domicílio encontrado.
                       </td>
                     </tr>
-                  ))
+                  )
                 ) : (
-                  <tr>
-                    <td colSpan={4} className="px-8 py-20 text-center text-slate-400 dark:text-slate-500 font-medium">
-                      Nenhum paciente encontrado com os filtros aplicados.
-                    </td>
-                  </tr>
+                  filteredPatients.length > 0 ? (
+                    filteredPatients.map((p) => (
+                      <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td className="px-8 py-5">
+                          <p className="text-sm font-bold text-on-surface">{p.name}</p>
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{p.cns}</p>
+                        </td>
+                        <td className="px-8 py-5">
+                          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                            {p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : 'N/A'}
+                          </span>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="flex flex-wrap gap-1">
+                            {p.categories?.map((cat: string) => (
+                              <span key={cat} className="text-[9px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded uppercase">
+                                {cat}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <span className="text-xs font-medium text-slate-600 dark:text-slate-400 italic">
+                            {getClinicalSummary(p)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="px-8 py-20 text-center text-slate-400 dark:text-slate-500 font-medium">
+                        Nenhum paciente encontrado com os filtros aplicados.
+                      </td>
+                    </tr>
+                  )
                 )}
               </tbody>
             </table>
