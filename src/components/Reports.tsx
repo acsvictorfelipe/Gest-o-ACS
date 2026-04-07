@@ -80,7 +80,12 @@ export function Reports({ user }: { user: any }) {
     const matchesSearch = h.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           h.address?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStreet = !streetFilter || h.address?.toLowerCase().includes(streetFilter.toLowerCase());
-    return matchesSearch && matchesStreet;
+    
+    const isPlaceholder = h.responsible_name === 'Responsável Importado' || 
+                          h.responsible_name === 'Responsável não cadastrado' ||
+                          !h.responsible_name;
+    
+    return matchesSearch && matchesStreet && !isPlaceholder;
   });
 
   const getClinicalSummary = (p: any) => {
@@ -399,7 +404,7 @@ export function Reports({ user }: { user: any }) {
         </div>
         <button 
           onClick={generatePDF}
-          disabled={filteredPatients.length === 0}
+          disabled={categoryFilter === 'Domicílios' ? filteredHouseholds.length === 0 : filteredPatients.length === 0}
           className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
         >
           <FileDown className="w-5 h-5" />
