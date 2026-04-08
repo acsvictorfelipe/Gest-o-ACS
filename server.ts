@@ -16,6 +16,11 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Health check route
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   // Supabase Admin Client
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -33,6 +38,7 @@ async function startServer() {
 
   // API Route for creating users
   app.post('/api/admin/create-user', async (req, res) => {
+    console.log('Received request to create user:', req.body.email);
     const { email, password, name, role, color, microarea } = req.body;
 
     // Basic validation
@@ -76,6 +82,68 @@ async function startServer() {
     } catch (error: any) {
       console.error('Error creating user:', error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // API Route for deleting users
+  app.delete('/api/admin/delete-user/:id', async (req, res) => {
+    const { id } = req.params;
+    console.log('Received request to delete user ID:', id);
+    
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return res.status(500).json({ 
+        error: 'Configuração ausente: SUPABASE_SERVICE_ROLE_KEY não encontrada. Por favor, adicione-a em Settings > Secrets.' 
+      });
+    }
+
+    try {
+      // 1. Delete dependent data first to satisfy foreign key constraints
+      // We check for errors and throw to ensure the process stops if something fails
+      
+      console.log('Deleting visits for agent:', id);
+      const { error: vError } = await supabaseAdmin
+        .from('visits')
+        .delete()
+        .eq('agent_id', id);
+      if (vError) throw new Error(`Erro ao excluir visitas: ${vError.message}`);
+
+      console.log('Deleting patients for agent:', id);
+      const { error: pError } = await supabaseAdmin
+        .from('patients')
+        .delete()
+        .eq('agent_id', id);
+      if (pError) throw new Error(`Erro ao excluir pacientes: ${pError.message}`);
+
+      console.log('Deleting households for agent:', id);
+      const { error: hError } = await supabaseAdmin
+        .from('households')
+        .delete()
+        .eq('agent_id', id);
+      if (hError) throw new Error(`Erro ao excluir domicílios: ${hError.message}`);
+
+      // 2. Delete from profiles table
+      console.log('Deleting profile:', id);
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .delete()
+        .eq('id', id);
+      
+      if (profileError) throw new Error(`Erro ao excluir perfil: ${profileError.message}`);
+
+      // 3. Delete from Auth - This is the final step
+      console.log('Deleting Auth user:', id);
+      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
+      
+      if (authError) {
+        console.error('Error deleting Auth user:', authError);
+        throw new Error(`Erro ao excluir conta de acesso: ${authError.message}`);
+      }
+      
+      console.log('User and all associated data deleted successfully:', id);
+      res.status(200).json({ message: 'User deleted successfully' });
+    } catch (error: any) {
+      console.error('Error in delete-user endpoint:', error);
+      res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
   });
 

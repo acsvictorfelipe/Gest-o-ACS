@@ -58,7 +58,7 @@ export default function App() {
       if (data) {
         let updatedProfile = data;
         // Bootstrap: Promote specific emails to Administrador
-        const adminEmails = ['victorfelipe2012@gmail.com', 'acsvictorfelipe@gmail.com'];
+        const adminEmails = ['victorfelipe2012@gmail.com'];
         if (supabaseUser.email && adminEmails.includes(supabaseUser.email) && data.role !== 'Administrador') {
           const { data: promotedData, error: promoError } = await supabase
             .from('profiles')
@@ -75,9 +75,31 @@ export default function App() {
         // Ensure name fallback from metadata
         const name = updatedProfile.name || supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
         setUser({ ...supabaseUser, ...updatedProfile, name });
-      } else if (error) {
-        console.error("Error fetching profile:", error);
+      } else {
+        // Profile doesn't exist, check if it's a super admin to create it
+        const adminEmails = ['victorfelipe2012@gmail.com'];
         const name = supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
+        
+        if (supabaseUser.email && adminEmails.includes(supabaseUser.email)) {
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: supabaseUser.id,
+              email: supabaseUser.email,
+              name: name,
+              role: 'Administrador',
+              color: '#64748b'
+            })
+            .select()
+            .single();
+          
+          if (!createError && newProfile) {
+            setUser({ ...supabaseUser, ...newProfile });
+            return;
+          }
+        }
+
+        console.error("Profile fetch error or not found:", error);
         setUser({ ...supabaseUser, name });
       }
     } catch (err) {

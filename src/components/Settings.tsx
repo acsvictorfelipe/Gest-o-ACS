@@ -130,7 +130,7 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
               </div>
             </div>
 
-            {user.role !== 'Administrador' && (
+            {user.role === 'Agente' && (
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">Microárea de Atuação</label>
                 <div className="relative">
@@ -169,7 +169,7 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
               </p>
             </div>
 
-            {user.role !== 'Administrador' && (
+            {user.role === 'Agente' && (
               <div className="md:col-span-2 space-y-4">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1 flex items-center gap-2">
                   <Palette className="w-3 h-3" />

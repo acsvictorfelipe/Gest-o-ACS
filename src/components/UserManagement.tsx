@@ -82,7 +82,16 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type');
+      let data;
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('Received non-JSON response:', text);
+        throw new Error(`Erro no servidor: O servidor retornou uma resposta inesperada. Verifique se o backend está rodando corretamente.`);
+      }
 
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao criar usuário');
@@ -105,23 +114,38 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
       return;
     }
 
-    if (!window.confirm("Tem certeza que deseja excluir este usuário? O perfil será removido.")) {
+    if (!window.confirm("Tem certeza que deseja excluir este usuário? Isso removerá permanentemente o acesso e o perfil.")) {
       return;
     }
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId);
+      const response = await fetch(`/api/admin/delete-user/${userId}`, {
+        method: 'DELETE',
+      });
 
-      if (error) throw error;
+      const contentType = response.headers.get('content-type');
+      let data;
 
-      setMessage({ type: 'success', text: 'Perfil de usuário removido com sucesso.' });
-      fetchUsers();
-    } catch (error) {
-      console.error("Error deleting user profile:", error);
-      setMessage({ type: 'error', text: 'Erro ao remover perfil.' });
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('Received non-JSON response on delete:', text);
+        throw new Error('Erro no servidor ao excluir usuário. Verifique os logs do console.');
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao excluir usuário');
+      }
+
+      setMessage({ type: 'success', text: 'Usuário excluído com sucesso.' });
+      // Small delay to ensure database propagation
+      setTimeout(() => {
+        fetchUsers();
+      }, 500);
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      setMessage({ type: 'error', text: error.message || 'Erro ao excluir usuário.' });
     }
   };
 
@@ -248,7 +272,16 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Função</label>
                 <select 
                   value={formData.role || 'Agente'}
-                  onChange={e => setFormData({...formData, role: e.target.value})}
+                  onChange={e => {
+                    const newRole = e.target.value;
+                    setFormData({
+                      ...formData, 
+                      role: newRole,
+                      // Reset fields based on role
+                      microarea: newRole === 'Agente' ? formData.microarea : '',
+                      color: newRole === 'Administrador' ? '#64748b' : formData.color
+                    });
+                  }}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 px-3 text-sm focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="Agente">Agente (ACS)</option>
@@ -256,6 +289,46 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                   <option value="Administrador">Administrador</option>
                 </select>
               </div>
+
+              {formData.role === 'Agente' && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Microárea</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      value={formData.microarea || ''}
+                      onChange={e => setFormData({...formData, microarea: e.target.value})}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 pl-10 text-sm focus:ring-2 focus:ring-primary/20"
+                      placeholder="Ex: 001"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {formData.role !== 'Administrador' && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Cor da Área</label>
+                  <div className="flex flex-wrap gap-3">
+                    {[
+                      { color: '#00488d', label: 'Azul' },
+                      { color: '#eab308', label: 'Amarelo' },
+                      { color: '#64748b', label: 'Cinza' },
+                      { color: '#db2777', label: 'Rosa' },
+                      { color: '#78350f', label: 'Marrom' }
+                    ].map((c) => (
+                      <button
+                        key={c.color}
+                        type="button"
+                        onClick={() => setFormData({...formData, color: c.color})}
+                        className={`w-8 h-8 rounded-full transition-all ${formData.color === c.color ? 'ring-4 ring-primary/20 scale-110' : 'opacity-50 hover:opacity-100'}`}
+                        style={{ backgroundColor: c.color }}
+                        title={c.label}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <button 
@@ -384,7 +457,7 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                       <option value="Administrador">Administrador</option>
                     </select>
                   </div>
-                  {editFormData.role !== 'Administrador' && (
+                  {editFormData.role === 'Agente' && (
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Microárea</label>
                       <input 
@@ -398,7 +471,7 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                   )}
                 </div>
 
-                {editFormData.role !== 'Administrador' && (
+                {(editFormData.role === 'Agente' || editFormData.role === 'Gestor') && (
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Cor da Área</label>
                     <div className="flex flex-wrap gap-3">
