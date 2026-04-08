@@ -25,7 +25,7 @@ import {
   Bed
 } from 'lucide-react';
 
-import { calculateAge } from '../lib/dateUtils';
+import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE } from '../lib/dateUtils';
 
 export function PatientList({ user }: { user: any }) {
   const navigate = useNavigate();
@@ -91,15 +91,20 @@ export function PatientList({ user }: { user: any }) {
 
     if (activeFilter === 'vaccine') {
       const isChild = p.categories?.includes('Criança');
+      if (!isChild) return false;
+      
+      const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
       const clinical = p.clinical_data || {};
       const vaccines = clinical.crianca?.vacinas || {};
-      const hasEmptyVaccine = Object.entries(vaccines).some(([key, v]) => {
-        // Ignore 4-year vaccines
-        if (key === 'dtp4y' || key === 'vop4y') return false;
-        // Check if not taken ('Sim' or legacy date string)
-        return v !== 'Sim' && !(typeof v === 'string' && v.length > 5);
-      });
-      return matchesSearch && isChild && hasEmptyVaccine;
+      
+      // Get vaccines that should have been taken by now
+      const dueVaccines = VACCINE_SCHEDULE
+        .filter(group => group.age <= ageInMonths)
+        .flatMap(group => group.vaccines);
+        
+      const hasPendingVaccine = dueVaccines.some(v => vaccines[v.id] !== 'Sim');
+      
+      return matchesSearch && hasPendingVaccine;
     }
 
     if (activeFilter === 'gestantes') return matchesSearch && p.categories?.includes('Gestante');
@@ -402,9 +407,18 @@ export function PatientList({ user }: { user: any }) {
                             }
                             return null;
                           })()}
-                          {p.categories?.includes('Criança') && Object.values(p.clinical_data?.crianca?.vacinas || {}).some(v => !v) && (
-                            <span className="text-[9px] font-bold text-orange-500 uppercase mt-1">Vacina Atrasada</span>
-                          )}
+                          {p.categories?.includes('Criança') && (() => {
+                            const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
+                            const vaccines = p.clinical_data?.crianca?.vacinas || {};
+                            const dueVaccines = VACCINE_SCHEDULE
+                              .filter(group => group.age <= ageInMonths)
+                              .flatMap(group => group.vaccines);
+                            const hasPending = dueVaccines.some(v => vaccines[v.id] !== 'Sim');
+                            
+                            return hasPending ? (
+                              <span className="text-[9px] font-bold text-orange-500 uppercase mt-1">Vacina Atrasada</span>
+                            ) : null;
+                          })()}
                         </div>
                       </td>
                       <td className="px-8 py-5">

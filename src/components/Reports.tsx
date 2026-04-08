@@ -16,7 +16,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { calculateAge } from '../lib/dateUtils';
+import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE } from '../lib/dateUtils';
 
 export function Reports({ user }: { user: any }) {
   const [patients, setPatients] = useState<any[]>([]);
@@ -198,6 +198,7 @@ export function Reports({ user }: { user: any }) {
     const c = p.clinical_data?.crianca || {};
     const consultas = c.consultas?.filter((v: string) => v).length || 0;
     
+    const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
     const vacinas = c.vacinas || {};
     const tomadasKeys = Object.entries(vacinas)
       .filter(([_, v]) => v === 'Sim' || (typeof v === 'string' && v.length > 5)) // Handle 'Sim' or legacy date strings
@@ -246,16 +247,14 @@ export function Reports({ user }: { user: any }) {
 
     const tomadas = tomadasKeys.map(k => vaccineLabels[k] || k);
     
-    // List of essential vaccines for children up to 15 months (new IDs)
-    const essentialVaccines = [
-      'BCG', 'Hep B (Nascer)', 'Penta 1ª', 'Penta 2ª', 'Penta 3ª',
-      'VIP 1ª', 'VIP 2ª', 'VIP 3ª', 'VIP (R)', 'Pneumo 10 1ª',
-      'Pneumo 10 2ª', 'Pneumo 10 3ª', 'Rotavírus 1ª', 'Rotavírus 2ª',
-      'MenC 1ª', 'MenC 2ª', 'MenC 3ª', 'Febre Amarela', 'SCR 1ª',
-      'DTP', 'Hep A', 'SCRV'
-    ];
+    // Get vaccines that should have been taken by now based on age
+    const dueVaccines = VACCINE_SCHEDULE
+      .filter(group => group.age <= ageInMonths)
+      .flatMap(group => group.vaccines);
       
-    const pendentes = essentialVaccines.filter(v => !tomadas.includes(v));
+    const pendentes = dueVaccines
+      .filter(v => vacinas[v.id] !== 'Sim')
+      .map(v => v.label);
     
     return { consultas, tomadas, pendentes };
   };

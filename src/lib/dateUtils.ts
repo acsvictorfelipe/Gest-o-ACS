@@ -1,3 +1,46 @@
+export const VACCINE_SCHEDULE = [
+  { age: 0, label: 'Ao nascer', vaccines: [
+    { id: 'bcg', label: 'BCG' },
+    { id: 'hepB_nascer', label: 'Hep B' }
+  ]},
+  { age: 2, label: '2 meses', vaccines: [
+    { id: 'penta1', label: 'Penta (1ª dose)' },
+    { id: 'vip1', label: 'VIP (1ª dose)' },
+    { id: 'pneumo10_1', label: 'Pneumo 10 (1ª dose)' },
+    { id: 'rotavirus1', label: 'Rotavírus Humano (1ª dose)' }
+  ]},
+  { age: 3, label: '3 meses', vaccines: [
+    { id: 'menC1', label: 'MenC (1ª dose)' }
+  ]},
+  { age: 4, label: '4 meses', vaccines: [
+    { id: 'penta2', label: 'Penta (2ª dose)' },
+    { id: 'vip2', label: 'VIP (2ª dose)' },
+    { id: 'pneumo10_2', label: 'Pneumo 10 (2ª dose)' },
+    { id: 'rotavirus2', label: 'Rotavírus Humano (2ª dose)' }
+  ]},
+  { age: 5, label: '5 meses', vaccines: [
+    { id: 'menC2', label: 'MenC (2ª dose)' }
+  ]},
+  { age: 6, label: '6 meses', vaccines: [
+    { id: 'penta3', label: 'Penta (3ª dose)' },
+    { id: 'vip3', label: 'VIP (3ª dose)' }
+  ]},
+  { age: 9, label: '9 meses', vaccines: [
+    { id: 'fa', label: 'FA (Febre Amarela)' }
+  ]},
+  { age: 12, label: '12 meses', vaccines: [
+    { id: 'scr1', label: 'SCR (Tríplice Viral)' },
+    { id: 'pneumo10_3', label: 'Pneumo 10 (3ª dose)' },
+    { id: 'menC3', label: 'MenC (3ª dose)' }
+  ]},
+  { age: 15, label: '15 meses', vaccines: [
+    { id: 'dtp', label: 'DTP' },
+    { id: 'vipR', label: 'VIP (R)' },
+    { id: 'hepA', label: 'Hep A' },
+    { id: 'scrv', label: 'SCRV (Tetra Viral)' }
+  ]}
+];
+
 export const calculateAge = (birthDate: string) => {
   if (!birthDate) return '';
   const today = new Date();
@@ -18,9 +61,13 @@ export const calculateAge = (birthDate: string) => {
   if (years < 0) return '0 Anos e 0 Meses';
 
   const yearsStr = years === 1 ? '1 Ano' : `${years} Anos`;
-  const monthsStr = months === 1 ? '1 Mês' : `${months} Meses`;
   
-  return `${yearsStr} e ${monthsStr}`;
+  if (years < 5) {
+    const monthsStr = months === 1 ? '1 Mês' : `${months} Meses`;
+    return `${yearsStr} e ${monthsStr}`;
+  }
+  
+  return yearsStr;
 };
 
 export const getAgeNumber = (birthDate: string) => {
