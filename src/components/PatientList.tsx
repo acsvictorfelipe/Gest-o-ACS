@@ -25,6 +25,8 @@ import {
   Bed
 } from 'lucide-react';
 
+import { calculateAge } from '../lib/dateUtils';
+
 export function PatientList({ user }: { user: any }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -314,7 +316,9 @@ export function PatientList({ user }: { user: any }) {
                               </button>
                             </div>
                             <div className="flex items-center gap-2">
-                              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{p.gender}, {p.birth_date}</p>
+                              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                                {p.gender}, {p.birth_date ? calculateAge(p.birth_date) : 'N/A'}
+                              </p>
                               <button 
                                 onClick={(e) => copyToClipboard(p.birth_date, e)}
                                 className="p-1 text-slate-300 hover:text-primary transition-colors"
@@ -463,7 +467,9 @@ export function PatientList({ user }: { user: any }) {
                       </div>
                       <div className="flex flex-col">
                         <span className="text-base font-bold text-on-surface">{p.name}</span>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">{p.gender}, {p.birth_date}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
+                          {p.gender}, {p.birth_date ? calculateAge(p.birth_date) : 'N/A'}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">

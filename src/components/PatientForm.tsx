@@ -27,6 +27,8 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+import { calculateAge, getAgeNumber, getAgeInMonths } from '../lib/dateUtils';
+
 const vaccineLabels: Record<string, string> = {
   penta2m: 'Penta 2 Meses',
   penta4m: 'Penta 4 Meses',
@@ -55,6 +57,49 @@ const vaccineLabels: Record<string, string> = {
   mamografia: 'Mamografia',
   vacinaHpv: 'Vacina HPV'
 };
+
+const VACCINE_SCHEDULE = [
+  { age: 0, label: 'Ao nascer', vaccines: [
+    { id: 'bcg', label: 'BCG' },
+    { id: 'hepB_nascer', label: 'Hep B' }
+  ]},
+  { age: 2, label: '2 meses', vaccines: [
+    { id: 'penta1', label: 'Penta (1ª dose)' },
+    { id: 'vip1', label: 'VIP (1ª dose)' },
+    { id: 'pneumo10_1', label: 'Pneumo 10 (1ª dose)' },
+    { id: 'rotavirus1', label: 'Rotavírus Humano (1ª dose)' }
+  ]},
+  { age: 3, label: '3 meses', vaccines: [
+    { id: 'menC1', label: 'MenC (1ª dose)' }
+  ]},
+  { age: 4, label: '4 meses', vaccines: [
+    { id: 'penta2', label: 'Penta (2ª dose)' },
+    { id: 'vip2', label: 'VIP (2ª dose)' },
+    { id: 'pneumo10_2', label: 'Pneumo 10 (2ª dose)' },
+    { id: 'rotavirus2', label: 'Rotavírus Humano (2ª dose)' }
+  ]},
+  { age: 5, label: '5 meses', vaccines: [
+    { id: 'menC2', label: 'MenC (2ª dose)' }
+  ]},
+  { age: 6, label: '6 meses', vaccines: [
+    { id: 'penta3', label: 'Penta (3ª dose)' },
+    { id: 'vip3', label: 'VIP (3ª dose)' }
+  ]},
+  { age: 9, label: '9 meses', vaccines: [
+    { id: 'fa', label: 'FA (Febre Amarela)' }
+  ]},
+  { age: 12, label: '12 meses', vaccines: [
+    { id: 'scr1', label: 'SCR (Tríplice Viral)' },
+    { id: 'pneumo10_3', label: 'Pneumo 10 (3ª dose)' },
+    { id: 'menC3', label: 'MenC (3ª dose)' }
+  ]},
+  { age: 15, label: '15 meses', vaccines: [
+    { id: 'dtp', label: 'DTP' },
+    { id: 'vipR', label: 'VIP (R)' },
+    { id: 'hepA', label: 'Hep A' },
+    { id: 'scrv', label: 'SCRV (Tetra Viral)' }
+  ]}
+];
 
 export function PatientForm({ user }: { user: any }) {
   const navigate = useNavigate();
@@ -154,6 +199,29 @@ export function PatientForm({ user }: { user: any }) {
         visita6meses: '',
         proximaVisitaSugerida: '',
         vacinas: {
+          bcg: '',
+          hepB_nascer: '',
+          penta1: '',
+          penta2: '',
+          penta3: '',
+          vip1: '',
+          vip2: '',
+          vip3: '',
+          vipR: '',
+          pneumo10_1: '',
+          pneumo10_2: '',
+          pneumo10_3: '',
+          rotavirus1: '',
+          rotavirus2: '',
+          menC1: '',
+          menC2: '',
+          menC3: '',
+          fa: '',
+          scr1: '',
+          dtp: '',
+          hepA: '',
+          scrv: '',
+          // Legacy keys
           penta2m: '',
           penta4m: '',
           penta6m: '',
@@ -357,30 +425,6 @@ export function PatientForm({ user }: { user: any }) {
       }, 500);
     }
   }, [location.search]);
-
-  const calculateAge = (birthDate: string) => {
-    if (!birthDate) return '';
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age >= 0 ? `${age} anos` : '';
-  };
-
-  const getAgeNumber = (birthDate: string) => {
-    if (!birthDate) return 0;
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age;
-  };
 
   const calculateNextVisit = (dateStr: string, days: number) => {
     if (!dateStr) return '';
@@ -663,6 +707,7 @@ export function PatientForm({ user }: { user: any }) {
       ['Nome', formData.name || 'N/A'],
       ['CNS', formData.cns || 'N/A'],
       ['Data de Nascimento', formData.birthDate ? new Date(formData.birthDate).toLocaleDateString('pt-BR') : 'N/A'],
+      ['Idade', formData.birthDate ? calculateAge(formData.birthDate) : 'N/A'],
       ['Gênero', formData.gender || 'N/A'],
       ['Contato', formData.contact || 'N/A'],
       ['Recado', formData.messageContact || 'N/A'],
@@ -763,6 +808,10 @@ export function PatientForm({ user }: { user: any }) {
 
     doc.save(`Ficha_${formData.name.replace(/\s+/g, '_')}.pdf`);
   };
+
+  const ageInMonths = getAgeInMonths(formData.birthDate);
+  const isFiveYearsOrMore = ageInMonths >= 60;
+  const visibleSchedule = VACCINE_SCHEDULE.filter(group => isFiveYearsOrMore || group.age <= ageInMonths);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1928,33 +1977,64 @@ export function PatientForm({ user }: { user: any }) {
                   </div>
 
                   <div className="space-y-4">
-                    <label className="block text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500">Calendário Vacinal</label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {formData.clinicalData.crianca.vacinas && Object.entries(formData.clinicalData.crianca.vacinas).map(([key, value]) => (
-                        <div key={key}>
-                          <label className="block text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">
-                            {vaccineLabels[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                          </label>
-                          <select 
-                            value={value || ''}
-                            onChange={e => setFormData({
-                              ...formData, 
-                              clinicalData: { 
-                                ...formData.clinicalData, 
-                                crianca: { 
-                                  ...formData.clinicalData.crianca, 
-                                  vacinas: { ...formData.clinicalData.crianca.vacinas, [key]: e.target.value } 
-                                } 
-                              }
-                            })}
-                            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-lg p-2 text-[10px] text-on-surface"
-                          >
-                            <option value="">Selecione</option>
-                            <option value="Não">Não</option>
-                            <option value="Sim">Sim</option>
-                          </select>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500">Calendário Vacinal</label>
+                      <span className="text-[10px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded">
+                        Idade: {ageInMonths} meses
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {visibleSchedule.length > 0 ? (
+                        visibleSchedule.map((group) => (
+                          <div key={group.age} className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <h4 className="text-[10px] font-bold text-primary mb-3 uppercase tracking-wider flex items-center gap-2">
+                              <Calendar className="w-3 h-3" />
+                              {group.label}
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {group.vaccines.map((v) => (
+                                <label key={v.id} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 cursor-pointer hover:border-primary/30 transition-all group">
+                                  <div className="relative flex items-center justify-center">
+                                    <input 
+                                      type="checkbox"
+                                      checked={formData.clinicalData.crianca.vacinas[v.id] === 'Sim'}
+                                      onChange={e => setFormData({
+                                        ...formData,
+                                        clinicalData: {
+                                          ...formData.clinicalData,
+                                          crianca: {
+                                            ...formData.clinicalData.crianca,
+                                            vacinas: {
+                                              ...formData.clinicalData.crianca.vacinas,
+                                              [v.id]: e.target.checked ? 'Sim' : 'Não'
+                                            }
+                                          }
+                                        }
+                                      })}
+                                      className="w-5 h-5 rounded-md border-slate-300 text-primary focus:ring-primary/20 transition-colors cursor-pointer"
+                                    />
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-primary transition-colors">
+                                      {v.label}
+                                    </span>
+                                    <span className="text-[9px] text-slate-400 font-medium">
+                                      Recomendado: {group.label}
+                                    </span>
+                                  </div>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                          <p className="text-xs text-slate-400 font-medium">
+                            Informe a data de nascimento para visualizar o calendário vacinal.
+                          </p>
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
                 </div>

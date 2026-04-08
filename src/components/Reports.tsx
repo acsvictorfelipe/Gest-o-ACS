@@ -16,6 +16,8 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+import { calculateAge } from '../lib/dateUtils';
+
 export function Reports({ user }: { user: any }) {
   const [patients, setPatients] = useState<any[]>([]);
   const [households, setHouseholds] = useState<any[]>([]);
@@ -202,6 +204,28 @@ export function Reports({ user }: { user: any }) {
       .map(([k, _]) => k);
     
     const vaccineLabels: Record<string, string> = {
+      bcg: 'BCG',
+      hepB_nascer: 'Hep B (Nascer)',
+      penta1: 'Penta 1ª',
+      penta2: 'Penta 2ª',
+      penta3: 'Penta 3ª',
+      vip1: 'VIP 1ª',
+      vip2: 'VIP 2ª',
+      vip3: 'VIP 3ª',
+      vipR: 'VIP (R)',
+      pneumo10_1: 'Pneumo 10 1ª',
+      pneumo10_2: 'Pneumo 10 2ª',
+      pneumo10_3: 'Pneumo 10 3ª',
+      rotavirus1: 'Rotavírus 1ª',
+      rotavirus2: 'Rotavírus 2ª',
+      menC1: 'MenC 1ª',
+      menC2: 'MenC 2ª',
+      menC3: 'MenC 3ª',
+      fa: 'Febre Amarela',
+      scr1: 'SCR 1ª',
+      dtp: 'DTP',
+      hepA: 'Hep A',
+      scrv: 'SCRV',
       penta2m: 'Penta 2 Meses',
       penta4m: 'Penta 4 Meses',
       penta6m: 'Penta 6 Meses',
@@ -222,12 +246,16 @@ export function Reports({ user }: { user: any }) {
 
     const tomadas = tomadasKeys.map(k => vaccineLabels[k] || k);
     
-    // Filter out vaccines for 4 years old (dtp4y and vop4y)
-    const todasAte2Anos = Object.entries(vaccineLabels)
-      .filter(([key, _]) => key !== 'dtp4y' && key !== 'vop4y')
-      .map(([_, label]) => label);
+    // List of essential vaccines for children up to 15 months (new IDs)
+    const essentialVaccines = [
+      'BCG', 'Hep B (Nascer)', 'Penta 1ª', 'Penta 2ª', 'Penta 3ª',
+      'VIP 1ª', 'VIP 2ª', 'VIP 3ª', 'VIP (R)', 'Pneumo 10 1ª',
+      'Pneumo 10 2ª', 'Pneumo 10 3ª', 'Rotavírus 1ª', 'Rotavírus 2ª',
+      'MenC 1ª', 'MenC 2ª', 'MenC 3ª', 'Febre Amarela', 'SCR 1ª',
+      'DTP', 'Hep A', 'SCRV'
+    ];
       
-    const pendentes = todasAte2Anos.filter(v => !tomadas.includes(v));
+    const pendentes = essentialVaccines.filter(v => !tomadas.includes(v));
     
     return { consultas, tomadas, pendentes };
   };
@@ -294,7 +322,7 @@ export function Reports({ user }: { user: any }) {
         const stats = getCriancaStats(p);
         return [
           p.name,
-          p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : 'N/A',
+          p.birth_date ? calculateAge(p.birth_date) : 'N/A',
           stats.consultas,
           stats.tomadas.join(', ') || 'Nenhuma',
           stats.pendentes.join(', ') || 'Nenhuma'
@@ -312,7 +340,7 @@ export function Reports({ user }: { user: any }) {
     } else {
       const mainTableData = filteredPatients.map(p => [
         p.name,
-        p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : 'N/A',
+        p.birth_date ? calculateAge(p.birth_date) : 'N/A',
         p.categories?.join(', ') || 'N/A',
         getClinicalSummary(p)
       ]);
