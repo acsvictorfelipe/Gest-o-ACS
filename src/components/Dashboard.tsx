@@ -16,6 +16,7 @@ import {
   Heart
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getAgeInMonths, VACCINE_SCHEDULE } from '../lib/dateUtils';
 
 export function Dashboard({ user }: { user: any }) {
   const [stats, setStats] = useState({
@@ -81,15 +82,18 @@ export function Dashboard({ user }: { user: any }) {
                 newStats.childVisitAlerts++;
               }
             }
-            // Simple check for late vaccines: if any vaccine field (up to 2 years) is empty or 'Não'
+            // Check for late vaccines based on age
+            const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
             const vaccines = clinical.crianca?.vacinas || {};
-            const hasEmptyVaccine = Object.entries(vaccines).some(([key, v]) => {
-              // Ignore 4-year vaccines
-              if (key === 'dtp4y' || key === 'vop4y') return false;
-              // Check if not taken ('Sim' or legacy date string)
-              return v !== 'Sim' && !(typeof v === 'string' && v.length > 5);
-            });
-            if (hasEmptyVaccine) {
+            
+            // Get vaccines that should have been taken by now
+            const dueVaccines = VACCINE_SCHEDULE
+              .filter(group => group.age <= ageInMonths)
+              .flatMap(group => group.vaccines);
+              
+            const hasPendingVaccine = dueVaccines.some(v => vaccines[v.id] !== 'Sim');
+            
+            if (hasPendingVaccine) {
               newStats.lateVaccines++;
             }
           }
