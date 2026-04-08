@@ -25,7 +25,7 @@ import {
   Bed
 } from 'lucide-react';
 
-import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE } from '../lib/dateUtils';
+import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE, formatDate } from '../lib/dateUtils';
 
 export function PatientList({ user }: { user: any }) {
   const navigate = useNavigate();

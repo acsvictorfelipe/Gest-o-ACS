@@ -16,7 +16,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE } from '../lib/dateUtils';
+import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE, formatDate } from '../lib/dateUtils';
 
 export function Reports({ user }: { user: any }) {
   const [patients, setPatients] = useState<any[]>([]);
@@ -188,9 +188,9 @@ export function Reports({ user }: { user: any }) {
       pendentes, 
       vacinasTomadas, 
       vacinasPendentes,
-      dum: g.dum ? new Date(g.dum).toLocaleDateString('pt-BR') : 'N/A',
-      dpp: g.dpp ? new Date(g.dpp).toLocaleDateString('pt-BR') : 'N/A',
-      saudeBucal: g.saudeBucal ? new Date(g.saudeBucal).toLocaleDateString('pt-BR') : 'Não Realizada'
+      dum: g.dum ? formatDate(g.dum) : 'N/A',
+      dpp: g.dpp ? formatDate(g.dpp) : 'N/A',
+      saudeBucal: g.saudeBucal ? formatDate(g.saudeBucal) : 'Não Realizada'
     };
   };
 
@@ -297,7 +297,7 @@ export function Reports({ user }: { user: any }) {
         const stats = getGestanteStats(p);
         return [
           p.name,
-          p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : 'N/A',
+          p.birth_date ? formatDate(p.birth_date) : 'N/A',
           stats.dum,
           stats.dpp,
           stats.consultas,
@@ -367,7 +367,7 @@ export function Reports({ user }: { user: any }) {
             const stats = getGestanteStats(p);
             return [
               p.name,
-              p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : 'N/A',
+              p.birth_date ? formatDate(p.birth_date) : 'N/A',
               stats.dum,
               stats.dpp,
               stats.consultas,
@@ -399,7 +399,7 @@ export function Reports({ user }: { user: any }) {
             const stats = getCriancaStats(p);
             return [
               p.name,
-              p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : 'N/A',
+              p.birth_date ? formatDate(p.birth_date) : 'N/A',
               stats.consultas,
               stats.tomadas.join(', ') || 'Nenhuma',
               stats.pendentes.join(', ') || 'Nenhuma'
@@ -564,7 +564,7 @@ export function Reports({ user }: { user: any }) {
                         </td>
                         <td className="px-8 py-5">
                           <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                            {p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : 'N/A'}
+                            {p.birth_date ? formatDate(p.birth_date) : 'N/A'}
                           </span>
                         </td>
                         <td className="px-8 py-5">

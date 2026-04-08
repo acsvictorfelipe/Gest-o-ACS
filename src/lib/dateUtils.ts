@@ -44,12 +44,18 @@ export const VACCINE_SCHEDULE = [
 export const calculateAge = (birthDate: string) => {
   if (!birthDate) return '';
   const today = new Date();
-  const birth = new Date(birthDate);
   
-  let years = today.getFullYear() - birth.getFullYear();
-  let months = today.getMonth() - birth.getMonth();
+  // Split the date string (YYYY-MM-DD) to avoid timezone shifts
+  const parts = birthDate.split('-');
+  if (parts.length !== 3) return '';
+  const birthYear = parseInt(parts[0]);
+  const birthMonth = parseInt(parts[1]) - 1; // 0-indexed
+  const birthDay = parseInt(parts[2]);
   
-  if (today.getDate() < birth.getDate()) {
+  let years = today.getFullYear() - birthYear;
+  let months = today.getMonth() - birthMonth;
+  
+  if (today.getDate() < birthDay) {
     months--;
   }
   
@@ -73,10 +79,16 @@ export const calculateAge = (birthDate: string) => {
 export const getAgeNumber = (birthDate: string) => {
   if (!birthDate) return 0;
   const today = new Date();
-  const birth = new Date(birthDate);
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+  
+  const parts = birthDate.split('-');
+  if (parts.length !== 3) return 0;
+  const birthYear = parseInt(parts[0]);
+  const birthMonth = parseInt(parts[1]) - 1;
+  const birthDay = parseInt(parts[2]);
+  
+  let age = today.getFullYear() - birthYear;
+  const m = today.getMonth() - birthMonth;
+  if (m < 0 || (m === 0 && today.getDate() < birthDay)) {
     age--;
   }
   return age;
@@ -84,12 +96,27 @@ export const getAgeNumber = (birthDate: string) => {
 
 export const getAgeInMonths = (birthDate: string) => {
   if (!birthDate) return 0;
-  const birth = new Date(birthDate);
+  
+  const parts = birthDate.split('-');
+  if (parts.length !== 3) return 0;
+  const birthYear = parseInt(parts[0]);
+  const birthMonth = parseInt(parts[1]) - 1;
+  const birthDay = parseInt(parts[2]);
+  
   const today = new Date();
-  let months = (today.getFullYear() - birth.getFullYear()) * 12;
-  months += today.getMonth() - birth.getMonth();
-  if (today.getDate() < birth.getDate()) {
+  let months = (today.getFullYear() - birthYear) * 12;
+  months += today.getMonth() - birthMonth;
+  if (today.getDate() < birthDay) {
     months--;
   }
   return Math.max(0, months);
+};
+
+export const formatDate = (dateStr: string) => {
+  if (!dateStr) return 'N/A';
+  // Split the date string (YYYY-MM-DD) to avoid timezone shifts
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const [year, month, day] = parts;
+  return `${day}/${month}/${year}`;
 };

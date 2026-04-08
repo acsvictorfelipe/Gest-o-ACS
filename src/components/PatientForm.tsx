@@ -27,7 +27,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { calculateAge, getAgeNumber, getAgeInMonths, VACCINE_SCHEDULE } from '../lib/dateUtils';
+import { calculateAge, getAgeNumber, getAgeInMonths, VACCINE_SCHEDULE, formatDate } from '../lib/dateUtils';
 
 const vaccineLabels: Record<string, string> = {
   penta2m: 'Penta 2 Meses',
@@ -663,7 +663,7 @@ export function PatientForm({ user }: { user: any }) {
     const personalData = [
       ['Nome', formData.name || 'N/A'],
       ['CNS', formData.cns || 'N/A'],
-      ['Data de Nascimento', formData.birthDate ? new Date(formData.birthDate).toLocaleDateString('pt-BR') : 'N/A'],
+      ['Data de Nascimento', formData.birthDate ? formatDate(formData.birthDate) : 'N/A'],
       ['Idade', formData.birthDate ? calculateAge(formData.birthDate) : 'N/A'],
       ['Gênero', formData.gender || 'N/A'],
       ['Contato', formData.contact || 'N/A'],
@@ -1310,7 +1310,7 @@ export function PatientForm({ user }: { user: any }) {
             <div className="mb-8 p-6 bg-primary/5 rounded-2xl border border-primary/10 animate-in fade-in slide-in-from-top-2">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                <h4 className="text-xs font-bold uppercase tracking-widest text-primary">Resumo da Visita Atual ({new Date(formData.visitDate).toLocaleDateString('pt-BR')})</h4>
+                <h4 className="text-xs font-bold uppercase tracking-widest text-primary">Resumo da Visita Atual ({formatDate(formData.visitDate)})</h4>
               </div>
               <textarea 
                 value={formData.visitSummary || ''}
@@ -1926,7 +1926,7 @@ export function PatientForm({ user }: { user: any }) {
                           <Activity className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                           <div>
                             <p className="text-[10px] font-bold text-amber-800 dark:text-amber-400 uppercase">Alerta: Criança menor de 2 anos</p>
-                            <p className="text-[9px] text-amber-600 dark:text-amber-500">Próxima visita recomendada até: {new Date(formData.clinicalData.crianca.proximaVisitaSugerida).toLocaleDateString('pt-BR')}</p>
+                            <p className="text-[9px] text-amber-600 dark:text-amber-500">Próxima visita recomendada até: {formatDate(formData.clinicalData.crianca.proximaVisitaSugerida)}</p>
                           </div>
                         </div>
                       )}
