@@ -57,8 +57,9 @@ export default function App() {
 
       if (data) {
         let updatedProfile = data;
-        // Bootstrap: Promote specific email to Administrador
-        if (supabaseUser.email === 'victorfelipe2012@gmail.com' && data.role !== 'Administrador') {
+        // Bootstrap: Promote specific emails to Administrador
+        const adminEmails = ['victorfelipe2012@gmail.com', 'acsvictorfelipe@gmail.com'];
+        if (supabaseUser.email && adminEmails.includes(supabaseUser.email) && data.role !== 'Administrador') {
           const { data: promotedData, error: promoError } = await supabase
             .from('profiles')
             .update({ role: 'Administrador' })
@@ -70,10 +71,14 @@ export default function App() {
             updatedProfile = promotedData;
           }
         }
-        setUser({ ...supabaseUser, ...updatedProfile });
+        
+        // Ensure name fallback from metadata
+        const name = updatedProfile.name || supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
+        setUser({ ...supabaseUser, ...updatedProfile, name });
       } else if (error) {
         console.error("Error fetching profile:", error);
-        setUser(supabaseUser);
+        const name = supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
+        setUser({ ...supabaseUser, name });
       }
     } catch (err) {
       console.error("Profile fetch error:", err);

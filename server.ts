@@ -41,6 +41,7 @@ async function startServer() {
     }
 
     try {
+      // Create user with admin privileges
       const { data, error } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
@@ -54,6 +55,22 @@ async function startServer() {
       });
 
       if (error) throw error;
+
+      // Also ensure profile exists (trigger should handle it, but we can be explicit)
+      if (data.user) {
+        const { error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            name,
+            role,
+            color,
+            microarea,
+            email
+          });
+        
+        if (profileError) console.error('Profile upsert error:', profileError);
+      }
 
       res.status(200).json({ user: data.user });
     } catch (error: any) {

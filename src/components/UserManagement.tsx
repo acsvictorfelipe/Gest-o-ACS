@@ -256,46 +256,6 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                   <option value="Administrador">Administrador</option>
                 </select>
               </div>
-
-              {formData.role !== 'Administrador' && (
-                <>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Microárea</label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <input 
-                        type="text" 
-                        value={formData.microarea || ''}
-                        onChange={e => setFormData({...formData, microarea: e.target.value})}
-                        className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 pl-10 text-sm focus:ring-2 focus:ring-primary/20"
-                        placeholder="Ex: 001"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Cor da Área</label>
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        { color: '#00488d', label: 'Azul' },
-                        { color: '#eab308', label: 'Amarelo' },
-                        { color: '#64748b', label: 'Cinza' },
-                        { color: '#db2777', label: 'Rosa' },
-                        { color: '#713f12', label: 'Marrom' }
-                      ].map((c) => (
-                        <button
-                          key={c.color}
-                          type="button"
-                          onClick={() => setFormData({...formData, color: c.color})}
-                          className={`w-6 h-6 rounded-full transition-all ${formData.color === c.color ? 'ring-2 ring-primary/40 scale-110' : 'opacity-40 hover:opacity-100'}`}
-                          style={{ backgroundColor: c.color }}
-                          title={c.label}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
 
             <button 

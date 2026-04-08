@@ -93,12 +93,3 @@ export const getAgeInMonths = (birthDate: string) => {
   }
   return Math.max(0, months);
 };
-
-export const formatDate = (dateStr: string) => {
-  if (!dateStr) return 'N/A';
-  // Split the date string (YYYY-MM-DD) to avoid timezone shifts
-  const parts = dateStr.split('-');
-  if (parts.length !== 3) return dateStr;
-  const [year, month, day] = parts;
-  return `${day}/${month}/${year}`;
-};
