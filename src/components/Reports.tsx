@@ -16,7 +16,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE } from '../lib/dateUtils';
+import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE, formatDate } from '../lib/dateUtils';
 
 export function Reports({ user }: { user: any }) {
   const [patients, setPatients] = useState<any[]>([]);
@@ -297,7 +297,7 @@ export function Reports({ user }: { user: any }) {
         const stats = getGestanteStats(p);
         return [
           p.name,
-          p.birth_date ? new Date(p.birth_date).toLocaleDateString('pt-BR') : 'N/A',
+          p.birth_date ? formatDate(p.birth_date) : 'N/A',
           stats.dum,
           stats.dpp,
           stats.consultas,

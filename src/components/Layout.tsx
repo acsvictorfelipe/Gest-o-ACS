@@ -25,6 +25,7 @@ import {
   Wifi,
   WifiOff
 } from 'lucide-react';
+import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE } from '../lib/dateUtils';
 import { SetupProfile } from './SetupProfile';
 
 interface LayoutProps {
@@ -87,10 +88,17 @@ export function Layout({ user, onProfileUpdate }: LayoutProps) {
               });
             }
 
-            // Check for late vaccines
+            // Check for late vaccines using age-based logic
+            const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
             const vaccines = p.clinical_data?.crianca?.vacinas || {};
-            const hasEmptyVaccine = Object.values(vaccines).some(v => !v);
-            if (hasEmptyVaccine) {
+            
+            const dueVaccines = VACCINE_SCHEDULE
+              .filter(group => group.age <= ageInMonths)
+              .flatMap(group => group.vaccines);
+              
+            const hasPending = dueVaccines.some(v => vaccines[v.id] !== 'Sim');
+
+            if (hasPending) {
               alerts.push({
                 id: `${p.id}-vacina`,
                 patientId: p.id,

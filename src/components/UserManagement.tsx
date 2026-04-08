@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { 
   UserPlus, 
@@ -17,10 +18,17 @@ import {
 } from 'lucide-react';
 
 export function UserManagement({ currentUser }: { currentUser: any }) {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+
+  useEffect(() => {
+    if (currentUser && currentUser.role !== 'Administrador') {
+      navigate('/');
+    }
+  }, [currentUser, navigate]);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -66,41 +74,21 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
     setMessage({ type: '', text: '' });
 
     try {
-      // 1. Create Auth Record
-      const isSystemAdmin = formData.role === 'Administrador';
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            name: formData.name,
-            role: formData.role,
-            color: isSystemAdmin ? null : formData.color,
-            microarea: isSystemAdmin ? '' : formData.microarea
-          }
-        }
+      const response = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       });
 
-      if (authError) throw authError;
+      const data = await response.json();
 
-      // Note: The trigger in Supabase will handle profile creation
-      // But we might need to update it if the trigger doesn't use metadata
-      // For now, let's manually update the profile to be sure
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            name: formData.name,
-            role: formData.role,
-            color: isSystemAdmin ? '#64748b' : formData.color, // Use a neutral color for admins if needed
-            microarea: isSystemAdmin ? '' : formData.microarea
-          })
-          .eq('id', authData.user.id);
-        
-        if (profileError) console.error("Profile update error:", profileError);
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao criar usuário');
       }
 
-      setMessage({ type: 'success', text: 'Usuário criado com sucesso! Verifique o e-mail para confirmação.' });
+      setMessage({ type: 'success', text: 'Usuário criado com sucesso!' });
       setFormData({ name: '', email: '', password: '', role: 'Agente', color: '#00488d', microarea: '' });
       fetchUsers();
     } catch (error: any) {
@@ -268,6 +256,46 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                   <option value="Administrador">Administrador</option>
                 </select>
               </div>
+
+              {formData.role !== 'Administrador' && (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Microárea</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input 
+                        type="text" 
+                        value={formData.microarea || ''}
+                        onChange={e => setFormData({...formData, microarea: e.target.value})}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 pl-10 text-sm focus:ring-2 focus:ring-primary/20"
+                        placeholder="Ex: 001"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Cor da Área</label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { color: '#00488d', label: 'Azul' },
+                        { color: '#eab308', label: 'Amarelo' },
+                        { color: '#64748b', label: 'Cinza' },
+                        { color: '#db2777', label: 'Rosa' },
+                        { color: '#713f12', label: 'Marrom' }
+                      ].map((c) => (
+                        <button
+                          key={c.color}
+                          type="button"
+                          onClick={() => setFormData({...formData, color: c.color})}
+                          className={`w-6 h-6 rounded-full transition-all ${formData.color === c.color ? 'ring-2 ring-primary/40 scale-110' : 'opacity-40 hover:opacity-100'}`}
+                          style={{ backgroundColor: c.color }}
+                          title={c.label}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <button 
