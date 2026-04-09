@@ -162,6 +162,11 @@ export function Reports({ user }: { user: any }) {
       // No extra info needed here as chronic is handled above
     }
 
+    if (p.categories?.includes('SaudeMental')) {
+      const sm = clinical.saudeMental || {};
+      if (sm.notes) info.push(`S.Mental: ${sm.notes}`);
+    }
+
     return info.length > 0 ? info.join(' | ') : 'Sem dados clínicos';
   };
 
@@ -420,7 +425,7 @@ export function Reports({ user }: { user: any }) {
     doc.save(`Relatorio_Microarea_${user.microarea}_${categoryFilter}.pdf`);
   };
 
-  const categories = ['Todas', 'Gestante', 'Criança', 'AcamadoDomiciliado', 'Idoso', 'Adulto', 'Domicílios'];
+  const categories = ['Todas', 'Gestante', 'Criança', 'AcamadoDomiciliado', 'Idoso', 'Adulto', 'SaudeMental', 'Domicílios'];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">

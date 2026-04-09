@@ -33,13 +33,14 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
     setMessage(null);
 
     try {
+      const isSystemAdmin = formData.role === 'Administrador';
       // 1. Update Supabase Profile
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
           name: formData.name,
-          microarea: formData.microarea,
-          color: formData.color,
+          microarea: isSystemAdmin ? '' : formData.microarea,
+          color: isSystemAdmin ? '#64748b' : formData.color,
           role: formData.role
         })
         .eq('id', user.id);
@@ -169,21 +170,22 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
               </p>
             </div>
 
-            {user.role === 'Agente' && (
+            {(user.role === 'Agente' || user.role === 'Gestor') && (
               <div className="md:col-span-2 space-y-4">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1 flex items-center gap-2">
                   <Palette className="w-3 h-3" />
-                  Cor de Identificação
+                  Cor de Identificação {user.role === 'Gestor' && '(Apenas Visualização)'}
                 </label>
                 <div className="flex flex-wrap gap-3">
                   {colors.map((c) => (
                     <button
                       key={c.value}
                       type="button"
+                      disabled={user.role === 'Gestor'}
                       onClick={() => setFormData({...formData, color: c.value})}
                       className={`group relative w-12 h-12 rounded-2xl transition-all ${
                         formData.color === c.value ? 'ring-4 ring-primary/20 scale-110 shadow-lg' : 'hover:scale-105'
-                      }`}
+                      } ${user.role === 'Gestor' ? 'cursor-default' : ''}`}
                       style={{ backgroundColor: c.value }}
                       title={c.name}
                     >

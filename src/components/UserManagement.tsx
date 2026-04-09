@@ -119,9 +119,12 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
     }
 
     try {
+      console.log(`Solicitando exclusão do usuário: ${userId}`);
       const response = await fetch(`/api/admin/delete-user/${userId}`, {
         method: 'DELETE',
       });
+
+      console.log(`Resposta da exclusão: ${response.status} ${response.statusText}`);
 
       const contentType = response.headers.get('content-type');
       let data;
@@ -382,15 +385,20 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                             <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tighter">
                               {u.role} • {u.microarea ? `MA ${u.microarea}` : 'Sem MA'}
                             </span>
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: u.color }}></div>
-                              <span className="text-[10px] font-bold uppercase" style={{ color: u.color }}>
-                                {u.color === '#00488d' ? 'Azul' : 
-                                 u.color === '#eab308' ? 'Amarelo' : 
-                                 u.color === '#64748b' ? 'Cinza' : 
-                                 u.color === '#db2777' ? 'Rosa' : 'Marrom'}
-                              </span>
-                            </div>
+                            {u.role !== 'Administrador' && (
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: u.color }}></div>
+                                <span className="text-[10px] font-bold uppercase" style={{ color: u.color }}>
+                                  {u.color === '#00488d' ? 'Azul' : 
+                                   u.color === '#eab308' ? 'Amarelo' : 
+                                   u.color === '#64748b' ? 'Cinza' : 
+                                   u.color === '#db2777' ? 'Rosa' : 'Marrom'}
+                                </span>
+                              </div>
+                            )}
+                            {u.role === 'Administrador' && (
+                              <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Acesso Total</span>
+                            )}
                           </div>
                         </td>
                         <td className="px-8 py-5">
@@ -449,7 +457,15 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Função</label>
                     <select 
                       value={editFormData.role || 'Agente'}
-                      onChange={e => setEditFormData({...editFormData, role: e.target.value})}
+                      onChange={e => {
+                        const newRole = e.target.value;
+                        setEditFormData({
+                          ...editFormData, 
+                          role: newRole,
+                          microarea: newRole === 'Agente' ? editFormData.microarea : '',
+                          color: newRole === 'Administrador' ? '#64748b' : editFormData.color
+                        });
+                      }}
                       className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 px-3 text-sm focus:ring-2 focus:ring-primary/20"
                     >
                       <option value="Agente">Agente (ACS)</option>

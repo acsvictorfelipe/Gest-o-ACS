@@ -84,6 +84,9 @@ export function PatientForm({ user }: { user: any }) {
     categories: [] as string[],
     clinicalData: {
       visitasGerais: [] as { date: string, summary: string }[],
+      saudeMental: {
+        notes: ''
+      },
       chronic: {
         diabetes: 'Não',
         diabetesData: {
@@ -278,6 +281,14 @@ export function PatientForm({ user }: { user: any }) {
             clinicalData: {
               ...formData.clinicalData,
               ...data.clinical_data,
+              saudeMental: data.clinical_data?.saudeMental || { notes: '' },
+              rastreamento: {
+                exameCitopatologico: 'Não',
+                saudeSexualReprodutiva: 'Não',
+                mamografia: 'Não',
+                vacinaHpv: 'Não',
+                ...(data.clinical_data?.rastreamento || {})
+              },
               chronic: data.clinical_data?.chronic || {
                 diabetes: data.clinical_data?.chronic?.diabetes || data.clinical_data?.adulto?.diabetes || data.clinical_data?.idoso?.diabetes || data.clinical_data?.gestante?.diabetes || data.clinical_data?.acamadodomiciliado?.diabetes || 'Não',
                 diabetesData: data.clinical_data?.chronic?.diabetesData || data.clinical_data?.adulto?.diabetesData || data.clinical_data?.idoso?.diabetesData || data.clinical_data?.gestante?.diabetesData || data.clinical_data?.acamadodomiciliado?.diabetesData || formData.clinicalData.chronic.diabetesData,
@@ -347,10 +358,6 @@ export function PatientForm({ user }: { user: any }) {
                   ...formData.clinicalData.idoso.hipertensaoData,
                   ...(data.clinical_data?.idoso?.hipertensaoData || {})
                 }
-              },
-              rastreamento: {
-                ...formData.clinicalData.rastreamento,
-                ...(data.clinical_data?.rastreamento || {})
               }
             }
           });
@@ -425,24 +432,22 @@ export function PatientForm({ user }: { user: any }) {
   };
 
   const renderAcsVisits = (subKey: 'diabetesData' | 'hipertensaoData') => {
-    const data = formData.clinicalData.chronic[subKey];
+    const data = formData.clinicalData?.chronic?.[subKey] || {};
     
-    if (!data) return null;
-
     const nextVisit = calculateNextVisit(data.visitaAcs1, 180);
     const alert = getVisitAlert(nextVisit);
 
     const updateVisits = (v1: string, v2: string) => {
-      setFormData({
-        ...formData,
+      setFormData(prev => ({
+        ...prev,
         clinicalData: {
-          ...formData.clinicalData,
+          ...prev.clinicalData,
           chronic: {
-            ...formData.clinicalData.chronic,
-            [subKey]: { ...data, visitaAcs1: v1, visitaAcs2: v2 }
+            ...(prev.clinicalData?.chronic || {}),
+            [subKey]: { ...(prev.clinicalData?.chronic?.[subKey] || {}), visitaAcs1: v1, visitaAcs2: v2 }
           }
         }
-      });
+      }));
     };
 
     return (
@@ -485,7 +490,7 @@ export function PatientForm({ user }: { user: any }) {
   };
 
   const renderDiabetesFields = () => {
-    const data = formData.clinicalData.chronic;
+    const data = formData.clinicalData?.chronic || {};
     if (data.diabetes !== 'Sim') return null;
 
     return (
@@ -498,16 +503,16 @@ export function PatientForm({ user }: { user: any }) {
           <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Avaliação dos Pés</label>
           <select 
             value={data.diabetesData?.avaliacaoPes || 'Não'}
-            onChange={e => setFormData({
-              ...formData, 
+            onChange={e => setFormData(prev => ({
+              ...prev, 
               clinicalData: { 
-                ...formData.clinicalData, 
+                ...prev.clinicalData, 
                 chronic: { 
-                  ...data, 
-                  diabetesData: { ...data.diabetesData, avaliacaoPes: e.target.value } 
+                  ...(prev.clinicalData?.chronic || {}), 
+                  diabetesData: { ...(prev.clinicalData?.chronic?.diabetesData || {}), avaliacaoPes: e.target.value } 
                 } 
               }
-            })}
+            }))}
             className="w-full bg-white dark:bg-slate-800 border-none rounded-xl p-3 text-sm"
           >
             <option>Não</option>
@@ -518,16 +523,16 @@ export function PatientForm({ user }: { user: any }) {
           <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Hemoglobina Glicada</label>
           <select 
             value={data.diabetesData?.hemoglobinaGlicada || 'Não'}
-            onChange={e => setFormData({
-              ...formData, 
+            onChange={e => setFormData(prev => ({
+              ...prev, 
               clinicalData: { 
-                ...formData.clinicalData, 
+                ...prev.clinicalData, 
                 chronic: { 
-                  ...data, 
-                  diabetesData: { ...data.diabetesData, hemoglobinaGlicada: e.target.value } 
+                  ...(prev.clinicalData?.chronic || {}), 
+                  diabetesData: { ...(prev.clinicalData?.chronic?.diabetesData || {}), hemoglobinaGlicada: e.target.value } 
                 } 
               }
-            })}
+            }))}
             className="w-full bg-white dark:bg-slate-800 border-none rounded-xl p-3 text-sm"
           >
             <option>Não</option>
@@ -540,7 +545,7 @@ export function PatientForm({ user }: { user: any }) {
   };
 
   const renderHipertensaoFields = () => {
-    const data = formData.clinicalData.chronic;
+    const data = formData.clinicalData?.chronic || {};
     if (data.hipertensao !== 'Sim') return null;
 
     return (
@@ -553,16 +558,16 @@ export function PatientForm({ user }: { user: any }) {
           <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Avaliação dos Pés</label>
           <select 
             value={data.hipertensaoData?.avaliacaoPes || 'Não'}
-            onChange={e => setFormData({
-              ...formData, 
+            onChange={e => setFormData(prev => ({
+              ...prev, 
               clinicalData: { 
-                ...formData.clinicalData, 
+                ...prev.clinicalData, 
                 chronic: { 
-                  ...data, 
-                  hipertensaoData: { ...data.hipertensaoData, avaliacaoPes: e.target.value } 
+                  ...(prev.clinicalData?.chronic || {}), 
+                  hipertensaoData: { ...(prev.clinicalData?.chronic?.hipertensaoData || {}), avaliacaoPes: e.target.value } 
                 } 
               }
-            })}
+            }))}
             className="w-full bg-white dark:bg-slate-800 border-none rounded-xl p-3 text-sm"
           >
             <option>Não</option>
@@ -580,6 +585,7 @@ export function PatientForm({ user }: { user: any }) {
     { id: 'AcamadoDomiciliado', icon: Bed, label: 'Acamado / Domiciliado', color: 'border-teal-500 text-teal-500' },
     { id: 'Adulto', icon: User, color: 'border-slate-500 text-slate-500' },
     { id: 'Idoso', icon: HeartPulse, color: 'border-red-500 text-red-500' },
+    { id: 'SaudeMental', icon: Activity, label: 'Saúde Mental', color: 'border-purple-500 text-purple-500' },
   ];
 
   const toggleCategory = (cat: string) => {
@@ -983,13 +989,13 @@ export function PatientForm({ user }: { user: any }) {
 
         const nextVisitStr = nextVisit.toISOString().split('T')[0];
         
-        if (!formData.clinicalData.crianca.proximaVisitaSugerida) {
+        if (!formData.clinicalData?.crianca?.proximaVisitaSugerida) {
           setFormData(prev => ({
             ...prev,
             clinicalData: {
               ...prev.clinicalData,
               crianca: {
-                ...prev.clinicalData.crianca,
+                ...(prev.clinicalData?.crianca || {}),
                 proximaVisitaSugerida: nextVisitStr
               }
             }
@@ -1375,14 +1381,14 @@ export function PatientForm({ user }: { user: any }) {
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Exame Citopatológico (Sim/Não)</label>
                   <select 
-                    value={formData.clinicalData.rastreamento.exameCitopatologico || 'Não'}
-                    onChange={e => setFormData({
-                      ...formData, 
+                    value={formData.clinicalData.rastreamento?.exameCitopatologico || 'Não'}
+                    onChange={e => setFormData(prev => ({
+                      ...prev, 
                       clinicalData: { 
-                        ...formData.clinicalData, 
-                        rastreamento: { ...formData.clinicalData.rastreamento, exameCitopatologico: e.target.value } 
+                        ...prev.clinicalData, 
+                        rastreamento: { ...(prev.clinicalData?.rastreamento || {}), exameCitopatologico: e.target.value } 
                       }
-                    })}
+                    }))}
                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm text-on-surface"
                   >
                     <option>Não</option>
@@ -1396,14 +1402,14 @@ export function PatientForm({ user }: { user: any }) {
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Saúde Sexual Reprodutiva (Sim/Não)</label>
                   <select 
-                    value={formData.clinicalData.rastreamento.saudeSexualReprodutiva || 'Não'}
-                    onChange={e => setFormData({
-                      ...formData, 
+                    value={formData.clinicalData.rastreamento?.saudeSexualReprodutiva || 'Não'}
+                    onChange={e => setFormData(prev => ({
+                      ...prev, 
                       clinicalData: { 
-                        ...formData.clinicalData, 
-                        rastreamento: { ...formData.clinicalData.rastreamento, saudeSexualReprodutiva: e.target.value } 
+                        ...prev.clinicalData, 
+                        rastreamento: { ...(prev.clinicalData?.rastreamento || {}), saudeSexualReprodutiva: e.target.value } 
                       }
-                    })}
+                    }))}
                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm text-on-surface"
                   >
                     <option>Não</option>
@@ -1417,14 +1423,14 @@ export function PatientForm({ user }: { user: any }) {
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Mamografia (Sim/Não)</label>
                   <select 
-                    value={formData.clinicalData.rastreamento.mamografia || 'Não'}
-                    onChange={e => setFormData({
-                      ...formData, 
+                    value={formData.clinicalData.rastreamento?.mamografia || 'Não'}
+                    onChange={e => setFormData(prev => ({
+                      ...prev, 
                       clinicalData: { 
-                        ...formData.clinicalData, 
-                        rastreamento: { ...formData.clinicalData.rastreamento, mamografia: e.target.value } 
+                        ...prev.clinicalData, 
+                        rastreamento: { ...(prev.clinicalData?.rastreamento || {}), mamografia: e.target.value } 
                       }
-                    })}
+                    }))}
                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm text-on-surface"
                   >
                     <option>Não</option>
@@ -1438,14 +1444,14 @@ export function PatientForm({ user }: { user: any }) {
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Vacina HPV (Sim/Não)</label>
                   <select 
-                    value={formData.clinicalData.rastreamento.vacinaHpv || 'Não'}
-                    onChange={e => setFormData({
-                      ...formData, 
+                    value={formData.clinicalData.rastreamento?.vacinaHpv || 'Não'}
+                    onChange={e => setFormData(prev => ({
+                      ...prev, 
                       clinicalData: { 
-                        ...formData.clinicalData, 
-                        rastreamento: { ...formData.clinicalData.rastreamento, vacinaHpv: e.target.value } 
+                        ...prev.clinicalData, 
+                        rastreamento: { ...(prev.clinicalData?.rastreamento || {}), vacinaHpv: e.target.value } 
                       }
-                    })}
+                    }))}
                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm text-on-surface"
                   >
                     <option>Não</option>
@@ -1483,6 +1489,31 @@ export function PatientForm({ user }: { user: any }) {
           </div>
         </section>
 
+        {/* Saúde Mental */}
+        {formData.categories.includes('SaudeMental') && (
+          <section className="bg-white rounded-2xl p-8 shadow-sm border-l-4 border-purple-500 mb-8 animate-in fade-in slide-in-from-top-2">
+            <h3 className="text-xl font-bold text-purple-600 mb-6 font-headline flex items-center gap-2">
+              <Activity className="w-6 h-6" />
+              Saúde Mental
+            </h3>
+            <div className="space-y-4">
+              <label className="block text-[10px] font-bold uppercase text-slate-400">Anotações de Saúde Mental</label>
+              <textarea 
+                value={formData.clinicalData?.saudeMental?.notes || ''}
+                onChange={e => setFormData(prev => ({
+                  ...prev, 
+                  clinicalData: { 
+                    ...prev.clinicalData, 
+                    saudeMental: { ...(prev.clinicalData?.saudeMental || {}), notes: e.target.value } 
+                  }
+                }))}
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-4 text-sm text-on-surface min-h-[100px]"
+                placeholder="Descreva observações relevantes sobre a saúde mental do paciente..."
+              />
+            </div>
+          </section>
+        )}
+
         {/* Condições Crônicas - Renderizado apenas uma vez se houver categorias relevantes */}
         {formData.categories.some(c => ['AcamadoDomiciliado', 'Gestante', 'Adulto', 'Idoso'].includes(c)) && (
           <section className="bg-white rounded-2xl p-8 shadow-sm border-l-4 border-indigo-500 mb-8 animate-in fade-in slide-in-from-top-2">
@@ -1494,11 +1525,14 @@ export function PatientForm({ user }: { user: any }) {
               <div>
                 <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Diabetes?</label>
                 <select 
-                  value={formData.clinicalData.chronic.diabetes || 'Não'}
-                  onChange={e => setFormData({
-                    ...formData, 
-                    clinicalData: { ...formData.clinicalData, chronic: { ...formData.clinicalData.chronic, diabetes: e.target.value } }
-                  })}
+                  value={formData.clinicalData?.chronic?.diabetes || 'Não'}
+                  onChange={e => setFormData(prev => ({
+                    ...prev, 
+                    clinicalData: { 
+                      ...prev.clinicalData, 
+                      chronic: { ...(prev.clinicalData?.chronic || {}), diabetes: e.target.value } 
+                    }
+                  }))}
                   className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                 >
                   <option>Não</option>
@@ -1509,11 +1543,14 @@ export function PatientForm({ user }: { user: any }) {
               <div>
                 <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Hipertensão?</label>
                 <select 
-                  value={formData.clinicalData.chronic.hipertensao || 'Não'}
-                  onChange={e => setFormData({
-                    ...formData, 
-                    clinicalData: { ...formData.clinicalData, chronic: { ...formData.clinicalData.chronic, hipertensao: e.target.value } }
-                  })}
+                  value={formData.clinicalData?.chronic?.hipertensao || 'Não'}
+                  onChange={e => setFormData(prev => ({
+                    ...prev, 
+                    clinicalData: { 
+                      ...prev.clinicalData, 
+                      chronic: { ...(prev.clinicalData?.chronic || {}), hipertensao: e.target.value } 
+                    }
+                  }))}
                   className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                 >
                   <option>Não</option>
@@ -1538,11 +1575,14 @@ export function PatientForm({ user }: { user: any }) {
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Grau de Dependência</label>
                     <select 
-                      value={formData.clinicalData.acamadodomiciliado.dependencia || 'Total'}
-                      onChange={e => setFormData({
-                        ...formData, 
-                        clinicalData: { ...formData.clinicalData, acamadodomiciliado: { ...formData.clinicalData.acamadodomiciliado, dependencia: e.target.value } }
-                      })}
+                      value={formData.clinicalData?.acamadodomiciliado?.dependencia || 'Total'}
+                      onChange={e => setFormData(prev => ({
+                        ...prev, 
+                        clinicalData: { 
+                          ...prev.clinicalData, 
+                          acamadodomiciliado: { ...(prev.clinicalData?.acamadodomiciliado || {}), dependencia: e.target.value } 
+                        }
+                      }))}
                       className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                     >
                       <option>Total</option>
@@ -1553,11 +1593,14 @@ export function PatientForm({ user }: { user: any }) {
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Faz uso de curativos?</label>
                     <select 
-                      value={formData.clinicalData.acamadodomiciliado.curativos || 'Não'}
-                      onChange={e => setFormData({
-                        ...formData, 
-                        clinicalData: { ...formData.clinicalData, acamadodomiciliado: { ...formData.clinicalData.acamadodomiciliado, curativos: e.target.value } }
-                      })}
+                      value={formData.clinicalData?.acamadodomiciliado?.curativos || 'Não'}
+                      onChange={e => setFormData(prev => ({
+                        ...prev, 
+                        clinicalData: { 
+                          ...prev.clinicalData, 
+                          acamadodomiciliado: { ...(prev.clinicalData?.acamadodomiciliado || {}), curativos: e.target.value } 
+                        }
+                      }))}
                       className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                     >
                       <option>Não</option>
@@ -1567,11 +1610,14 @@ export function PatientForm({ user }: { user: any }) {
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Cuidador Presente</label>
                     <select 
-                      value={formData.clinicalData.acamadodomiciliado.cuidador || 'Não'}
-                      onChange={e => setFormData({
-                        ...formData, 
-                        clinicalData: { ...formData.clinicalData, acamadodomiciliado: { ...formData.clinicalData.acamadodomiciliado, cuidador: e.target.value } }
-                      })}
+                      value={formData.clinicalData?.acamadodomiciliado?.cuidador || 'Não'}
+                      onChange={e => setFormData(prev => ({
+                        ...prev, 
+                        clinicalData: { 
+                          ...prev.clinicalData, 
+                          acamadodomiciliado: { ...(prev.clinicalData?.acamadodomiciliado || {}), cuidador: e.target.value } 
+                        }
+                      }))}
                       className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                     >
                       <option>Não</option>
@@ -1581,26 +1627,32 @@ export function PatientForm({ user }: { user: any }) {
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Faz uso de fralda?</label>
                     <select 
-                      value={formData.clinicalData.acamadodomiciliado.usoFralda || 'Não'}
-                      onChange={e => setFormData({
-                        ...formData, 
-                        clinicalData: { ...formData.clinicalData, acamadodomiciliado: { ...formData.clinicalData.acamadodomiciliado, usoFralda: e.target.value } }
-                      })}
+                      value={formData.clinicalData?.acamadodomiciliado?.usoFralda || 'Não'}
+                      onChange={e => setFormData(prev => ({
+                        ...prev, 
+                        clinicalData: { 
+                          ...prev.clinicalData, 
+                          acamadodomiciliado: { ...(prev.clinicalData?.acamadodomiciliado || {}), usoFralda: e.target.value } 
+                        }
+                      }))}
                       className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                     >
                       <option>Não</option>
                       <option>Sim</option>
                     </select>
                   </div>
-                  {formData.clinicalData.acamadodomiciliado.usoFralda === 'Sim' && (
+                  {formData.clinicalData?.acamadodomiciliado?.usoFralda === 'Sim' && (
                     <div>
                       <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Tamanho da Fralda</label>
                       <select 
-                        value={formData.clinicalData.acamadodomiciliado.tamanhoFralda || ''}
-                        onChange={e => setFormData({
-                          ...formData, 
-                          clinicalData: { ...formData.clinicalData, acamadodomiciliado: { ...formData.clinicalData.acamadodomiciliado, tamanhoFralda: e.target.value } }
-                        })}
+                        value={formData.clinicalData?.acamadodomiciliado?.tamanhoFralda || ''}
+                        onChange={e => setFormData(prev => ({
+                          ...prev, 
+                          clinicalData: { 
+                            ...prev.clinicalData, 
+                            acamadodomiciliado: { ...(prev.clinicalData?.acamadodomiciliado || {}), tamanhoFralda: e.target.value } 
+                          }
+                        }))}
                         className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                       >
                         <option value="">Selecione...</option>
@@ -1619,11 +1671,14 @@ export function PatientForm({ user }: { user: any }) {
                   <div className="md:col-span-3">
                     <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Observações</label>
                     <textarea 
-                      value={formData.clinicalData.acamadodomiciliado.observacoes || ''}
-                      onChange={e => setFormData({
-                        ...formData, 
-                        clinicalData: { ...formData.clinicalData, acamadodomiciliado: { ...formData.clinicalData.acamadodomiciliado, observacoes: e.target.value } }
-                      })}
+                      value={formData.clinicalData?.acamadodomiciliado?.observacoes || ''}
+                      onChange={e => setFormData(prev => ({
+                        ...prev, 
+                        clinicalData: { 
+                          ...prev.clinicalData, 
+                          acamadodomiciliado: { ...(prev.clinicalData?.acamadodomiciliado || {}), observacoes: e.target.value } 
+                        }
+                      }))}
                       className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm min-h-[100px]"
                       placeholder="Descreva condições específicas..."
                     />
@@ -1643,11 +1698,14 @@ export function PatientForm({ user }: { user: any }) {
                     <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">DUM (Última Menstruação)</label>
                     <input 
                       type="date" 
-                      value={formData.clinicalData.gestante.dum || ''}
-                      onChange={e => setFormData({
-                        ...formData, 
-                        clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, dum: e.target.value } }
-                      })}
+                      value={formData.clinicalData?.gestante?.dum || ''}
+                      onChange={e => setFormData(prev => ({
+                        ...prev, 
+                        clinicalData: { 
+                          ...prev.clinicalData, 
+                          gestante: { ...(prev.clinicalData?.gestante || {}), dum: e.target.value } 
+                        }
+                      }))}
                       className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                     />
                   </div>
@@ -1655,11 +1713,14 @@ export function PatientForm({ user }: { user: any }) {
                     <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">DPP (Prev. Parto)</label>
                     <input 
                       type="date" 
-                      value={formData.clinicalData.gestante.dpp || ''}
-                      onChange={e => setFormData({
-                        ...formData, 
-                        clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, dpp: e.target.value } }
-                      })}
+                      value={formData.clinicalData?.gestante?.dpp || ''}
+                      onChange={e => setFormData(prev => ({
+                        ...prev, 
+                        clinicalData: { 
+                          ...prev.clinicalData, 
+                          gestante: { ...(prev.clinicalData?.gestante || {}), dpp: e.target.value } 
+                        }
+                      }))}
                       className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                     />
                   </div>
@@ -1676,7 +1737,7 @@ export function PatientForm({ user }: { user: any }) {
                       </button>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {formData.clinicalData.gestante.consultas?.map((date, idx) => (
+                      {formData.clinicalData?.gestante?.consultas?.map((date, idx) => (
                         <div key={idx} className="relative group">
                           <input 
                             type="date" 
@@ -1708,7 +1769,7 @@ export function PatientForm({ user }: { user: any }) {
                       </button>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {formData.clinicalData.gestante.visitasAcs?.map((date, idx) => (
+                      {formData.clinicalData?.gestante?.visitasAcs?.map((date, idx) => (
                         <div key={idx} className="relative group">
                           <input 
                             type="date" 
@@ -1737,11 +1798,14 @@ export function PatientForm({ user }: { user: any }) {
                       <div>
                         <label className="block text-[10px] font-bold uppercase text-slate-500 mb-2">Sífilis</label>
                         <select 
-                          value={formData.clinicalData.gestante.sifilis || 'NÃO REALIZADO'}
-                          onChange={e => setFormData({
-                            ...formData, 
-                            clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, sifilis: e.target.value } }
-                          })}
+                          value={formData.clinicalData?.gestante?.sifilis || 'NÃO REALIZADO'}
+                          onChange={e => setFormData(prev => ({
+                            ...prev, 
+                            clinicalData: { 
+                              ...prev.clinicalData, 
+                              gestante: { ...(prev.clinicalData?.gestante || {}), sifilis: e.target.value } 
+                            }
+                          }))}
                           className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                         >
                           <option>NÃO REALIZADO</option>
@@ -1751,11 +1815,14 @@ export function PatientForm({ user }: { user: any }) {
                       <div>
                         <label className="block text-[10px] font-bold uppercase text-slate-500 mb-2">HIV</label>
                         <select 
-                          value={formData.clinicalData.gestante.hiv || 'NÃO REALIZADO'}
-                          onChange={e => setFormData({
-                            ...formData, 
-                            clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, hiv: e.target.value } }
-                          })}
+                          value={formData.clinicalData?.gestante?.hiv || 'NÃO REALIZADO'}
+                          onChange={e => setFormData(prev => ({
+                            ...prev, 
+                            clinicalData: { 
+                              ...prev.clinicalData, 
+                              gestante: { ...(prev.clinicalData?.gestante || {}), hiv: e.target.value } 
+                            }
+                          }))}
                           className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                         >
                           <option>NÃO REALIZADO</option>
@@ -1765,11 +1832,14 @@ export function PatientForm({ user }: { user: any }) {
                       <div>
                         <label className="block text-[10px] font-bold uppercase text-slate-500 mb-2">Hepatite B</label>
                         <select 
-                          value={formData.clinicalData.gestante.hepatiteB || 'NÃO REALIZADO'}
-                          onChange={e => setFormData({
-                            ...formData, 
-                            clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, hepatiteB: e.target.value } }
-                          })}
+                          value={formData.clinicalData?.gestante?.hepatiteB || 'NÃO REALIZADO'}
+                          onChange={e => setFormData(prev => ({
+                            ...prev, 
+                            clinicalData: { 
+                              ...prev.clinicalData, 
+                              gestante: { ...(prev.clinicalData?.gestante || {}), hepatiteB: e.target.value } 
+                            }
+                          }))}
                           className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                         >
                           <option>NÃO REALIZADO</option>
@@ -1779,11 +1849,14 @@ export function PatientForm({ user }: { user: any }) {
                       <div>
                         <label className="block text-[10px] font-bold uppercase text-slate-500 mb-2">Hepatite C</label>
                         <select 
-                          value={formData.clinicalData.gestante.hepatiteC || 'NÃO REALIZADO'}
-                          onChange={e => setFormData({
-                            ...formData, 
-                            clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, hepatiteC: e.target.value } }
-                          })}
+                          value={formData.clinicalData?.gestante?.hepatiteC || 'NÃO REALIZADO'}
+                          onChange={e => setFormData(prev => ({
+                            ...prev, 
+                            clinicalData: { 
+                              ...prev.clinicalData, 
+                              gestante: { ...(prev.clinicalData?.gestante || {}), hepatiteC: e.target.value } 
+                            }
+                          }))}
                           className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                         >
                           <option>NÃO REALIZADO</option>
@@ -1802,11 +1875,14 @@ export function PatientForm({ user }: { user: any }) {
                       <div>
                         <label className="block text-[10px] font-bold uppercase text-slate-500 mb-2">dTpa Aplicada?</label>
                         <select 
-                          value={formData.clinicalData.gestante.dtpa || 'Não'}
-                          onChange={e => setFormData({
-                            ...formData, 
-                            clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, dtpa: e.target.value } }
-                          })}
+                          value={formData.clinicalData?.gestante?.dtpa || 'Não'}
+                          onChange={e => setFormData(prev => ({
+                            ...prev, 
+                            clinicalData: { 
+                              ...prev.clinicalData, 
+                              gestante: { ...(prev.clinicalData?.gestante || {}), dtpa: e.target.value } 
+                            }
+                          }))}
                           className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
                         >
                           <option>Não</option>
@@ -1821,11 +1897,14 @@ export function PatientForm({ user }: { user: any }) {
                       <label className="block text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 mb-2">Consulta Puerpério</label>
                       <input 
                         type="date" 
-                        value={formData.clinicalData.gestante.puerperioConsulta || ''}
-                        onChange={e => setFormData({
-                          ...formData, 
-                          clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, puerperioConsulta: e.target.value } }
-                        })}
+                        value={formData.clinicalData?.gestante?.puerperioConsulta || ''}
+                        onChange={e => setFormData(prev => ({
+                          ...prev, 
+                          clinicalData: { 
+                            ...prev.clinicalData, 
+                            gestante: { ...(prev.clinicalData?.gestante || {}), puerperioConsulta: e.target.value } 
+                          }
+                        }))}
                         className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm text-on-surface"
                       />
                     </div>
@@ -1833,11 +1912,14 @@ export function PatientForm({ user }: { user: any }) {
                       <label className="block text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 mb-2">Visita ACS Puerpério</label>
                       <input 
                         type="date" 
-                        value={formData.clinicalData.gestante.puerperioVisita || ''}
-                        onChange={e => setFormData({
-                          ...formData, 
-                          clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, puerperioVisita: e.target.value } }
-                        })}
+                        value={formData.clinicalData?.gestante?.puerperioVisita || ''}
+                        onChange={e => setFormData(prev => ({
+                          ...prev, 
+                          clinicalData: { 
+                            ...prev.clinicalData, 
+                            gestante: { ...(prev.clinicalData?.gestante || {}), puerperioVisita: e.target.value } 
+                          }
+                        }))}
                         className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm text-on-surface"
                       />
                     </div>
@@ -1845,11 +1927,14 @@ export function PatientForm({ user }: { user: any }) {
                       <label className="block text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 mb-2">Saúde Bucal</label>
                       <input 
                         type="date" 
-                        value={formData.clinicalData.gestante.saudeBucal || ''}
-                        onChange={e => setFormData({
-                          ...formData, 
-                          clinicalData: { ...formData.clinicalData, gestante: { ...formData.clinicalData.gestante, saudeBucal: e.target.value } }
-                        })}
+                        value={formData.clinicalData?.gestante?.saudeBucal || ''}
+                        onChange={e => setFormData(prev => ({
+                          ...prev, 
+                          clinicalData: { 
+                            ...prev.clinicalData, 
+                            gestante: { ...(prev.clinicalData?.gestante || {}), saudeBucal: e.target.value } 
+                            }
+                        }))}
                         className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm text-on-surface"
                       />
                     </div>
@@ -1900,11 +1985,14 @@ export function PatientForm({ user }: { user: any }) {
                           <label className="block text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase">Até 30 dias</label>
                           <input 
                             type="date" 
-                            value={formData.clinicalData.crianca.visita30dias || ''}
-                            onChange={e => setFormData({
-                              ...formData, 
-                              clinicalData: { ...formData.clinicalData, crianca: { ...formData.clinicalData.crianca, visita30dias: e.target.value } }
-                            })}
+                            value={formData.clinicalData?.crianca?.visita30dias || ''}
+                            onChange={e => setFormData(prev => ({
+                              ...prev, 
+                              clinicalData: { 
+                                ...prev.clinicalData, 
+                                crianca: { ...(prev.clinicalData?.crianca || {}), visita30dias: e.target.value } 
+                              }
+                            }))}
                             className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-2 text-xs text-on-surface"
                           />
                         </div>
@@ -1912,11 +2000,14 @@ export function PatientForm({ user }: { user: any }) {
                           <label className="block text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase">Até 6 meses</label>
                           <input 
                             type="date" 
-                            value={formData.clinicalData.crianca.visita6meses || ''}
-                            onChange={e => setFormData({
-                              ...formData, 
-                              clinicalData: { ...formData.clinicalData, crianca: { ...formData.clinicalData.crianca, visita6meses: e.target.value } }
-                            })}
+                            value={formData.clinicalData?.crianca?.visita6meses || ''}
+                            onChange={e => setFormData(prev => ({
+                              ...prev, 
+                              clinicalData: { 
+                                ...prev.clinicalData, 
+                                crianca: { ...(prev.clinicalData?.crianca || {}), visita6meses: e.target.value } 
+                              }
+                            }))}
                             className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-2 text-xs text-on-surface"
                           />
                         </div>
