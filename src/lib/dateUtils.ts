@@ -114,8 +114,9 @@ export const getAgeInMonths = (birthDate: string) => {
 
 export const formatDate = (dateStr: string) => {
   if (!dateStr) return 'N/A';
-  // Split the date string (YYYY-MM-DD) to avoid timezone shifts
-  const parts = dateStr.split('-');
+  // Handle ISO strings by taking only the date part
+  const cleanDate = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+  const parts = cleanDate.split('-');
   if (parts.length !== 3) return dateStr;
   const [year, month, day] = parts;
   return `${day}/${month}/${year}`;

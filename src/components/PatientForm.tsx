@@ -50,6 +50,7 @@ const vaccineLabels: Record<string, string> = {
   visitaAcs2: '2ª Visita ACS',
   consultaMedicaAnualData: 'Consulta Médica Anual',
   avaliacaoPes: 'Avaliação dos Pés',
+  consultas6Meses: 'Consultas nos últimos 6 meses',
   hemoglobinaGlicada: 'Hemoglobina Glicada',
   vacinaInfluenza: 'Vacina Influenza',
   exameCitopatologico: 'Exame Citopatológico',
@@ -98,7 +99,7 @@ export function PatientForm({ user }: { user: any }) {
         },
         hipertensao: 'Não',
         hipertensaoData: {
-          avaliacaoPes: 'Não',
+          consultas6Meses: 'Não',
           visitaAcs1: '',
           visitaAcs2: ''
         }
@@ -119,7 +120,7 @@ export function PatientForm({ user }: { user: any }) {
         visitasAcsDiabetes: [] as string[],
         hipertensao: 'Não',
         hipertensaoData: {
-          avaliacaoPes: 'Não',
+          consultas6Meses: 'Não',
           visitaAcs1: '',
           visitaAcs2: ''
         },
@@ -148,7 +149,7 @@ export function PatientForm({ user }: { user: any }) {
         },
         hipertensao: 'Não',
         hipertensaoData: {
-          avaliacaoPes: 'Não',
+          consultas6Meses: 'Não',
           visitaAcs1: '',
           visitaAcs2: ''
         }
@@ -212,10 +213,11 @@ export function PatientForm({ user }: { user: any }) {
         visitasAcsDiabetes: [] as string[],
         hipertensao: 'Não',
         hipertensaoData: {
-          avaliacaoPes: 'Não',
+          consultas6Meses: 'Não',
           visitaAcs1: '',
           visitaAcs2: ''
-        }
+        },
+        notes: ''
       },
       idoso: {
         diabetes: 'Não',
@@ -228,7 +230,7 @@ export function PatientForm({ user }: { user: any }) {
         visitasAcsDiabetes: [] as string[],
         hipertensao: 'Não',
         hipertensaoData: {
-          avaliacaoPes: 'Não',
+          consultas6Meses: 'Não',
           visitaAcs1: '',
           visitaAcs2: ''
         },
@@ -568,16 +570,16 @@ export function PatientForm({ user }: { user: any }) {
           Submenu: Hipertensão
         </h4>
         <div>
-          <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Avaliação dos Pés</label>
+          <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Consultas nos últimos 6 meses?</label>
           <select 
-            value={data.hipertensaoData?.avaliacaoPes || 'Não'}
+            value={data.hipertensaoData?.consultas6Meses || 'Não'}
             onChange={e => setFormData(prev => ({
               ...prev, 
               clinicalData: { 
                 ...prev.clinicalData, 
                 chronic: { 
                   ...(prev.clinicalData?.chronic || {}), 
-                  hipertensaoData: { ...(prev.clinicalData?.chronic?.hipertensaoData || {}), avaliacaoPes: e.target.value } 
+                  hipertensaoData: { ...(prev.clinicalData?.chronic?.hipertensaoData || {}), consultas6Meses: e.target.value } 
                 } 
               }
             }))}
@@ -2138,6 +2140,23 @@ export function PatientForm({ user }: { user: any }) {
                   Categoria: {catId}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {catId === 'Adulto' && (
+                    <div className="md:col-span-2 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                      <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Observações / Informações Adicionais</label>
+                      <textarea 
+                        value={formData.clinicalData.adulto.notes || ''}
+                        onChange={e => setFormData({
+                          ...formData, 
+                          clinicalData: { 
+                            ...formData.clinicalData, 
+                            adulto: { ...formData.clinicalData.adulto, notes: e.target.value } 
+                          }
+                        })}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-4 text-sm min-h-[120px] text-on-surface"
+                        placeholder="Anote aqui informações relevantes sobre o acompanhamento deste adulto..."
+                      />
+                    </div>
+                  )}
                   {catId === 'Idoso' && (
                     <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
                       <h4 className="col-span-full text-xs font-bold uppercase text-red-600 dark:text-red-400 flex items-center gap-2 mb-2">
