@@ -26,6 +26,7 @@ import {
   WifiOff
 } from 'lucide-react';
 import { SetupProfile } from './SetupProfile';
+import { formatDate, parseDate } from '../lib/dateUtils';
 
 interface LayoutProps {
   user: any;
@@ -71,17 +72,20 @@ export function Layout({ user, onProfileUpdate }: LayoutProps) {
 
         patients?.forEach(p => {
           if (p.categories?.includes('Criança') && p.birth_date) {
-            const birth = new Date(p.birth_date);
+            const birth = parseDate(p.birth_date);
+            if (!birth) return;
+            
             const sixMonthsDate = new Date(birth);
             sixMonthsDate.setMonth(birth.getMonth() + 6);
             const diffDays = Math.ceil((sixMonthsDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
             
             if (diffDays <= 15 && diffDays >= -15) {
+              const formattedDate = `${sixMonthsDate.getDate().toString().padStart(2, '0')}/${(sixMonthsDate.getMonth() + 1).toString().padStart(2, '0')}/${sixMonthsDate.getFullYear()}`;
               alerts.push({
                 id: p.id,
                 name: p.name,
                 type: 'Visita 6 Meses',
-                message: `Próxima da visita de 6 meses (${sixMonthsDate.toLocaleDateString('pt-BR')})`,
+                message: `Próxima da visita de 6 meses (${formattedDate})`,
                 icon: Baby,
                 color: 'text-orange-500'
               });

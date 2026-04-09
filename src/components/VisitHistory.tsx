@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
+import { formatDate } from '../lib/dateUtils';
+
 export function VisitHistory({ user }: { user: any }) {
   const navigate = useNavigate();
   const [visits, setVisits] = useState<any[]>([]);
@@ -155,7 +157,7 @@ export function VisitHistory({ user }: { user: any }) {
                           </div>
                           <div>
                             <p className="text-sm font-bold text-on-surface">
-                              {new Date(v.date).toLocaleDateString('pt-BR')}
+                              {formatDate(v.date)}
                             </p>
                             <span className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500 dark:text-slate-400 uppercase">
                               {v.type}

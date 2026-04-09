@@ -25,7 +25,7 @@ import {
   Bed
 } from 'lucide-react';
 
-import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE, formatDate } from '../lib/dateUtils';
+import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE, formatDate, parseDate } from '../lib/dateUtils';
 
 export function PatientList({ user }: { user: any }) {
   const navigate = useNavigate();
@@ -391,7 +391,9 @@ export function PatientList({ user }: { user: any }) {
                           )}
                           {p.categories?.includes('Criança') && (() => {
                             if (!p.birth_date) return null;
-                            const birth = new Date(p.birth_date);
+                            const birth = parseDate(p.birth_date);
+                            if (!birth) return null;
+                            
                             const sixMonthsDate = new Date(birth);
                             sixMonthsDate.setMonth(birth.getMonth() + 6);
                             const now = new Date();

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { syncService } from '../lib/syncService';
+import { formatDate } from '../lib/dateUtils';
 import { 
   Home, 
   Users, 
@@ -300,7 +301,7 @@ export function HouseholdView({ user }: { user: any }) {
                     <div className="flex items-center gap-3 mb-1">
                       <span className="text-sm font-bold text-on-surface">{v.type}</span>
                       <span className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-400 dark:text-slate-500 uppercase">
-                        {new Date(v.date).toLocaleDateString('pt-BR')}
+                        {formatDate(v.date)}
                       </span>
                     </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{v.summary}</p>

@@ -120,3 +120,11 @@ export const formatDate = (dateStr: string) => {
   const [year, month, day] = parts;
   return `${day}/${month}/${year}`;
 };
+
+export const parseDate = (dateStr: string) => {
+  if (!dateStr) return null;
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return null;
+  // Create date at noon local time to avoid timezone shifts
+  return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+};

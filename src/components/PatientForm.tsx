@@ -27,7 +27,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { calculateAge, getAgeNumber, getAgeInMonths, VACCINE_SCHEDULE, formatDate } from '../lib/dateUtils';
+import { calculateAge, getAgeNumber, getAgeInMonths, VACCINE_SCHEDULE, formatDate, parseDate } from '../lib/dateUtils';
 
 const vaccineLabels: Record<string, string> = {
   penta2m: 'Penta 2 Meses',
@@ -392,7 +392,8 @@ export function PatientForm({ user }: { user: any }) {
 
   const calculateNextVisit = (dateStr: string, days: number) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
+    const date = parseDate(dateStr);
+    if (!date) return '';
     const year = date.getFullYear();
     date.setDate(date.getDate() + days);
     
@@ -401,15 +402,23 @@ export function PatientForm({ user }: { user: any }) {
       return `${year}-12-31`;
     }
     
-    return date.toISOString().split('T')[0];
+    // Format back to YYYY-MM-DD manually to avoid toISOString timezone shift
+    const y = date.getFullYear();
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const d = date.getDate().toString().padStart(2, '0');
+    return `${y}-${m}-${d}`;
   };
 
   const getVisitAlert = (nextDateStr: string) => {
     if (!nextDateStr) return null;
-    const nextDate = new Date(nextDateStr);
+    const nextDate = parseDate(nextDateStr);
+    if (!nextDate) return null;
     const today = new Date();
+    // Set today to noon to compare with nextDate which is also at noon
+    today.setHours(12, 0, 0, 0);
+    
     const diffTime = nextDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays < 0) return { type: 'error', message: `Atrasada há ${Math.abs(diffDays)} dias!` };
     if (diffDays <= 15) return { type: 'warning', message: `Próxima visita em ${diffDays} dias.` };
@@ -418,13 +427,16 @@ export function PatientForm({ user }: { user: any }) {
 
   const getConsultationAlert = (lastDateStr: string) => {
     if (!lastDateStr) return null;
-    const lastDate = new Date(lastDateStr);
+    const lastDate = parseDate(lastDateStr);
+    if (!lastDate) return null;
     const nextDate = new Date(lastDate);
     nextDate.setFullYear(nextDate.getFullYear() + 1);
     
     const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    
     const diffTime = nextDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays < 0) return { type: 'error', message: `Consulta anual atrasada há ${Math.abs(diffDays)} dias!` };
     if (diffDays <= 30) return { type: 'warning', message: `Próxima consulta anual em ${diffDays} dias.` };
