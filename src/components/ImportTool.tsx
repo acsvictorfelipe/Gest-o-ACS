@@ -32,6 +32,22 @@ export function ImportTool({ user }: { user: any }) {
     setLoading(true);
     setResults(null);
 
+    const normalizeSimNao = (val: any) => {
+      if (!val) return 'Não';
+      const s = String(val).toLowerCase().trim();
+      if (s === 'sim' || s === 's' || s === 'true' || s === '1') return 'Sim';
+      return 'Não';
+    };
+
+    const getColumnValue = (row: any, variations: string[]) => {
+      const keys = Object.keys(row);
+      for (const variation of variations) {
+        const foundKey = keys.find(k => k.toLowerCase().trim() === variation.toLowerCase().trim());
+        if (foundKey !== undefined) return row[foundKey];
+      }
+      return null;
+    };
+
     Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
@@ -43,121 +59,163 @@ export function ImportTool({ user }: { user: any }) {
 
         for (const row of rows) {
           try {
-            const cns = row['Cns'] || row['cns'];
-            const name = row['Nome do Paciente'] || row['nome'];
+            const cns = getColumnValue(row, ['Cns', 'CNS', 'C.N.S.']);
+            const name = getColumnValue(row, ['Nome do Paciente', 'Nome', 'Paciente', 'nome']);
             if (!cns || !name) continue;
 
-            const respCns = row['RespFamiliar_CNS'] || cns;
-            const address = row['Endereço'] || 'Endereço não informado';
-            const number = row['NumeroCasa'] || '';
-            const complement = row['Complemento'] || '';
-            const isResp = row['RespFamiliar?'] === 'Sim';
+            const respCns = getColumnValue(row, ['RespFamiliar_CNS', 'CNS Responsável', 'CNS Responsavel', 'cns_responsavel', 'Responsável CNS']) || cns;
+            const address = getColumnValue(row, ['Endereço', 'Endereco', 'Logradouro', 'Rua']) || 'Endereço não informado';
+            const number = getColumnValue(row, ['NumeroCasa', 'Número', 'Numero', 'Nº', 'N', 'nº']) || '';
+            const complement = getColumnValue(row, ['Complemento', 'Apto', 'Casa']) || '';
+            const isResp = normalizeSimNao(getColumnValue(row, ['RespFamiliar?', 'Responsável?', 'Responsavel?', 'É Responsável?', 'Responsavel Familiar'])) === 'Sim';
 
             // 1. Handle Household
             let householdId = null;
             const { data: existingH } = await supabase
               .from('households')
-              .select('id')
+              .select('id, responsible_name')
               .eq('responsible_cns', respCns)
               .maybeSingle();
 
             if (existingH) {
               householdId = existingH.id;
-              // If this row is the responsible, update the name (in case it was a placeholder)
-              if (isResp) {
-                await supabase.from('households').update({ responsible_name: name }).eq('id', householdId);
+              // Update household info if this is the responsible or if it was a placeholder
+              const updates: any = {};
+              if (isResp) updates.responsible_name = name;
+              if (address && address !== 'Endereço não informado') updates.address = address;
+              if (number) updates.number = number;
+              if (complement) updates.complement = complement;
+
+              if (Object.keys(updates).length > 0) {
+                await supabase.from('households').update(updates).eq('id', householdId);
               }
             } else {
-              // If not responsible and household doesn't exist, don't create it automatically
-              if (isResp) {
-                const { data: newH, error: hError } = await supabase
-                  .from('households')
-                  .insert([{
-                    address,
-                    number,
-                    complement,
-                    microarea: user.microarea || '000',
-                    area_color: user.color || '#00488d',
-                    agent_id: user.id,
-                    responsible_cns: respCns,
-                    responsible_name: name
-                  }])
-                  .select()
-                  .single();
-                
-                if (hError) throw hError;
-                householdId = newH.id;
-              } else {
-                // Patient without household (responsible not found)
-                householdId = null;
-              }
+              // Create household even if not responsible, using current row's address info
+              const { data: newH, error: hError } = await supabase
+                .from('households')
+                .insert([{
+                  address,
+                  number,
+                  complement,
+                  microarea: user.microarea || '000',
+                  area_color: user.color || '#00488d',
+                  agent_id: user.id,
+                  responsible_cns: respCns,
+                  responsible_name: isResp ? name : 'Responsável não cadastrado'
+                }])
+                .select()
+                .single();
+              
+              if (hError) throw hError;
+              householdId = newH.id;
             }
 
             // 2. Map Categories
-            const rawCat = row['Categoria'] || '';
+            const rawCat = getColumnValue(row, ['Categoria', 'Categorias', 'categoria']) || '';
             const categories = [];
             if (rawCat.includes('Gestante')) categories.push('Gestante');
             if (rawCat.includes('Criança')) categories.push('Criança');
             if (rawCat.includes('Acamado')) categories.push('AcamadoDomiciliado');
             if (rawCat.includes('Adulto')) categories.push('Adulto');
-            if (row['Idade'] && parseInt(row['Idade']) >= 60) categories.push('Idoso');
+            if (rawCat.includes('Saúde Mental') || rawCat.includes('Saude Mental')) categories.push('SaudeMental');
+            
+            const idade = parseInt(getColumnValue(row, ['Idade', 'idade']) || '0');
+            if (idade >= 60) categories.push('Idoso');
             
             // 3. Map Clinical Data
+            const hasDiabetes = normalizeSimNao(getColumnValue(row, ['Tem Diabete?', 'Diabetes', 'Diabético', 'Diabetico']));
+            const hasHipertensao = normalizeSimNao(getColumnValue(row, ['Tem Hipertensão?', 'Tem Pressão Alta?', 'Hipertensão', 'Hipertensao', 'Pressão Alta', 'Pressao Alta']));
+            const hasConsultas6m = normalizeSimNao(getColumnValue(row, ['Consultas nos últimos 6 meses', 'Consultas 6 Meses', 'Consultas6Meses']));
+
+            const socialBenefits = [];
+            const rawBenefits = getColumnValue(row, ['Benefícios Sociais', 'Benefícios', 'Beneficios']) || '';
+            if (rawBenefits) {
+              if (rawBenefits.includes('Bolsa Família') || rawBenefits.includes('Bolsa Familia')) socialBenefits.push('Bolsa Família');
+              if (rawBenefits.includes('LOAS')) socialBenefits.push('LOAS');
+              if (rawBenefits.includes('BPC')) socialBenefits.push('BPC');
+            } else {
+              if (normalizeSimNao(getColumnValue(row, ['Bolsa Família', 'Bolsa Familia'])) === 'Sim') socialBenefits.push('Bolsa Família');
+              if (normalizeSimNao(getColumnValue(row, ['LOAS'])) === 'Sim') socialBenefits.push('LOAS');
+              if (normalizeSimNao(getColumnValue(row, ['BPC'])) === 'Sim') socialBenefits.push('BPC');
+            }
+
             const clinicalData: any = {
+              visitasGerais: [] as { date: string, summary: string }[],
+              socialBenefits,
+              saudeMental: {
+                notes: getColumnValue(row, ['Saúde Mental Notas', 'Saude Mental Notas', 'Notas Saúde Mental']) || ''
+              },
               chronic: {
-                diabetes: row['Tem Diabete?'] || 'Não',
-                hipertensao: row['Tem Hipertensão?'] || row['Tem Pressão Alta?'] || 'Não',
+                diabetes: hasDiabetes,
+                hipertensao: hasHipertensao,
                 diabetesData: { avaliacaoPes: 'Não', hemoglobinaGlicada: 'Não', visitaAcs1: '', visitaAcs2: '' },
-                hipertensaoData: { avaliacaoPes: 'Não', visitaAcs1: '', visitaAcs2: '' }
+                hipertensaoData: { consultas6Meses: hasConsultas6m, visitaAcs1: '', visitaAcs2: '' }
               },
               gestante: {
-                dum: formatDate(row['DUM']),
-                dpp: formatDate(row['DPP']),
+                dum: formatDate(getColumnValue(row, ['DUM', 'dum'])),
+                dpp: formatDate(getColumnValue(row, ['DPP', 'dpp'])),
                 consultas: [
-                  formatDate(row['1 Consulta']),
-                  formatDate(row['2 Consulta']),
-                  formatDate(row['3 Consulta']),
-                  formatDate(row['4 Consulta']),
-                  formatDate(row['5 Consulta']),
-                  formatDate(row['6 Consulta']),
-                  formatDate(row['7 Consulta']),
-                  formatDate(row['8 Consulta']),
-                  formatDate(row['9 Consulta'])
+                  formatDate(getColumnValue(row, ['1 Consulta'])),
+                  formatDate(getColumnValue(row, ['2 Consulta'])),
+                  formatDate(getColumnValue(row, ['3 Consulta'])),
+                  formatDate(getColumnValue(row, ['4 Consulta'])),
+                  formatDate(getColumnValue(row, ['5 Consulta'])),
+                  formatDate(getColumnValue(row, ['6 Consulta'])),
+                  formatDate(getColumnValue(row, ['7 Consulta'])),
+                  formatDate(getColumnValue(row, ['8 Consulta'])),
+                  formatDate(getColumnValue(row, ['9 Consulta']))
                 ].filter(d => d),
-                hiv: row['HIV'] || 'NÃO REALIZADO',
-                hepatiteB: row['Hepatite B'] || 'NÃO REALIZADO',
-                hepatiteC: row['Hepatite C'] || 'NÃO REALIZADO',
-                sifilis: row['Sifilis'] || 'NÃO REALIZADO',
-                dtpa: row['dTpa'] || 'Não',
-                diabetes: row['Tem Diabete?'] || 'Não',
-                hipertensao: row['Tem Hipertensão?'] || row['Tem Pressão Alta?'] || 'Não'
+                hiv: getColumnValue(row, ['HIV', 'hiv']) || 'NÃO REALIZADO',
+                hepatiteB: getColumnValue(row, ['Hepatite B', 'HepatiteB']) || 'NÃO REALIZADO',
+                hepatiteC: getColumnValue(row, ['Hepatite C', 'HepatiteC']) || 'NÃO REALIZADO',
+                sifilis: getColumnValue(row, ['Sifilis', 'Sífilis']) || 'NÃO REALIZADO',
+                dtpa: normalizeSimNao(getColumnValue(row, ['dTpa', 'dtpa'])),
+                diabetes: hasDiabetes,
+                hipertensao: hasHipertensao,
+                hipertensaoData: { consultas6Meses: hasConsultas6m, visitaAcs1: '', visitaAcs2: '' }
               },
               crianca: {
-                visita30dias: formatDate(row['Visita30dias']),
-                visita6meses: formatDate(row['Visita6Meses']),
+                visita30dias: formatDate(getColumnValue(row, ['Visita30dias', 'Visita 30 dias'])),
+                visita6meses: formatDate(getColumnValue(row, ['Visita6Meses', 'Visita 6 meses'])),
                 vacinas: {
-                  penta2m: formatDate(row['Penta2Meses']),
-                  penta4m: formatDate(row['Penta4Meses']),
-                  penta6m: formatDate(row['Penta6Meses']),
-                  vip2m: formatDate(row['VIP2meses']),
-                  vip4m: formatDate(row['VIP4meses']),
-                  vip6m: formatDate(row['VIP6meses'])
+                  bcg: normalizeSimNao(getColumnValue(row, ['BCG', 'bcg'])),
+                  penta1: normalizeSimNao(getColumnValue(row, ['Penta1', 'Penta 1'])),
+                  penta2: normalizeSimNao(getColumnValue(row, ['Penta2', 'Penta 2'])),
+                  penta3: normalizeSimNao(getColumnValue(row, ['Penta3', 'Penta 3'])),
+                  vip1: normalizeSimNao(getColumnValue(row, ['VIP1', 'VIP 1'])),
+                  vip2: normalizeSimNao(getColumnValue(row, ['VIP2', 'VIP 2'])),
+                  vip3: normalizeSimNao(getColumnValue(row, ['VIP3', 'VIP 3'])),
+                  // Legacy mapping
+                  penta2m: formatDate(getColumnValue(row, ['Penta2Meses'])),
+                  penta4m: formatDate(getColumnValue(row, ['Penta4Meses'])),
+                  penta6m: formatDate(getColumnValue(row, ['Penta6Meses'])),
+                  vip2m: formatDate(getColumnValue(row, ['VIP2meses'])),
+                  vip4m: formatDate(getColumnValue(row, ['VIP4meses'])),
+                  vip6m: formatDate(getColumnValue(row, ['VIP6meses']))
                 }
               },
               acamadodomiciliado: {
-                dependencia: row['Grau de Dependência'] || 'Parcial',
-                curativos: row['CurativosdeFeridasAbertas'] || 'Não',
-                cuidador: row['Cuidador Presente'] || 'Não',
-                diabetes: row['Tem Diabete?'] || 'Não',
-                hipertensao: row['Tem Hipertensão?'] || row['Tem Pressão Alta?'] || 'Não'
+                dependencia: getColumnValue(row, ['Grau de Dependência', 'Dependência', 'Dependencia']) || 'Parcial',
+                curativos: normalizeSimNao(getColumnValue(row, ['CurativosdeFeridasAbertas', 'Curativos'])),
+                cuidador: normalizeSimNao(getColumnValue(row, ['Cuidador Presente', 'Cuidador'])),
+                diabetes: hasDiabetes,
+                hipertensao: hasHipertensao,
+                hipertensaoData: { consultas6Meses: hasConsultas6m, visitaAcs1: '', visitaAcs2: '' }
               },
               adulto: {
-                diabetes: row['Tem Diabete?'] || 'Não',
-                hipertensao: row['Tem Hipertensão?'] || row['Tem Pressão Alta?'] || 'Não'
+                diabetes: hasDiabetes,
+                hipertensao: hasHipertensao,
+                hipertensaoData: { consultas6Meses: hasConsultas6m, visitaAcs1: '', visitaAcs2: '' },
+                notes: getColumnValue(row, ['Observações', 'Notas', 'Observacoes']) || ''
               },
               idoso: {
-                diabetes: row['Tem Diabete?'] || 'Não',
-                hipertensao: row['Tem Hipertensão?'] || row['Tem Pressão Alta?'] || 'Não'
+                diabetes: hasDiabetes,
+                hipertensao: hasHipertensao,
+                hipertensaoData: { consultas6Meses: hasConsultas6m, visitaAcs1: '', visitaAcs2: '' },
+                vacinaInfluenza: normalizeSimNao(getColumnValue(row, ['Vacina Influenza', 'Influenza']))
+              },
+              saudeMental: {
+                notes: getColumnValue(row, ['Saúde Mental Notas', 'Saude Mental Notas', 'Notas Saúde Mental']) || ''
               }
             };
 
@@ -169,17 +227,17 @@ export function ImportTool({ user }: { user: any }) {
                 cns,
                 responsible_cns: respCns,
                 is_family_responsible: isResp,
-                birth_date: formatDate(row['DN']),
-                gender: row['Gênero'] || 'Feminino',
-                visit_date: formatDate(row['Data da Visita']) || new Date().toISOString().split('T')[0],
-                contact: row['Contato'] || '',
-                message_contact: row['Recado'] || '',
+                birth_date: formatDate(getColumnValue(row, ['DN', 'Data de Nascimento', 'Nascimento'])),
+                gender: getColumnValue(row, ['Gênero', 'Genero', 'Sexo']) || 'Feminino',
+                visit_date: formatDate(getColumnValue(row, ['Data da Visita', 'Visita'])) || new Date().toISOString().split('T')[0],
+                contact: getColumnValue(row, ['Contato', 'Telefone']) || '',
+                message_contact: getColumnValue(row, ['Recado']) || '',
                 household_id: householdId,
                 categories,
                 microarea: user.microarea || '000',
                 area_color: user.color || '#00488d',
                 agent_id: user.id,
-                last_visit_at: formatDate(row['Data da Visita']) || new Date().toISOString(),
+                last_visit_at: formatDate(getColumnValue(row, ['Data da Visita', 'Visita'])) || new Date().toISOString(),
                 clinical_data: clinicalData
               }]);
 
@@ -187,7 +245,7 @@ export function ImportTool({ user }: { user: any }) {
             successCount++;
           } catch (err: any) {
             errorCount++;
-            messages.push(`Erro no paciente ${row['Nome do Paciente']}: ${err.message}`);
+            messages.push(`Erro no paciente ${getColumnValue(row, ['Nome do Paciente', 'Nome']) || 'Desconhecido'}: ${err.message}`);
           }
         }
 
