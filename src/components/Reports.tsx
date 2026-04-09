@@ -74,6 +74,12 @@ export function Reports({ user }: { user: any }) {
 
   const filteredPatients = patients.filter(p => {
     const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || p.cns?.includes(searchTerm);
+    
+    if (categoryFilter === 'Beneficiários') {
+      const benefits = p.clinical_data?.socialBenefits || [];
+      return matchesSearch && benefits.length > 0;
+    }
+
     const matchesCategory = categoryFilter === 'Todas' || p.categories?.includes(categoryFilter);
     return matchesSearch && matchesCategory;
   });
@@ -165,6 +171,10 @@ export function Reports({ user }: { user: any }) {
     if (p.categories?.includes('SaudeMental')) {
       const sm = clinical.saudeMental || {};
       if (sm.notes) info.push(`S.Mental: ${sm.notes}`);
+    }
+
+    if (clinical.socialBenefits && clinical.socialBenefits.length > 0) {
+      info.push(`Benefícios: ${clinical.socialBenefits.join(', ')}`);
     }
 
     return info.length > 0 ? info.join(' | ') : 'Sem dados clínicos';
@@ -341,6 +351,22 @@ export function Reports({ user }: { user: any }) {
         styles: { fontSize: 7, cellPadding: 2 },
         alternateRowStyles: { fillColor: [245, 247, 250] }
       });
+    } else if (categoryFilter === 'Beneficiários') {
+      const beneficiarioData = filteredPatients.map(p => [
+        p.name,
+        p.birth_date ? formatDate(p.birth_date) : 'N/A',
+        p.clinical_data?.socialBenefits?.join(', ') || 'Nenhum',
+        p.categories?.join(', ') || 'N/A'
+      ]);
+
+      autoTable(doc, {
+        startY: 45,
+        head: [['Nome', 'Nascimento', 'Benefícios', 'Categorias']],
+        body: beneficiarioData,
+        headStyles: { fillColor: [0, 72, 141] },
+        styles: { fontSize: 8, cellPadding: 3 },
+        alternateRowStyles: { fillColor: [245, 247, 250] }
+      });
     } else {
       const mainTableData = filteredPatients.map(p => [
         p.name,
@@ -425,7 +451,7 @@ export function Reports({ user }: { user: any }) {
     doc.save(`Relatorio_Microarea_${user.microarea}_${categoryFilter}.pdf`);
   };
 
-  const categories = ['Todas', 'Gestante', 'Criança', 'AcamadoDomiciliado', 'Idoso', 'Adulto', 'SaudeMental', 'Domicílios'];
+  const categories = ['Todas', 'Gestante', 'Criança', 'AcamadoDomiciliado', 'Idoso', 'Adulto', 'SaudeMental', 'Beneficiários', 'Domicílios'];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -512,7 +538,14 @@ export function Reports({ user }: { user: any }) {
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
                 <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                  {categoryFilter === 'Domicílios' ? (
+                      {categoryFilter === 'Beneficiários' ? (
+                        <>
+                          <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Cidadão</th>
+                          <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Nascimento</th>
+                          <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Benefícios</th>
+                          <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Categorias</th>
+                        </>
+                      ) : categoryFilter === 'Domicílios' ? (
                     <>
                       <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Endereço</th>
                       <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Nº / Comp.</th>
@@ -530,7 +563,47 @@ export function Reports({ user }: { user: any }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                {categoryFilter === 'Domicílios' ? (
+                {categoryFilter === 'Beneficiários' ? (
+                  filteredPatients.length > 0 ? (
+                    filteredPatients.map((p) => (
+                      <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td className="px-8 py-5">
+                          <p className="text-sm font-bold text-on-surface">{p.name}</p>
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{p.cns}</p>
+                        </td>
+                        <td className="px-8 py-5">
+                          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                            {p.birth_date ? formatDate(p.birth_date) : 'N/A'}
+                          </span>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="flex flex-wrap gap-1">
+                            {p.clinical_data?.socialBenefits?.map((benefit: string) => (
+                              <span key={benefit} className="text-[9px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded uppercase">
+                                {benefit}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="flex flex-wrap gap-1">
+                            {p.categories?.map((cat: string) => (
+                              <span key={cat} className="text-[9px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded uppercase">
+                                {cat}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="px-8 py-20 text-center text-slate-400 dark:text-slate-500 font-medium">
+                        Nenhum beneficiário encontrado.
+                      </td>
+                    </tr>
+                  )
+                ) : categoryFilter === 'Domicílios' ? (
                   filteredHouseholds.length > 0 ? (
                     filteredHouseholds.map((h) => (
                       <tr key={h.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">

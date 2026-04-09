@@ -84,6 +84,7 @@ export function PatientForm({ user }: { user: any }) {
     categories: [] as string[],
     clinicalData: {
       visitasGerais: [] as { date: string, summary: string }[],
+      socialBenefits: [] as string[],
       saudeMental: {
         notes: ''
       },
@@ -1197,6 +1198,35 @@ export function PatientForm({ user }: { user: any }) {
                 onChange={e => setFormData({...formData, visitDate: e.target.value})}
                 className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
               />
+            </div>
+
+            {/* Benefícios Sociais */}
+            <div className="md:col-span-12">
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Benefícios Sociais</label>
+              <div className="flex flex-wrap gap-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                {['Bolsa Família', 'LOAS', 'BPC', 'Outros'].map(benefit => (
+                  <label key={benefit} className="flex items-center gap-3 cursor-pointer group">
+                    <div className="relative flex items-center">
+                      <input 
+                        type="checkbox"
+                        checked={formData.clinicalData?.socialBenefits?.includes(benefit)}
+                        onChange={e => {
+                          const current = formData.clinicalData?.socialBenefits || [];
+                          const next = e.target.checked 
+                            ? [...current, benefit]
+                            : current.filter(b => b !== benefit);
+                          setFormData(prev => ({
+                            ...prev,
+                            clinicalData: { ...prev.clinicalData, socialBenefits: next }
+                          }));
+                        }}
+                        className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary/20 transition-all cursor-pointer"
+                      />
+                    </div>
+                    <span className="text-sm font-medium text-slate-600 group-hover:text-primary transition-colors">{benefit}</span>
+                  </label>
+                ))}
+              </div>
             </div>
             <div className="md:col-span-4">
               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Tipo de Visita</label>
