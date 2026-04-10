@@ -113,7 +113,7 @@ export const getAgeInMonths = (birthDate: string) => {
 };
 
 export const formatDate = (dateStr: string) => {
-  if (!dateStr) return 'N/A';
+  if (!dateStr) return '';
   // Handle ISO strings by taking only the date part
   const cleanDate = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
   const parts = cleanDate.split('-');

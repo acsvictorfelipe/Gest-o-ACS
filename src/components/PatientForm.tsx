@@ -1020,6 +1020,45 @@ export function PatientForm({ user }: { user: any }) {
     }
   }, [formData.birthDate, formData.categories]);
 
+  useEffect(() => {
+    if (formData.categories.includes('Gestante') && formData.clinicalData?.gestante?.dum) {
+      const dum = formData.clinicalData.gestante.dum;
+      // Parse date manually to avoid timezone issues
+      const parts = dum.split('-');
+      if (parts.length === 3) {
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[1]) - 1;
+        const day = parseInt(parts[2]);
+        
+        const dumDate = new Date(year, month, day);
+        if (!isNaN(dumDate.getTime())) {
+          const dppDate = new Date(dumDate);
+          // Naegele's Rule: Add 7 days and 9 months
+          dppDate.setDate(dppDate.getDate() + 7);
+          dppDate.setMonth(dppDate.getMonth() + 9);
+          
+          const y = dppDate.getFullYear();
+          const m = String(dppDate.getMonth() + 1).padStart(2, '0');
+          const d = String(dppDate.getDate()).padStart(2, '0');
+          const dppStr = `${y}-${m}-${d}`;
+          
+          if (formData.clinicalData.gestante.dpp !== dppStr) {
+            setFormData(prev => ({
+              ...prev,
+              clinicalData: {
+                ...prev.clinicalData,
+                gestante: {
+                  ...(prev.clinicalData?.gestante || {}),
+                  dpp: dppStr
+                }
+              }
+            }));
+          }
+        }
+      }
+    }
+  }, [formData.clinicalData?.gestante?.dum, formData.categories]);
+
   const addDateToList = (category: string, list: string) => {
     setFormData(prev => {
       const newData = { ...prev.clinicalData };

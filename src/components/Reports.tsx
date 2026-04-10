@@ -181,7 +181,7 @@ export function Reports({ user }: { user: any }) {
     }
     if (p.categories?.includes('AcamadoDomiciliado')) {
       const a = clinical.acamadodomiciliado || {};
-      info.push(`Dep: ${a.dependencia || 'N/A'}`);
+      info.push(`Dep: ${a.dependencia || ''}`);
       if (a.curativos === 'Sim') info.push('Curativos');
       if (a.usoFralda === 'Sim') {
         info.push(`Fralda: ${a.tamanhoFralda || 'S/T'}`);
@@ -231,9 +231,9 @@ export function Reports({ user }: { user: any }) {
       pendentes, 
       vacinasTomadas, 
       vacinasPendentes,
-      dum: g.dum ? formatDate(g.dum) : 'N/A',
-      dpp: g.dpp ? formatDate(g.dpp) : 'N/A',
-      saudeBucal: g.saudeBucal ? formatDate(g.saudeBucal) : 'Não Realizada'
+      dum: g.dum ? formatDate(g.dum) : '',
+      dpp: g.dpp ? formatDate(g.dpp) : '',
+      saudeBucal: g.saudeBucal ? formatDate(g.saudeBucal) : ''
     };
   };
 
@@ -322,7 +322,7 @@ export function Reports({ user }: { user: any }) {
       const householdData = filteredHouseholds.map(h => [
         h.address,
         h.number,
-        h.complement || '-',
+        h.complement || '',
         h.responsible_name,
         h.patients?.length || 0
       ]);
@@ -340,7 +340,7 @@ export function Reports({ user }: { user: any }) {
         const stats = getGestanteStats(p);
         return [
           p.name,
-          p.birth_date ? formatDate(p.birth_date) : 'N/A',
+          p.birth_date ? formatDate(p.birth_date) : '',
           stats.dum,
           stats.dpp,
           stats.consultas,
@@ -364,7 +364,7 @@ export function Reports({ user }: { user: any }) {
         const stats = getCriancaStats(p);
         return [
           p.name,
-          p.birth_date ? calculateAge(p.birth_date) : 'N/A',
+          p.birth_date ? calculateAge(p.birth_date) : '',
           stats.consultas,
           stats.tomadas.join(', ') || 'Nenhuma',
           stats.pendentes.join(', ') || 'Nenhuma'
@@ -382,9 +382,9 @@ export function Reports({ user }: { user: any }) {
     } else if (categoryFilter === 'Beneficiários') {
       const beneficiarioData = filteredPatients.map(p => [
         p.name,
-        p.birth_date ? formatDate(p.birth_date) : 'N/A',
+        p.birth_date ? formatDate(p.birth_date) : '',
         p.clinical_data?.socialBenefits?.join(', ') || 'Nenhum',
-        p.categories?.join(', ') || 'N/A'
+        p.categories?.join(', ') || ''
       ]);
 
       autoTable(doc, {
@@ -398,8 +398,8 @@ export function Reports({ user }: { user: any }) {
     } else {
       const mainTableData = filteredPatients.map(p => [
         p.name,
-        p.birth_date ? calculateAge(p.birth_date) : 'N/A',
-        p.categories?.join(', ') || 'N/A',
+        p.birth_date ? calculateAge(p.birth_date) : '',
+        p.categories?.join(', ') || '',
         getClinicalSummary(p)
       ]);
 
@@ -426,7 +426,7 @@ export function Reports({ user }: { user: any }) {
             const stats = getGestanteStats(p);
             return [
               p.name,
-              p.birth_date ? formatDate(p.birth_date) : 'N/A',
+              p.birth_date ? formatDate(p.birth_date) : '',
               stats.dum,
               stats.dpp,
               stats.consultas,
@@ -458,7 +458,7 @@ export function Reports({ user }: { user: any }) {
             const stats = getCriancaStats(p);
             return [
               p.name,
-              p.birth_date ? formatDate(p.birth_date) : 'N/A',
+              p.birth_date ? formatDate(p.birth_date) : '',
               stats.consultas,
               stats.tomadas.join(', ') || 'Nenhuma',
               stats.pendentes.join(', ') || 'Nenhuma'
@@ -601,7 +601,7 @@ export function Reports({ user }: { user: any }) {
                         </td>
                         <td className="px-8 py-5">
                           <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                            {p.birth_date ? formatDate(p.birth_date) : 'N/A'}
+                            {p.birth_date ? formatDate(p.birth_date) : ''}
                           </span>
                         </td>
                         <td className="px-8 py-5">
@@ -670,7 +670,7 @@ export function Reports({ user }: { user: any }) {
                         </td>
                         <td className="px-8 py-5">
                           <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                            {p.birth_date ? formatDate(p.birth_date) : 'N/A'}
+                            {p.birth_date ? formatDate(p.birth_date) : ''}
                           </span>
                         </td>
                         <td className="px-8 py-5">

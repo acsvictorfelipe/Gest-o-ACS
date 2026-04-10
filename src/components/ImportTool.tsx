@@ -128,6 +128,25 @@ export function ImportTool({ user }: { user: any }) {
             const hasHipertensao = normalizeSimNao(getColumnValue(row, ['Tem Hipertensão?', 'Tem Pressão Alta?', 'Hipertensão', 'Hipertensao', 'Pressão Alta', 'Pressao Alta']));
             const hasConsultas6m = normalizeSimNao(getColumnValue(row, ['Consultas nos últimos 6 meses', 'Consultas 6 Meses', 'Consultas6Meses']));
 
+            const dum = formatDate(getColumnValue(row, ['DUM', 'dum']));
+            let dpp = formatDate(getColumnValue(row, ['DPP', 'dpp']));
+
+            if (dum && !dpp && categories.includes('Gestante')) {
+              const parts = dum.split('-');
+              if (parts.length === 3) {
+                const dumDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                if (!isNaN(dumDate.getTime())) {
+                  const dppDate = new Date(dumDate);
+                  dppDate.setDate(dppDate.getDate() + 7);
+                  dppDate.setMonth(dppDate.getMonth() + 9);
+                  const y = dppDate.getFullYear();
+                  const m = String(dppDate.getMonth() + 1).padStart(2, '0');
+                  const d = String(dppDate.getDate()).padStart(2, '0');
+                  dpp = `${y}-${m}-${d}`;
+                }
+              }
+            }
+
             const socialBenefits = [];
             const rawBenefits = getColumnValue(row, ['Benefícios Sociais', 'Benefícios', 'Beneficios']) || '';
             if (rawBenefits) {
@@ -153,8 +172,8 @@ export function ImportTool({ user }: { user: any }) {
                 hipertensaoData: { consultas6Meses: hasConsultas6m, visitaAcs1: '', visitaAcs2: '' }
               },
               gestante: {
-                dum: formatDate(getColumnValue(row, ['DUM', 'dum'])),
-                dpp: formatDate(getColumnValue(row, ['DPP', 'dpp'])),
+                dum,
+                dpp,
                 consultas: [
                   formatDate(getColumnValue(row, ['1 Consulta'])),
                   formatDate(getColumnValue(row, ['2 Consulta'])),
