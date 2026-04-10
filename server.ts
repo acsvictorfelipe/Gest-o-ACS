@@ -7,18 +7,32 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.env ? new URL(import.meta.url) : import.meta.url);
+const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function startServer() {
+  console.log('Starting server...');
   const app = express();
   const PORT = 3000;
 
   app.use(express.json());
 
+  // Request logging middleware
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+  });
+
   // Health check route
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      config: {
+        hasSupabaseUrl: !!process.env.VITE_SUPABASE_URL,
+        hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+      }
+    });
   });
 
   // Supabase Admin Client
@@ -26,17 +40,22 @@ async function startServer() {
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {
-    console.warn('SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing.');
+    console.error('CRITICAL: VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing.');
   }
 
-  const supabaseAdmin = createClient(supabaseUrl || '', supabaseServiceKey || '', {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
+  const supabaseAdmin = createClient(
+    supabaseUrl || 'https://placeholder.supabase.co', 
+    supabaseServiceKey || 'placeholder-key', 
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
     }
-  });
+  );
 
   // API Route for creating users
+  console.log('Registering POST /api/admin/create-user');
   app.post('/api/admin/create-user', async (req, res) => {
     console.log('Received request to create user:', req.body.email);
     const { email, password, name, role, color, microarea } = req.body;
@@ -81,7 +100,8 @@ async function startServer() {
       res.status(200).json({ user: data.user });
     } catch (error: any) {
       console.error('Error creating user:', error);
-      res.status(500).json({ error: error.message });
+      const errorMessage = error.message || error.error_description || 'Erro desconhecido ao criar usuário';
+      res.status(500).json({ error: errorMessage });
     }
   });
 
@@ -147,6 +167,12 @@ async function startServer() {
     }
   });
 
+  // Catch-all for /api routes to prevent SPA fallback
+  app.all('/api/*', (req, res) => {
+    console.warn(`404 - API route not found: ${req.method} ${req.url}`);
+    res.status(404).json({ error: `Rota de API não encontrada: ${req.method} ${req.url}` });
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
@@ -162,9 +188,22 @@ async function startServer() {
     });
   }
 
+  // Global error handler
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Unhandled error:', err);
+    res.status(500).json({ 
+      error: 'Erro interno no servidor', 
+      message: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  });
+
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 
-startServer();
+startServer().catch(err => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
+});
