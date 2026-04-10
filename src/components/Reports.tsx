@@ -364,7 +364,7 @@ export function Reports({ user }: { user: any }) {
         const stats = getCriancaStats(p);
         return [
           p.name,
-          p.birth_date ? calculateAge(p.birth_date) : '',
+          p.birth_date ? formatDate(p.birth_date) : '',
           stats.consultas,
           stats.tomadas.join(', ') || 'Nenhuma',
           stats.pendentes.join(', ') || 'Nenhuma'
@@ -398,7 +398,7 @@ export function Reports({ user }: { user: any }) {
     } else {
       const mainTableData = filteredPatients.map(p => [
         p.name,
-        p.birth_date ? calculateAge(p.birth_date) : '',
+        p.birth_date ? formatDate(p.birth_date) : '',
         p.categories?.join(', ') || '',
         getClinicalSummary(p)
       ]);
