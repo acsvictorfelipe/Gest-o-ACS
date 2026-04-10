@@ -22,7 +22,8 @@ import {
   AlertTriangle,
   AlertCircle,
   Smile,
-  Bed
+  Bed,
+  ArrowLeft
 } from 'lucide-react';
 
 import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE, formatDate, parseDate } from '../lib/dateUtils';
@@ -53,22 +54,43 @@ export function PatientList({ user }: { user: any }) {
       if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
       setLoading(true);
       try {
-        let query = supabase
-          .from('patients')
-          .select('*')
-          .order('name', { ascending: true });
+        let allData: any[] = [];
+        let from = 0;
+        let to = 999;
+        let hasMore = true;
 
-        if (user.role === 'Administrador') {
-          // No filters for Admin
-        } else if (user.role === 'Gestor') {
-          query = query.eq('area_color', user.color);
-        } else {
-          query = query.eq('agent_id', user.id);
+        while (hasMore && allData.length < 10000) {
+          let query = supabase
+            .from('patients')
+            .select('*')
+            .order('name', { ascending: true })
+            .range(from, to);
+
+          if (user.role === 'Administrador') {
+            // No filters for Admin
+          } else if (user.role === 'Gestor') {
+            query = query.eq('area_color', user.color);
+          } else {
+            query = query.eq('agent_id', user.id);
+          }
+
+          const { data, error } = await query;
+          if (error) throw error;
+          
+          if (data && data.length > 0) {
+            allData = [...allData, ...data];
+            if (data.length < 1000) {
+              hasMore = false;
+            } else {
+              from += 1000;
+              to += 1000;
+            }
+          } else {
+            hasMore = false;
+          }
         }
-
-        const { data, error } = await query.range(0, 4999);
-        if (error) throw error;
-        setPatients(data || []);
+        
+        setPatients(allData);
       } catch (error) {
         console.error("Error fetching patients:", error);
       } finally {
@@ -251,7 +273,14 @@ export function PatientList({ user }: { user: any }) {
         </div>
 
         {activeFilter !== 'all' && (
-          <div className="flex items-center gap-2 animate-in slide-in-from-left-2">
+          <div className="flex items-center gap-3 animate-in slide-in-from-left-2">
+            <button 
+              onClick={clearFilter}
+              className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full text-xs font-bold transition-colors"
+            >
+              <ArrowLeft className="w-3 h-3" />
+              Voltar
+            </button>
             <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-bold">
               <Filter className="w-3 h-3" />
               {activeFilter === 'pending' ? 'Visitas Pendentes' : 

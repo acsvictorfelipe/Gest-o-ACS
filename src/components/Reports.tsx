@@ -31,38 +31,66 @@ export function Reports({ user }: { user: any }) {
       if (!user.microarea && user.role !== 'Administrador') return;
       setLoading(true);
       try {
-        // Fetch Patients
-        let pQuery = supabase
-          .from('patients')
-          .select('*')
-          .order('name', { ascending: true });
+        // Fetch Patients in chunks
+        let allPatients: any[] = [];
+        let pFrom = 0;
+        let pTo = 999;
+        let pHasMore = true;
 
-        // Fetch Households
-        let hQuery = supabase
-          .from('households')
-          .select('*, patients(id)')
-          .order('address', { ascending: true });
+        while (pHasMore && allPatients.length < 10000) {
+          let pQuery = supabase
+            .from('patients')
+            .select('*')
+            .order('name', { ascending: true })
+            .range(pFrom, pTo);
 
-        if (user.role === 'Administrador') {
-          // No filters
-        } else if (user.role === 'Gestor') {
-          pQuery = pQuery.eq('area_color', user.color);
-          hQuery = hQuery.eq('area_color', user.color);
-        } else {
-          pQuery = pQuery.eq('agent_id', user.id);
-          hQuery = hQuery.eq('agent_id', user.id);
+          if (user.role === 'Administrador') {
+          } else if (user.role === 'Gestor') {
+            pQuery = pQuery.eq('area_color', user.color);
+          } else {
+            pQuery = pQuery.eq('agent_id', user.id);
+          }
+
+          const { data, error } = await pQuery;
+          if (error) throw error;
+          if (data && data.length > 0) {
+            allPatients = [...allPatients, ...data];
+            if (data.length < 1000) pHasMore = false;
+            else { pFrom += 1000; pTo += 1000; }
+          } else pHasMore = false;
         }
 
-        const [pRes, hRes] = await Promise.all([
-          pQuery.range(0, 4999),
-          hQuery.range(0, 4999)
-        ]);
+        // Fetch Households in chunks
+        let allHouseholds: any[] = [];
+        let hFrom = 0;
+        let hTo = 999;
+        let hHasMore = true;
 
-        if (pRes.error) throw pRes.error;
-        if (hRes.error) throw hRes.error;
+        while (hHasMore && allHouseholds.length < 5000) {
+          let hQuery = supabase
+            .from('households')
+            .select('*, patients(id)')
+            .order('address', { ascending: true })
+            .range(hFrom, hTo);
 
-        setPatients(pRes.data || []);
-        setHouseholds(hRes.data || []);
+          if (user.role === 'Administrador') {
+          } else if (user.role === 'Gestor') {
+            hQuery = hQuery.eq('area_color', user.color);
+          } else {
+            hQuery = hQuery.eq('agent_id', user.id);
+          }
+
+          const { data, error } = await hQuery;
+          if (error) throw error;
+          if (data && data.length > 0) {
+            allHouseholds = [...allHouseholds, ...data];
+            if (data.length < 1000) hHasMore = false;
+            else { hFrom += 1000; hTo += 1000; }
+          } else hHasMore = false;
+        }
+
+        setPatients(allPatients);
+        setHouseholds(allHouseholds);
       } catch (error) {
         console.error("Error fetching data for reports:", error);
       } finally {

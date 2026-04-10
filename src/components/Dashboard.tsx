@@ -40,20 +40,39 @@ export function Dashboard({ user }: { user: any }) {
       if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
       
       try {
-        let query = supabase.from('patients').select('*').range(0, 4999);
-        
-        if (user.role === 'Administrador') {
-          // No filters for Admin
-        } else if (user.role === 'Gestor') {
-          query = query.eq('area_color', user.color);
-        } else {
-          query = query.eq('agent_id', user.id);
+        let allPatients: any[] = [];
+        let from = 0;
+        let to = 999;
+        let hasMore = true;
+
+        while (hasMore && allPatients.length < 10000) {
+          let query = supabase.from('patients').select('id, categories, clinical_data, last_visit_at, birth_date').range(from, to);
+          
+          if (user.role === 'Administrador') {
+            // No filters for Admin
+          } else if (user.role === 'Gestor') {
+            query = query.eq('area_color', user.color);
+          } else {
+            query = query.eq('agent_id', user.id);
+          }
+
+          const { data, error } = await query;
+          if (error) throw error;
+          
+          if (data && data.length > 0) {
+            allPatients = [...allPatients, ...data];
+            if (data.length < 1000) {
+              hasMore = false;
+            } else {
+              from += 1000;
+              to += 1000;
+            }
+          } else {
+            hasMore = false;
+          }
         }
 
-        const { data: patients, error } = await query;
-        
-        if (error) throw error;
-
+        const patients = allPatients;
         const newStats = { totalPatients: patients?.length || 0, gestantes: 0, criancas: 0, acamados: 0, idosos: 0, hipertensos: 0, diabeticos: 0, pendingVisits: 0, lateVaccines: 0, childVisitAlerts: 0 };
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);

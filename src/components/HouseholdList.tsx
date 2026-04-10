@@ -27,22 +27,43 @@ export function HouseholdList({ user }: { user: any }) {
       if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
       setLoading(true);
       try {
-        let query = supabase
-          .from('households')
-          .select('*')
-          .order('created_at', { ascending: false });
+        let allHouseholds: any[] = [];
+        let from = 0;
+        let to = 999;
+        let hasMore = true;
 
-        if (user.role === 'Administrador') {
-          // No filters for Admin
-        } else if (user.role === 'Gestor') {
-          query = query.eq('area_color', user.color);
-        } else {
-          query = query.eq('agent_id', user.id);
+        while (hasMore && allHouseholds.length < 5000) {
+          let query = supabase
+            .from('households')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .range(from, to);
+
+          if (user.role === 'Administrador') {
+            // No filters for Admin
+          } else if (user.role === 'Gestor') {
+            query = query.eq('area_color', user.color);
+          } else {
+            query = query.eq('agent_id', user.id);
+          }
+
+          const { data, error } = await query;
+          if (error) throw error;
+          
+          if (data && data.length > 0) {
+            allHouseholds = [...allHouseholds, ...data];
+            if (data.length < 1000) {
+              hasMore = false;
+            } else {
+              from += 1000;
+              to += 1000;
+            }
+          } else {
+            hasMore = false;
+          }
         }
-
-        const { data, error } = await query.range(0, 4999);
-        if (error) throw error;
-        setHouseholds(data || []);
+        
+        setHouseholds(allHouseholds);
       } catch (error) {
         console.error("Error fetching households:", error);
       } finally {
