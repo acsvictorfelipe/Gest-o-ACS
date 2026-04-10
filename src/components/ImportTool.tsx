@@ -8,7 +8,8 @@ import {
   Loader2, 
   ArrowLeft,
   Database,
-  Info
+  Info,
+  Download
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -213,9 +214,6 @@ export function ImportTool({ user }: { user: any }) {
                 hipertensao: hasHipertensao,
                 hipertensaoData: { consultas6Meses: hasConsultas6m, visitaAcs1: '', visitaAcs2: '' },
                 vacinaInfluenza: normalizeSimNao(getColumnValue(row, ['Vacina Influenza', 'Influenza']))
-              },
-              saudeMental: {
-                notes: getColumnValue(row, ['Saúde Mental Notas', 'Saude Mental Notas', 'Notas Saúde Mental']) || ''
               }
             };
 
@@ -255,30 +253,69 @@ export function ImportTool({ user }: { user: any }) {
     });
   };
 
+  const downloadExample = () => {
+    const headers = [
+      'Nome do Paciente', 'Cns', 'RespFamiliar?', 'RespFamiliar_CNS', 'Endereço', 'NumeroCasa', 'Complemento',
+      'DN', 'Gênero', 'Categoria', 'Idade', 'Tem Diabete?', 'Tem Hipertensão?', 'Consultas nos últimos 6 meses',
+      'Benefícios Sociais', 'Contato', 'Recado', 'Data da Visita', 'DUM', 'DPP', '1 Consulta', '2 Consulta',
+      '3 Consulta', '4 Consulta', '5 Consulta', '6 Consulta', '7 Consulta', '8 Consulta', '9 Consulta',
+      'HIV', 'Hepatite B', 'Hepatite C', 'Sifilis', 'dTpa', 'Visita30dias', 'Visita6Meses', 'BCG', 'Penta1',
+      'Penta2', 'Penta3', 'VIP1', 'VIP2', 'VIP3', 'Grau de Dependência', 'CurativosdeFeridasAbertas',
+      'Cuidador Presente', 'Observações', 'Saúde Mental Notas'
+    ];
+    
+    const exampleRow = [
+      'João da Silva', '123456789012345', 'Sim', '123456789012345', 'Rua das Flores', '123', 'Apto 1',
+      '15/05/1980', 'Masculino', 'Adulto', '43', 'Não', 'Sim', 'Sim', 'Bolsa Família', '(11) 99999-9999',
+      'Falar com Maria', '09/04/2026', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+      '', '', '', '', '', '', '', '', '', '', '', '', 'Paciente estável', ''
+    ];
+
+    const csvContent = [headers, exampleRow].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "modelo_importacao_acs.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="flex items-center gap-4">
-        <button 
-          onClick={() => navigate(-1)}
-          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
-        >
-          <ArrowLeft className="w-6 h-6 text-slate-500" />
-        </button>
-        <div>
-          <h2 className="text-3xl font-extrabold text-primary tracking-tight font-headline">Importação de Dados</h2>
-          <p className="text-slate-500 mt-1 font-medium">Migre sua base de dados atual para o novo sistema.</p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6 text-slate-500" />
+            </button>
+            <div>
+              <h2 className="text-3xl font-extrabold text-primary tracking-tight font-headline">Importação de Dados</h2>
+              <p className="text-slate-500 mt-1 font-medium">Migre sua base de dados atual para o novo sistema.</p>
+            </div>
+          </div>
+          <button 
+            onClick={downloadExample}
+            className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-primary border-2 border-primary/10 hover:border-primary/30 rounded-2xl font-bold text-sm transition-all shadow-sm"
+          >
+            <Download className="w-4 h-4" />
+            Baixar Modelo CSV
+          </button>
         </div>
-      </div>
 
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 p-6 rounded-2xl flex gap-4">
         <Info className="w-6 h-6 text-blue-600 shrink-0" />
         <div className="text-sm text-blue-800 dark:text-blue-300 space-y-2">
           <p className="font-bold">Instruções de Importação:</p>
           <ul className="list-disc ml-4 space-y-1">
-            <li>Cole o conteúdo da sua planilha no formato CSV (separado por vírgulas).</li>
+            <li>Utilize o botão <strong>"Baixar Modelo CSV"</strong> para obter uma planilha exemplo.</li>
+            <li>O sistema aceita campos em branco; preencha apenas o que for necessário.</li>
             <li>O sistema identificará automaticamente os domicílios pelo CNS do Responsável Familiar.</li>
             <li>Datas devem estar no formato DD/MM/YYYY.</li>
-            <li>Certifique-se de que os cabeçalhos correspondem ao modelo enviado.</li>
           </ul>
         </div>
       </div>
