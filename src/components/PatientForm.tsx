@@ -798,17 +798,11 @@ export function PatientForm({ user }: { user: any }) {
     try {
       // 1. Check if Household with this Responsible CNS already exists
       const targetCns = formData.isFamilyResponsible ? formData.cns : formData.responsibleCns;
-      let householdId = '';
-
-      if (!targetCns) {
-        throw new Error("CNS do Responsável é obrigatório para vincular a família.");
-      }
+      let householdId: string | null = formData.householdId || null;
 
       if (!navigator.onLine) {
-        // Offline mode: We can't easily handle the household/patient relationship without IDs
-        // So we generate temporary UUIDs
         const existingHouseholdId = formData.householdId;
-        if (!existingHouseholdId) {
+        if (targetCns && !existingHouseholdId) {
           householdId = crypto.randomUUID();
           const householdData = {
             id: householdId,
@@ -822,7 +816,7 @@ export function PatientForm({ user }: { user: any }) {
             responsible_name: formData.isFamilyResponsible ? formData.name : 'Responsável não cadastrado'
           };
           await syncService.addToQueue('households', 'INSERT', householdData);
-        } else {
+        } else if (existingHouseholdId) {
           householdId = existingHouseholdId;
           if (formData.isFamilyResponsible) {
             await syncService.addToQueue('households', 'UPDATE', {
@@ -857,62 +851,84 @@ export function PatientForm({ user }: { user: any }) {
         };
 
         await syncService.addToQueue('patients', id ? 'UPDATE' : 'INSERT', patientData);
+        
+        if (formData.visitDate) {
+          await syncService.addToQueue('visits', 'INSERT', {
+            id: crypto.randomUUID(),
+            patient_id: patientData.id,
+            agent_id: user.id,
+            date: formData.visitDate,
+            type: formData.visitType,
+            summary: formData.visitSummary,
+            microarea: user.microarea,
+            area_color: user.color || '#00488d'
+          });
+        }
+
         alert('Dados salvos localmente. Serão sincronizados quando houver internet.');
         navigate('/');
         return;
       }
 
-      const { data: householdData, error: hError } = await supabase
-        .from('households')
-        .select('id')
-        .eq('responsible_cns', targetCns)
-        .eq('microarea', user.microarea)
-        .maybeSingle();
+      if (targetCns) {
+        const { data: householdData, error: hError } = await supabase
+          .from('households')
+          .select('id')
+          .eq('responsible_cns', targetCns)
+          .eq('microarea', user.microarea)
+          .maybeSingle();
 
-      if (hError) throw hError;
+        if (hError) throw hError;
 
-      if (householdData) {
-        // Household exists, use it
-        householdId = householdData.id;
-        
-        // If this patient is the responsible, update household info
-        if (formData.isFamilyResponsible) {
-          const { error: updateHError } = await supabase
-            .from('households')
-            .update({
-              responsible_name: formData.name,
-              address: formData.address,
-              number: formData.number,
-              complement: formData.complement,
-              last_update_at: new Date().toISOString()
-            })
-            .eq('id', householdId);
-          if (updateHError) throw updateHError;
+        if (householdData) {
+          // Household exists, use it
+          householdId = householdData.id;
+          
+          // If this patient is the responsible, update household info
+          if (formData.isFamilyResponsible) {
+            const { error: updateHError } = await supabase
+              .from('households')
+              .update({
+                responsible_name: formData.name,
+                address: formData.address,
+                number: formData.number,
+                complement: formData.complement,
+                last_update_at: new Date().toISOString()
+              })
+              .eq('id', householdId);
+            if (updateHError) throw updateHError;
+          }
+        } else {
+          // If not responsible and household doesn't exist, don't create it automatically
+          // But allow the patient to be registered (householdId will be null)
+          if (formData.isFamilyResponsible) {
+            // Create new Household only if they are the responsible
+            const { data: newH, error: createHError } = await supabase
+              .from('households')
+              .insert([{
+                address: formData.address,
+                number: formData.number,
+                complement: formData.complement,
+                microarea: user.microarea,
+                area_color: user.color || '#00488d',
+                agent_id: user.id,
+                responsible_cns: targetCns,
+                responsible_name: formData.name
+              }])
+              .select()
+              .single();
+            
+            if (createHError) throw createHError;
+            householdId = newH.id;
+          } else {
+            // Patient without household (responsible not found)
+            householdId = null;
+          }
         }
       } else {
-        // If not responsible and household doesn't exist, don't create it automatically
-        // But allow the patient to be registered (householdId will be null)
-        if (formData.isFamilyResponsible) {
-          // Create new Household only if they are the responsible
-          const { data: newH, error: createHError } = await supabase
-            .from('households')
-            .insert([{
-              address: formData.address,
-              number: formData.number,
-              complement: formData.complement,
-              microarea: user.microarea,
-              area_color: user.color || '#00488d',
-              agent_id: user.id,
-              responsible_cns: targetCns,
-              responsible_name: formData.name
-            }])
-            .select()
-            .single();
-          
-          if (createHError) throw createHError;
-          householdId = newH.id;
-        } else {
-          // Patient without household (responsible not found)
+        // No target CNS provided, patient will be registered without a household link
+        // unless they already have one (e.g. editing)
+        if (!householdId) {
           householdId = null;
         }
       }
@@ -1130,7 +1146,7 @@ export function PatientForm({ user }: { user: any }) {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             <div className="md:col-span-4">
               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
-                {formData.isFamilyResponsible ? 'Seu CNS (Responsável)' : 'CNS do Responsável Familiar'}
+                {formData.isFamilyResponsible ? 'Seu CNS (Responsável)' : 'CNS do Responsável Familiar (Opcional)'}
               </label>
               <input 
                 type="text" 
