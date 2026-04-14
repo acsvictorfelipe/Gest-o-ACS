@@ -58,7 +58,7 @@ export default function App() {
       if (data) {
         let updatedProfile = data;
         // Bootstrap: Promote specific emails to Administrador
-        const adminEmails = ['victorfelipe2012@gmail.com', 'acsvictorfelipe@gmail.com'];
+        const adminEmails = ['victorfelipe2012@gmail.com'];
         if (supabaseUser.email && adminEmails.includes(supabaseUser.email) && data.role !== 'Administrador') {
           const { data: promotedData, error: promoError } = await supabase
             .from('profiles')
@@ -77,7 +77,7 @@ export default function App() {
         setUser({ ...supabaseUser, ...updatedProfile, name });
       } else {
         // Profile doesn't exist, check if it's a super admin to create it
-        const adminEmails = ['victorfelipe2012@gmail.com', 'acsvictorfelipe@gmail.com'];
+        const adminEmails = ['victorfelipe2012@gmail.com'];
         const name = supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
         
         if (supabaseUser.email && adminEmails.includes(supabaseUser.email)) {
@@ -109,6 +109,31 @@ export default function App() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Temporary migration to update acsvictorfelipe@gmail.com profile as requested
+    if (user && user.email === 'acsvictorfelipe@gmail.com' && (user.role !== 'Agente' || user.microarea !== '3')) {
+      const performMigration = async () => {
+        console.log('Performing requested profile migration for acsvictorfelipe@gmail.com');
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            role: 'Agente',
+            color: '#64748b', // Cinza
+            microarea: '3'
+          })
+          .eq('id', user.id);
+        
+        if (!error) {
+          console.log('Migration successful, refreshing profile...');
+          fetchProfile(user);
+        } else {
+          console.error('Migration failed:', error);
+        }
+      };
+      performMigration();
+    }
+  }, [user]);
 
   if (loading) {
     return (
