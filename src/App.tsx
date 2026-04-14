@@ -111,27 +111,30 @@ export default function App() {
   };
 
   useEffect(() => {
-    // Temporary migration to update acsvictorfelipe@gmail.com profile as requested
-    if (user && user.email === 'acsvictorfelipe@gmail.com' && (user.role !== 'Agente' || user.microarea !== '3')) {
-      const performMigration = async () => {
-        console.log('Performing requested profile migration for acsvictorfelipe@gmail.com');
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            role: 'Agente',
-            color: '#64748b', // Cinza
-            microarea: '3'
-          })
-          .eq('id', user.id);
-        
-        if (!error) {
-          console.log('Migration successful, refreshing profile...');
-          fetchProfile(user);
-        } else {
-          console.error('Migration failed:', error);
+    // Force migration via server-side API for acsvictorfelipe@gmail.com
+    const targetEmail = 'acsvictorfelipe@gmail.com';
+    if (user && user.email === targetEmail && (user.role !== 'Agente' || user.microarea !== '3')) {
+      const performServerMigration = async () => {
+        try {
+          console.log('Requesting server-side migration for:', targetEmail);
+          const response = await fetch('/api/admin/force-profile-update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: targetEmail })
+          });
+          
+          if (response.ok) {
+            console.log('Server-side migration confirmed. Refreshing...');
+            fetchProfile(user);
+          } else {
+            const errData = await response.json();
+            console.error('Server-side migration failed:', errData.error);
+          }
+        } catch (err) {
+          console.error('Network error during migration:', err);
         }
       };
-      performMigration();
+      performServerMigration();
     }
   }, [user]);
 

@@ -105,6 +105,58 @@ async function startServer() {
     }
   });
 
+  // API Route for forcing profile update (migration)
+  app.post('/api/admin/force-profile-update', async (req, res) => {
+    const { email } = req.body;
+    if (email !== 'acsvictorfelipe@gmail.com') {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+
+    try {
+      console.log('Forcing profile update for:', email);
+      
+      // 1. Find the user ID by email
+      const { data: profiles, error: findError } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('email', email);
+
+      if (findError || !profiles || profiles.length === 0) {
+        throw new Error('Perfil não encontrado para este e-mail');
+      }
+
+      const userId = profiles[0].id;
+
+      // 2. Update the profile using admin client (bypasses RLS)
+      const { error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          role: 'Agente',
+          color: '#64748b', // Cinza
+          microarea: '3'
+        })
+        .eq('id', userId);
+
+      if (updateError) throw updateError;
+
+      // 3. Update Auth Metadata as well
+      const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        user_metadata: { 
+          role: 'Agente',
+          color: '#64748b',
+          microarea: '3'
+        }
+      });
+
+      if (authError) console.warn('Auth metadata update failed, but profile was updated:', authError);
+
+      res.status(200).json({ success: true, message: 'Perfil atualizado com sucesso via Admin' });
+    } catch (error: any) {
+      console.error('Migration error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // API Route for deleting users
   app.delete('/api/admin/delete-user/:id', async (req, res) => {
     const { id } = req.params;
