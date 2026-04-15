@@ -32,7 +32,7 @@ export function AdultoIdosoSection({ catId, formData, setFormData }: Props) {
                   adulto: { ...formData.clinicalData.adulto, notes: e.target.value } 
                 }
               })}
-              className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-4 text-sm min-h-[120px] text-on-surface"
+              className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm text-on-surface"
               placeholder="Anote aqui informações relevantes sobre o acompanhamento deste adulto..."
             />
           </div>
@@ -101,7 +101,7 @@ export function AdultoIdosoSection({ catId, formData, setFormData }: Props) {
               </div>
               {getVisitAlert(calculateNextVisit(formData.clinicalData.idoso.visitaAcs1, 180)) && (
                 <div className={`p-3 rounded-xl flex items-center gap-3 text-[10px] font-bold uppercase ${
-                  getVisitAlert(calculateNextVisit(formData.clinicalData.idoso.visitaAcs1, 180))?.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                  getVisitAlert(calculateNextVisit(formData.clinicalData.idoso.visitaAcs1, 180))?.type === 'error' ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400'
                 }`}>
                   <Activity className="w-4 h-4" />
                   {getVisitAlert(calculateNextVisit(formData.clinicalData.idoso.visitaAcs1, 180))?.message}
@@ -124,7 +124,7 @@ export function AdultoIdosoSection({ catId, formData, setFormData }: Props) {
               />
               {getConsultationAlert(formData.clinicalData.idoso.consultaMedicaAnualData) && (
                 <div className={`mt-2 p-3 rounded-xl flex items-center gap-3 text-[10px] font-bold uppercase ${
-                  getConsultationAlert(formData.clinicalData.idoso.consultaMedicaAnualData)?.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                  getConsultationAlert(formData.clinicalData.idoso.consultaMedicaAnualData)?.type === 'error' ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400'
                 }`}>
                   <Activity className="w-4 h-4" />
                   {getConsultationAlert(formData.clinicalData.idoso.consultaMedicaAnualData)?.message}

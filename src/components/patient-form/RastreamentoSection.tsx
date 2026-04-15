@@ -109,7 +109,7 @@ export function SaudeMentalSection({ formData, setFormData }: Props) {
   if (!formData.categories.includes('SaudeMental')) return null;
 
   return (
-    <section className="bg-white rounded-2xl p-8 shadow-sm border-l-4 border-purple-500 mb-8 animate-in fade-in slide-in-from-top-2">
+    <section className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border-l-4 border-purple-500 mb-8 animate-in fade-in slide-in-from-top-2">
       <h3 className="text-xl font-bold text-purple-600 mb-6 font-headline flex items-center gap-2">
         <Activity className="w-6 h-6" />
         Saúde Mental

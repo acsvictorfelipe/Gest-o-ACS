@@ -27,13 +27,13 @@ export function CategoriesSection({ formData, setFormData }: Props) {
   };
 
   return (
-    <section className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
+    <section className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border border-slate-100 dark:border-slate-800">
       <div className="flex items-center gap-3 mb-8">
         <div className="w-1.5 h-8 bg-primary rounded-full"></div>
         <h3 className="text-xl font-bold text-primary font-headline">Condições e Acompanhamentos</h3>
       </div>
       
-      <p className="text-sm text-slate-500 mb-6 font-medium">Selecione as condições aplicáveis para abrir as fichas específicas (Você pode selecionar várias):</p>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 font-medium">Selecione as condições aplicáveis para abrir as fichas específicas (Você pode selecionar várias):</p>
       
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {categoriesDef.map(cat => {
@@ -46,14 +46,14 @@ export function CategoriesSection({ formData, setFormData }: Props) {
               onClick={() => toggleCategory(cat.id)}
               className={`p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-3 transition-all duration-300 ${
                 isSelected 
-                  ? `${cat.color} bg-white shadow-md scale-105` 
+                  ? `${cat.color} bg-white dark:bg-slate-800 shadow-md scale-105` 
                   : 'border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-400 hover:border-slate-200'
               }`}
             >
-              <div className={`p-3 rounded-full ${isSelected ? 'bg-current opacity-10' : 'bg-white dark:bg-slate-700 shadow-sm'}`}>
-                <Icon className={`w-6 h-6 ${isSelected ? '' : 'text-slate-400'}`} />
+              <div className={`p-3 rounded-full ${isSelected ? 'bg-current opacity-10' : 'bg-white dark:bg-slate-800 shadow-sm'}`}>
+                <Icon className={`w-6 h-6 ${isSelected ? '' : 'text-slate-400 dark:text-slate-500'}`} />
               </div>
-              <span className={`text-[10px] font-bold uppercase tracking-widest text-center ${isSelected ? '' : 'text-slate-500'}`}>
+              <span className={`text-[10px] font-bold uppercase tracking-widest text-center ${isSelected ? '' : 'text-slate-500 dark:text-slate-400'}`}>
                 {cat.label || cat.id}
               </span>
             </button>

@@ -57,7 +57,7 @@ export function VisitSection({ id, formData, setFormData }: Props) {
             type="date" 
             value={formData.visitDate || ''}
             onChange={e => setFormData(prev => ({...prev, visitDate: e.target.value}))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
           />
         </div>
         <div className="md:col-span-4">
@@ -65,7 +65,7 @@ export function VisitSection({ id, formData, setFormData }: Props) {
           <select 
             value={formData.visitType}
             onChange={e => setFormData(prev => ({...prev, visitType: e.target.value}))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
           >
             <option>Rotina</option>
             <option>Acompanhamento</option>
@@ -76,7 +76,7 @@ export function VisitSection({ id, formData, setFormData }: Props) {
         </div>
         <div className="md:col-span-12">
           <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Benefícios Sociais</label>
-          <div className="flex flex-wrap gap-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
+          <div className="flex flex-wrap gap-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
             {['Bolsa Família', 'LOAS', 'BPC', 'Outros'].map(benefit => (
               <label key={benefit} className="flex items-center gap-3 cursor-pointer group">
                 <div className="relative flex items-center">
@@ -96,14 +96,14 @@ export function VisitSection({ id, formData, setFormData }: Props) {
                     className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary/20 transition-all cursor-pointer"
                   />
                 </div>
-                <span className="text-sm font-medium text-slate-600 group-hover:text-primary transition-colors">{benefit}</span>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-primary transition-colors">{benefit}</span>
               </label>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 border-t border-slate-100 pt-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 border-t border-slate-100 dark:border-slate-800 pt-8">
         <div>
           <h3 className="text-lg font-bold text-primary font-headline flex items-center gap-2">
             <Calendar className="w-5 h-5" />
@@ -115,7 +115,7 @@ export function VisitSection({ id, formData, setFormData }: Props) {
           <button 
             type="button"
             onClick={addDateToList}
-            className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-xl text-xs font-bold hover:bg-primary/20 transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-primary/10 dark:bg-primary/20 text-primary rounded-xl text-xs font-bold hover:bg-primary/20 transition-all"
           >
             <Plus className="w-4 h-4" />
             Adicionar Visita Antiga
@@ -124,7 +124,7 @@ export function VisitSection({ id, formData, setFormData }: Props) {
             <button 
               type="button"
               onClick={() => navigate('/historico', { state: { search: formData.cns } })}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-all"
+              className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
             >
               <Calendar className="w-4 h-4" />
               Ver Histórico Completo
@@ -134,7 +134,7 @@ export function VisitSection({ id, formData, setFormData }: Props) {
       </div>
 
       {formData.visitDate && (
-        <div className="mb-8 p-6 bg-primary/5 rounded-2xl border border-primary/10 animate-in fade-in slide-in-from-top-2">
+        <div className="mb-8 p-6 bg-primary/5 dark:bg-primary/10 rounded-2xl border border-primary/10 dark:border-primary/20 animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
             <h4 className="text-xs font-bold uppercase tracking-widest text-primary">Resumo da Visita Atual ({formatDate(formData.visitDate)})</h4>

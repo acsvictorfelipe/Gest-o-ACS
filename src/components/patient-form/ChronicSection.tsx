@@ -58,7 +58,7 @@ export function ChronicSection({ formData, setFormData }: Props) {
         </div>
         {alert && (
           <div className={`p-3 rounded-xl flex items-center gap-3 text-[10px] font-bold uppercase ${
-            alert.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+            alert.type === 'error' ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400'
           }`}>
             <Activity className="w-4 h-4" />
             {alert.message}
@@ -71,7 +71,7 @@ export function ChronicSection({ formData, setFormData }: Props) {
   const data = formData.clinicalData?.chronic || {};
 
   return (
-    <section className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
+    <section className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border border-slate-100 dark:border-slate-800">
       <div className="flex items-center gap-3 mb-8">
         <div className="w-1.5 h-8 bg-primary rounded-full"></div>
         <h3 className="text-xl font-bold text-primary font-headline">Doenças Crônicas</h3>
@@ -89,7 +89,7 @@ export function ChronicSection({ formData, setFormData }: Props) {
                 chronic: { ...(prev.clinicalData?.chronic || {}), diabetes: e.target.value }
               }
             }))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
           >
             <option>Não</option>
             <option>Sim</option>
@@ -106,7 +106,7 @@ export function ChronicSection({ formData, setFormData }: Props) {
                 chronic: { ...(prev.clinicalData?.chronic || {}), hipertensao: e.target.value }
               }
             }))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
           >
             <option>Não</option>
             <option>Sim</option>

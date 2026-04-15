@@ -11,8 +11,8 @@ export function AcamadoSection({ formData, setFormData }: Props) {
   if (!formData.categories.includes('AcamadoDomiciliado')) return null;
 
   return (
-    <section className="bg-white rounded-2xl p-8 shadow-sm border-l-4 border-teal-500">
-      <h3 className="text-xl font-bold text-teal-600 mb-8 font-headline flex items-center gap-2">
+    <section className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border-l-4 border-teal-500">
+      <h3 className="text-xl font-bold text-teal-600 dark:text-teal-400 mb-8 font-headline flex items-center gap-2">
         <Activity className="w-6 h-6" />
         Categoria: Acamado / Domiciliado
       </h3>
@@ -28,7 +28,7 @@ export function AcamadoSection({ formData, setFormData }: Props) {
                 acamadodomiciliado: { ...(prev.clinicalData?.acamadodomiciliado || {}), dependencia: e.target.value } 
               }
             }))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm"
           >
             <option>Total</option>
             <option>Parcial</option>
@@ -46,7 +46,7 @@ export function AcamadoSection({ formData, setFormData }: Props) {
                 acamadodomiciliado: { ...(prev.clinicalData?.acamadodomiciliado || {}), curativos: e.target.value } 
               }
             }))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm"
           >
             <option>Não</option>
             <option>Sim</option>
@@ -63,7 +63,7 @@ export function AcamadoSection({ formData, setFormData }: Props) {
                 acamadodomiciliado: { ...(prev.clinicalData?.acamadodomiciliado || {}), cuidador: e.target.value } 
               }
             }))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm"
           >
             <option>Não</option>
             <option>Sim</option>
@@ -80,7 +80,7 @@ export function AcamadoSection({ formData, setFormData }: Props) {
                 acamadodomiciliado: { ...(prev.clinicalData?.acamadodomiciliado || {}), usoFralda: e.target.value } 
               }
             }))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm"
           >
             <option>Não</option>
             <option>Sim</option>
@@ -98,7 +98,7 @@ export function AcamadoSection({ formData, setFormData }: Props) {
                   acamadodomiciliado: { ...(prev.clinicalData?.acamadodomiciliado || {}), tamanhoFralda: e.target.value } 
                 }
               }))}
-              className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+              className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm"
             >
               <option value="">Selecione...</option>
               <option>Infantil P</option>

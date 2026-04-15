@@ -10,7 +10,7 @@ interface Props {
 
 export function IdentificationSection({ formData, setFormData }: Props) {
   return (
-    <section className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
+    <section className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border border-slate-100 dark:border-slate-800">
       <div className="flex items-center gap-3 mb-8">
         <div className="w-1.5 h-8 bg-primary rounded-full"></div>
         <h3 className="text-xl font-bold text-primary font-headline">Identificação Geral</h3>
@@ -26,16 +26,16 @@ export function IdentificationSection({ formData, setFormData }: Props) {
             value={(formData.isFamilyResponsible ? formData.cns : formData.responsibleCns) || ''}
             onChange={e => setFormData(prev => ({...prev, responsibleCns: e.target.value}))}
             disabled={formData.isFamilyResponsible}
-            className={`w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20 ${formData.isFamilyResponsible ? 'opacity-50 cursor-not-allowed' : ''}`} 
+            className={`w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20 ${formData.isFamilyResponsible ? 'opacity-50 cursor-not-allowed' : ''}`} 
             placeholder="000 0000 0000 0000" 
           />
           {!formData.isFamilyResponsible && (
             <p className="text-[9px] text-slate-400 mt-1 italic">Use o CNS para vincular este cidadão a uma família existente.</p>
           )}
           {!formData.isFamilyResponsible && !formData.responsibleCns && (
-            <div className="mt-2 p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-center gap-2">
+            <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 rounded-xl flex items-center gap-2">
               <AlertTriangle className="w-3 h-3 text-amber-500" />
-              <span className="text-[9px] font-bold text-amber-700 uppercase">Responsável Pendente: O domicílio não será gerado.</span>
+              <span className="text-[9px] font-bold text-amber-700 dark:text-amber-400 uppercase">Responsável Pendente: O domicílio não será gerado.</span>
             </div>
           )}
         </div>
@@ -44,7 +44,7 @@ export function IdentificationSection({ formData, setFormData }: Props) {
           <select 
             value={formData.isFamilyResponsible ? 'Sim' : 'Não'}
             onChange={e => setFormData(prev => ({...prev, isFamilyResponsible: e.target.value === 'Sim'}))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
           >
             <option>Não</option>
             <option>Sim</option>
@@ -66,7 +66,7 @@ export function IdentificationSection({ formData, setFormData }: Props) {
             type="text" 
             value={formData.name || ''}
             onChange={e => setFormData(prev => ({...prev, name: e.target.value}))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
             placeholder="Nome do paciente" 
           />
         </div>
@@ -76,7 +76,7 @@ export function IdentificationSection({ formData, setFormData }: Props) {
             type="text" 
             value={formData.cns || ''}
             onChange={e => setFormData(prev => ({...prev, cns: e.target.value}))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
             placeholder="000 0000 0000 0000" 
           />
         </div>
@@ -85,7 +85,7 @@ export function IdentificationSection({ formData, setFormData }: Props) {
           <select 
             value={formData.gender || 'Feminino'}
             onChange={e => setFormData(prev => ({...prev, gender: e.target.value}))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
           >
             <option>Feminino</option>
             <option>Masculino</option>
@@ -108,7 +108,7 @@ export function IdentificationSection({ formData, setFormData }: Props) {
             type="date" 
             value={formData.birthDate || ''}
             onChange={e => setFormData(prev => ({...prev, birthDate: e.target.value}))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
           />
         </div>
         <div className="md:col-span-3">
@@ -117,7 +117,7 @@ export function IdentificationSection({ formData, setFormData }: Props) {
             disabled
             type="text" 
             value={calculateAge(formData.birthDate) || ''}
-            className="w-full bg-slate-100 border-none rounded-xl p-3 text-sm text-slate-500" 
+            className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-xl p-3 text-sm text-slate-500 dark:text-slate-400" 
           />
         </div>
 
@@ -128,7 +128,7 @@ export function IdentificationSection({ formData, setFormData }: Props) {
             type="text" 
             value={formData.address || ''}
             onChange={e => setFormData(prev => ({...prev, address: e.target.value}))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
           />
         </div>
         <div className="md:col-span-1">
@@ -137,7 +137,7 @@ export function IdentificationSection({ formData, setFormData }: Props) {
             type="text" 
             value={formData.number || ''}
             onChange={e => setFormData(prev => ({...prev, number: e.target.value}))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
           />
         </div>
         <div className="md:col-span-2">
@@ -146,7 +146,7 @@ export function IdentificationSection({ formData, setFormData }: Props) {
             type="text" 
             value={formData.complement || ''}
             onChange={e => setFormData(prev => ({...prev, complement: e.target.value}))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
           />
         </div>
         <div className="md:col-span-2">
@@ -170,7 +170,7 @@ export function IdentificationSection({ formData, setFormData }: Props) {
             type="text" 
             value={formData.contact || ''}
             onChange={e => setFormData(prev => ({...prev, contact: e.target.value}))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
             placeholder="(00) 00000-0000"
           />
         </div>
@@ -195,7 +195,7 @@ export function IdentificationSection({ formData, setFormData }: Props) {
             type="text" 
             value={formData.messageContact || ''}
             onChange={e => setFormData(prev => ({...prev, messageContact: e.target.value}))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
           />
         </div>
       </div>

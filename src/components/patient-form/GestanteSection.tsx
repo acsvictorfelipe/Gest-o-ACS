@@ -20,7 +20,7 @@ export function GestanteSection({
   if (!formData.categories.includes('Gestante')) return null;
 
   return (
-    <section className="bg-white rounded-2xl p-8 shadow-sm border-l-4 border-blue-500">
+    <section className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border-l-4 border-blue-500">
       <h3 className="text-xl font-bold text-blue-600 mb-8 font-headline flex items-center gap-2">
         <Baby className="w-6 h-6" />
         Categoria: Gestante
@@ -38,7 +38,7 @@ export function GestanteSection({
                 gestante: { ...(prev.clinicalData?.gestante || {}), dum: e.target.value } 
               }
             }))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm"
           />
         </div>
         <div>
@@ -53,7 +53,7 @@ export function GestanteSection({
                 gestante: { ...(prev.clinicalData?.gestante || {}), dpp: e.target.value } 
               }
             }))}
-            className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm"
           />
         </div>
 
@@ -75,7 +75,7 @@ export function GestanteSection({
                   type="date" 
                   value={date}
                   onChange={e => updateDateInList('gestante', 'consultas', idx, e.target.value)}
-                  className="w-full bg-slate-50 border-none rounded-lg p-2 text-xs"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-lg p-2 text-xs"
                 />
                 <button 
                   type="button"
@@ -107,7 +107,7 @@ export function GestanteSection({
                   type="date" 
                   value={date}
                   onChange={e => updateDateInList('gestante', 'visitasAcs', idx, e.target.value)}
-                  className="w-full bg-slate-50 border-none rounded-lg p-2 text-xs"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-lg p-2 text-xs"
                 />
                 <button 
                   type="button"
@@ -138,7 +138,7 @@ export function GestanteSection({
                     gestante: { ...(prev.clinicalData?.gestante || {}), sifilis: e.target.value } 
                   }
                 }))}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm"
               >
                 <option>NÃO REALIZADO</option>
                 <option>REALIZADO</option>
@@ -155,7 +155,7 @@ export function GestanteSection({
                     gestante: { ...(prev.clinicalData?.gestante || {}), hiv: e.target.value } 
                   }
                 }))}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm"
               >
                 <option>NÃO REALIZADO</option>
                 <option>REALIZADO</option>
@@ -172,7 +172,7 @@ export function GestanteSection({
                     gestante: { ...(prev.clinicalData?.gestante || {}), hepatiteB: e.target.value } 
                   }
                 }))}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm"
               >
                 <option>NÃO REALIZADO</option>
                 <option>REALIZADO</option>
@@ -189,7 +189,7 @@ export function GestanteSection({
                     gestante: { ...(prev.clinicalData?.gestante || {}), hepatiteC: e.target.value } 
                   }
                 }))}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm"
               >
                 <option>NÃO REALIZADO</option>
                 <option>REALIZADO</option>
@@ -215,7 +215,7 @@ export function GestanteSection({
                     gestante: { ...(prev.clinicalData?.gestante || {}), dtpa: e.target.value } 
                   }
                 }))}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm"
+                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm"
               >
                 <option>Não</option>
                 <option>Sim</option>
