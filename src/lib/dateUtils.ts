@@ -129,3 +129,56 @@ export const parseDate = (dateStr: string) => {
   // Create date at noon local time to avoid timezone shifts
   return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
 };
+
+// Calcula a próxima data de visita com base em uma data inicial e um intervalo em dias
+export const calculateNextVisit = (dateStr: string, intervalDays: number): string => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return '';
+  const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+  date.setDate(date.getDate() + intervalDays);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Retorna um alerta de visita com base na data calculada
+export const getVisitAlert = (nextVisitDate: string): { type: 'warning' | 'error'; message: string } | null => {
+  if (!nextVisitDate) return null;
+  const parts = nextVisitDate.split('-');
+  if (parts.length !== 3) return null;
+  const next = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const diffDays = Math.ceil((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return { type: 'error', message: `Visita atrasada em ${Math.abs(diffDays)} dia(s)` };
+  }
+  if (diffDays <= 30) {
+    return { type: 'warning', message: `Próxima visita em ${diffDays} dia(s)` };
+  }
+  return null;
+};
+
+// Verifica se a consulta médica anual está atrasada ou próxima (intervalo de 365 dias)
+export const getConsultationAlert = (dateStr: string): { type: 'warning' | 'error'; message: string } | null => {
+  if (!dateStr) return null;
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return null;
+  const consultation = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+  const nextConsultation = new Date(consultation);
+  nextConsultation.setDate(nextConsultation.getDate() + 365);
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const diffDays = Math.ceil((nextConsultation.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return { type: 'error', message: `Consulta anual atrasada em ${Math.abs(diffDays)} dia(s)` };
+  }
+  if (diffDays <= 30) {
+    return { type: 'warning', message: `Consulta anual vence em ${diffDays} dia(s)` };
+  }
+  return null;
+};

@@ -217,6 +217,14 @@ export function Layout({ user, onProfileUpdate }: LayoutProps) {
             referrerPolicy="no-referrer"
           />
           <div className="flex-1 min-w-0">
+            <p className="text-[9px] font-bold text-primary uppercase tracking-widest mb-0.5">
+              {(() => {
+                const hour = new Date().getHours();
+                if (hour < 12) return 'Bom dia';
+                if (hour < 18) return 'Boa tarde';
+                return 'Boa noite';
+              })()}
+            </p>
             <p className="text-xs font-bold text-on-surface truncate">{user.name || 'Agente'}</p>
             <div className="flex flex-col">
               <p className="text-[10px] text-on-surface-variant uppercase tracking-tighter truncate">

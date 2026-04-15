@@ -13,15 +13,26 @@ import { Reports } from './components/Reports';
 import { UserManagement } from './components/UserManagement';
 import { VisitHistory } from './components/VisitHistory';
 import { ImportTool } from './components/ImportTool';
+import { Toaster } from 'sonner';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const root = window.document.documentElement;
-    root.classList.remove('dark');
-    root.classList.add('light');
+    
+    const handleChange = (e: MediaQueryListEvent) => {
+      if (e.matches) root.classList.add('dark');
+      else root.classList.remove('dark');
+    };
+    
+    if (mediaQuery.matches) root.classList.add('dark');
+    else root.classList.remove('dark');
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
   useEffect(() => {
@@ -55,11 +66,12 @@ export default function App() {
         .eq('id', supabaseUser.id)
         .single();
 
+      const initialAdminEmail = import.meta.env.VITE_INITIAL_ADMIN_EMAIL;
+
       if (data) {
         let updatedProfile = data;
-        // Bootstrap: Promote specific emails to Administrador
-        const adminEmails = ['victorfelipe2012@gmail.com'];
-        if (supabaseUser.email && adminEmails.includes(supabaseUser.email) && data.role !== 'Administrador') {
+        // Permite promoção estrita apenas se a variável de admin foi configurada
+        if (initialAdminEmail && supabaseUser.email === initialAdminEmail && data.role !== 'Administrador') {
           const { data: promotedData, error: promoError } = await supabase
             .from('profiles')
             .update({ role: 'Administrador' })
@@ -76,11 +88,10 @@ export default function App() {
         const name = updatedProfile.name || supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
         setUser({ ...supabaseUser, ...updatedProfile, name });
       } else {
-        // Profile doesn't exist, check if it's a super admin to create it
-        const adminEmails = ['victorfelipe2012@gmail.com'];
+        // Profile doesn't exist, check if it's the environment super admin to create it
         const name = supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
         
-        if (supabaseUser.email && adminEmails.includes(supabaseUser.email)) {
+        if (initialAdminEmail && supabaseUser.email === initialAdminEmail) {
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
             .insert({
@@ -110,34 +121,6 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    // Force migration via server-side API for acsvictorfelipe@gmail.com
-    const targetEmail = 'acsvictorfelipe@gmail.com';
-    if (user && user.email === targetEmail && (user.role !== 'Agente' || user.microarea !== '3')) {
-      const performServerMigration = async () => {
-        try {
-          console.log('Requesting server-side migration for:', targetEmail);
-          const response = await fetch('/api/admin/force-profile-update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: targetEmail })
-          });
-          
-          if (response.ok) {
-            console.log('Server-side migration confirmed. Refreshing...');
-            fetchProfile(user);
-          } else {
-            const errData = await response.json();
-            console.error('Server-side migration failed:', errData.error);
-          }
-        } catch (err) {
-          console.error('Network error during migration:', err);
-        }
-      };
-      performServerMigration();
-    }
-  }, [user]);
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
@@ -148,6 +131,7 @@ export default function App() {
 
   return (
     <Router>
+      <Toaster position="top-right" richColors theme="system" />
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
         

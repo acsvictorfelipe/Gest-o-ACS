@@ -25,6 +25,7 @@ import {
   Bed,
   ArrowLeft
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE, formatDate, parseDate } from '../lib/dateUtils';
 
@@ -33,10 +34,14 @@ export function PatientList({ user }: { user: any }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [patients, setPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState(searchParams.get('filter') || 'all');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
     const filter = searchParams.get('filter');
@@ -50,116 +55,96 @@ export function PatientList({ user }: { user: any }) {
   }, [searchParams]);
 
   useEffect(() => {
+    // Reset state when filters change
+    setPatients([]);
+    setPage(0);
+    setHasMore(true);
+  }, [searchTerm, activeFilter, user.microarea, user.id, user.role, user.color]);
+
+  useEffect(() => {
     const fetchPatients = async () => {
       if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
-      setLoading(true);
+      
+      const isInitialFetch = page === 0;
+      if (isInitialFetch) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
       try {
-        let allData: any[] = [];
-        let from = 0;
-        let to = 999;
-        let hasMore = true;
+        let query = supabase
+          .from('patients')
+          .select('*', { count: 'exact' })
+          .order('name', { ascending: true });
 
-        while (hasMore && allData.length < 10000) {
-          let query = supabase
-            .from('patients')
-            .select('*')
-            .order('name', { ascending: true })
-            .range(from, to);
-
-          if (user.role === 'Administrador') {
-            // No filters for Admin
-          } else if (user.role === 'Gestor') {
-            query = query.eq('area_color', user.color);
-          } else {
-            query = query.eq('agent_id', user.id);
-          }
-
-          const { data, error } = await query;
-          if (error) throw error;
-          
-          if (data && data.length > 0) {
-            allData = [...allData, ...data];
-            if (data.length < 1000) {
-              hasMore = false;
-            } else {
-              from += 1000;
-              to += 1000;
-            }
-          } else {
-            hasMore = false;
-          }
+        // Role-based filters
+        if (user.role === 'Gestor') {
+          query = query.eq('area_color', user.color);
+        } else if (user.role !== 'Administrador') {
+          query = query.eq('agent_id', user.id);
         }
+
+        // Search filter
+        if (searchTerm) {
+          query = query.or(`name.ilike.%${searchTerm}%,cns.like.%${searchTerm}%`);
+        }
+
+        // Active status filters
+        if (activeFilter === 'pending') {
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          query = query.or(`last_visit_at.is.null,last_visit_at.lt.${thirtyDaysAgo.toISOString()}`);
+        } else if (activeFilter === 'gestantes') {
+          query = query.contains('categories', ['Gestante']);
+        } else if (activeFilter === 'crianças') {
+          query = query.contains('categories', ['Criança']);
+        } else if (activeFilter === 'acamados') {
+          query = query.contains('categories', ['AcamadoDomiciliado']);
+        } else if (activeFilter === 'idosos') {
+          query = query.contains('categories', ['Idoso']);
+        } else if (activeFilter === 'hipertensos') {
+          query = query.or('clinical_data->chronic->>hipertensao.eq.Sim,clinical_data->gestante->>hipertensao.eq.Sim,clinical_data->gestante->>pressaoAlta.eq.Sim,clinical_data->acamadodomiciliado->>hipertensao.eq.Sim,clinical_data->acamadodomiciliado->>pressaoAlta.eq.Sim,clinical_data->adulto->>hipertensao.eq.Sim,clinical_data->adulto->>pressaoAlta.eq.Sim,clinical_data->idoso->>hipertensao.eq.Sim,clinical_data->idoso->>pressaoAlta.eq.Sim');
+        } else if (activeFilter === 'diabéticos') {
+          query = query.or('clinical_data->chronic->>diabetes.eq.Sim,clinical_data->gestante->>diabetes.eq.Sim,clinical_data->acamadodomiciliado->>diabetes.eq.Sim,clinical_data->adulto->>diabetes.eq.Sim,clinical_data->idoso->>diabetes.eq.Sim');
+        }
+
+        // Pagination
+        const from = page * ITEMS_PER_PAGE;
+        const to = from + ITEMS_PER_PAGE - 1;
+        query = query.range(from, to);
+
+        const { data, error, count } = await query;
+        if (error) throw error;
         
-        setPatients(allData);
+        if (data) {
+          setPatients(prev => isInitialFetch ? data : [...prev, ...data]);
+          setHasMore(count ? (page + 1) * ITEMS_PER_PAGE < count : data.length === ITEMS_PER_PAGE);
+        }
       } catch (error) {
         console.error("Error fetching patients:", error);
       } finally {
         setLoading(false);
+        setLoadingMore(false);
       }
     };
     fetchPatients();
-  }, [user.microarea, user.id, user.role, user.color]);
+  }, [page, searchTerm, activeFilter, user.microarea, user.id, user.role, user.color]);
 
-  const filteredPatients = patients.filter(p => {
-    const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         p.cns?.includes(searchTerm);
+  const filteredPatients = patients;
     
-    if (activeFilter === 'pending') {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
-      return matchesSearch && (!lastVisit || lastVisit < thirtyDaysAgo);
-    }
-
-    if (activeFilter === 'vaccine') {
-      const isChild = p.categories?.includes('Criança');
-      if (!isChild) return false;
-      
-      const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
-      const clinical = p.clinical_data || {};
-      const vaccines = clinical.crianca?.vacinas || {};
-      
-      // Get vaccines that should have been taken by now
-      const dueVaccines = VACCINE_SCHEDULE
-        .filter(group => group.age <= ageInMonths)
-        .flatMap(group => group.vaccines);
-        
-      const hasPendingVaccine = dueVaccines.some(v => vaccines[v.id] !== 'Sim');
-      
-      return matchesSearch && hasPendingVaccine;
-    }
-
-    if (activeFilter === 'gestantes') return matchesSearch && p.categories?.includes('Gestante');
-    if (activeFilter === 'crianças') return matchesSearch && p.categories?.includes('Criança');
-    if (activeFilter === 'acamados') return matchesSearch && p.categories?.includes('AcamadoDomiciliado');
-    if (activeFilter === 'idosos') return matchesSearch && p.categories?.includes('Idoso');
-    if (activeFilter === 'hipertensos') {
-      const clinical = p.clinical_data || {};
-      return matchesSearch && (
-        clinical.chronic?.hipertensao === 'Sim' ||
-        clinical.gestante?.hipertensao === 'Sim' ||
-        clinical.gestante?.pressaoAlta === 'Sim' || 
-        clinical.acamadodomiciliado?.hipertensao === 'Sim' ||
-        clinical.acamadodomiciliado?.pressaoAlta === 'Sim' || 
-        clinical.adulto?.hipertensao === 'Sim' ||
-        clinical.adulto?.pressaoAlta === 'Sim' || 
-        clinical.idoso?.hipertensao === 'Sim' ||
-        clinical.idoso?.pressaoAlta === 'Sim'
-      );
-    }
-    if (activeFilter === 'diabéticos') {
-      const clinical = p.clinical_data || {};
-      return matchesSearch && (
-        clinical.chronic?.diabetes === 'Sim' ||
-        clinical.gestante?.diabetes === 'Sim' || 
-        clinical.acamadodomiciliado?.diabetes === 'Sim' || 
-        clinical.adulto?.diabetes === 'Sim' || 
-        clinical.idoso?.diabetes === 'Sim'
-      );
-    }
-
-    return matchesSearch;
-  });
+  // Use a simpler pass-through since server does most filtering
+  // Except for 'vaccine' which we'll handle by fetching more if needed or just showing current matches
+  const displayPatients = activeFilter === 'vaccine' 
+    ? filteredPatients.filter(p => {
+        const isChild = p.categories?.includes('Criança');
+        if (!isChild) return false;
+        const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
+        const vaccines = p.clinical_data?.crianca?.vacinas || {};
+        const dueVaccines = VACCINE_SCHEDULE.filter(group => group.age <= ageInMonths).flatMap(group => group.vaccines);
+        return dueVaccines.some(v => vaccines[v.id] !== 'Sim');
+      })
+    : filteredPatients;
 
   const clearFilter = () => {
     setActiveFilter('all');
@@ -187,7 +172,7 @@ export function PatientList({ user }: { user: any }) {
         
         setPatients(patients.filter(p => p.id !== deleteConfirm));
         setDeleteConfirm(null);
-        alert('Exclusão agendada para sincronização.');
+        toast.success('Exclusão agendada para sincronização.');
         return;
       }
 
@@ -223,7 +208,7 @@ export function PatientList({ user }: { user: any }) {
       setDeleteConfirm(null);
     } catch (error) {
       console.error("Error deleting patient:", error);
-      alert("Erro ao excluir paciente.");
+      toast.error("Erro ao excluir paciente.");
     } finally {
       setDeleting(false);
     }
@@ -300,7 +285,7 @@ export function PatientList({ user }: { user: any }) {
               </button>
             </div>
             <span className="text-xs text-slate-400 font-medium">
-              {filteredPatients.length} {filteredPatients.length === 1 ? 'resultado encontrado' : 'resultados encontrados'}
+              {displayPatients.length} {displayPatients.length === 1 ? 'carregado' : 'carregados'}
             </span>
           </div>
         )}
@@ -312,289 +297,335 @@ export function PatientList({ user }: { user: any }) {
           <p className="font-medium">Carregando cidadãos...</p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-          {/* Desktop Table View */}
-          <div className="hidden lg:block overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[800px]">
-              <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Cidadão</th>
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">CNS</th>
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Categorias</th>
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Última Visita</th>
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                {filteredPatients.length > 0 ? (
-                  filteredPatients.map((p) => (
-                    <tr 
-                      key={p.id} 
-                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
-                      onClick={() => p.household_id ? navigate(`/domicilio/${p.household_id}`) : navigate(`/editar-paciente/${p.id}`)}
-                    >
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 font-bold text-sm group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                            {p.name?.substring(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-bold text-on-surface">{p.name}</p>
-                              <button 
-                                onClick={(e) => copyToClipboard(p.name, e)}
-                                className="p-1 text-slate-300 hover:text-primary transition-colors"
-                                title="Copiar Nome"
-                              >
-                                <Copy className="w-3 h-3" />
-                              </button>
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[800px]">
+                <thead>
+                  <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                    <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Cidadão</th>
+                    <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">CNS</th>
+                    <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Categorias</th>
+                    <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Última Visita</th>
+                    <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                  {displayPatients.length > 0 ? (
+                    displayPatients.map((p) => (
+                      <tr 
+                        key={p.id} 
+                        className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                        onClick={() => p.household_id ? navigate(`/domicilio/${p.household_id}`) : navigate(`/editar-paciente/${p.id}`)}
+                      >
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 font-bold text-sm group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                              {p.name?.substring(0, 2).toUpperCase()}
                             </div>
-                            <div className="flex items-center gap-2">
-                              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-                                {p.gender}, {p.birth_date ? calculateAge(p.birth_date) : 'N/A'}
-                              </p>
-                              <button 
-                                onClick={(e) => copyToClipboard(p.birth_date, e)}
-                                className="p-1 text-slate-300 hover:text-primary transition-colors"
-                                title="Copiar Data de Nascimento"
-                              >
-                                <Copy className="w-3 h-3" />
-                              </button>
-                            </div>
-                            {(p.contact || p.message_contact) && (
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                                {p.contact && (
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-[9px] font-bold text-primary uppercase">Tel:</span>
-                                    <span className="text-[9px] text-slate-400">{p.contact}</span>
-                                    <button 
-                                      onClick={(e) => copyToClipboard(p.contact, e)}
-                                      className="p-1 text-slate-300 hover:text-primary transition-colors"
-                                      title="Copiar Contato"
-                                    >
-                                      <Copy className="w-2.5 h-2.5" />
-                                    </button>
-                                  </div>
-                                )}
-                                {p.message_contact && (
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-[9px] font-bold text-orange-500 uppercase">Recado:</span>
-                                    <span className="text-[9px] text-slate-400">{p.message_contact}</span>
-                                    <button 
-                                      onClick={(e) => copyToClipboard(p.message_contact, e)}
-                                      className="p-1 text-slate-300 hover:text-primary transition-colors"
-                                      title="Copiar Contato de Recado"
-                                    >
-                                      <Copy className="w-2.5 h-2.5" />
-                                    </button>
-                                  </div>
-                                )}
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-bold text-on-surface">{p.name}</p>
+                                <button 
+                                  onClick={(e) => copyToClipboard(p.name, e)}
+                                  className="p-1 text-slate-300 hover:text-primary transition-colors"
+                                  title="Copiar Nome"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                </button>
                               </div>
+                              <div className="flex items-center gap-2">
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                                  {p.gender}, {p.birth_date ? calculateAge(p.birth_date) : 'N/A'}
+                                </p>
+                                <button 
+                                  onClick={(e) => copyToClipboard(p.birth_date, e)}
+                                  className="p-1 text-slate-300 hover:text-primary transition-colors"
+                                  title="Copiar Data de Nascimento"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                </button>
+                              </div>
+                              {(p.contact || p.message_contact) && (
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                                  {p.contact && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[9px] font-bold text-primary uppercase">Tel:</span>
+                                      <span className="text-[9px] text-slate-400">{p.contact}</span>
+                                      <button 
+                                        onClick={(e) => copyToClipboard(p.contact, e)}
+                                        className="p-1 text-slate-300 hover:text-primary transition-colors"
+                                        title="Copiar Contato"
+                                      >
+                                        <Copy className="w-2.5 h-2.5" />
+                                      </button>
+                                    </div>
+                                  )}
+                                  {p.message_contact && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[9px] font-bold text-orange-500 uppercase">Recado:</span>
+                                      <span className="text-[9px] text-slate-400">{p.message_contact}</span>
+                                      <button 
+                                        onClick={(e) => copyToClipboard(p.message_contact, e)}
+                                        className="p-1 text-slate-300 hover:text-primary transition-colors"
+                                        title="Copiar Contato de Recado"
+                                      >
+                                        <Copy className="w-2.5 h-2.5" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{p.cns}</span>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="flex flex-wrap gap-2">
+                            {p.categories?.map((cat: string) => (
+                              <div key={cat} className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors">
+                                {getCategoryIcon([cat])}
+                                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">{cat}</span>
+                              </div>
+                            ))}
+                            {(!p.categories || p.categories.length === 0) && (
+                              <span className="text-[10px] font-bold text-slate-300 dark:text-slate-600 uppercase">Sem Categoria</span>
                             )}
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{p.cns}</span>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex flex-wrap gap-2">
-                          {p.categories?.map((cat: string) => (
-                            <div key={cat} className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors">
-                              {getCategoryIcon([cat])}
-                              <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">{cat}</span>
-                            </div>
-                          ))}
-                          {(!p.categories || p.categories.length === 0) && (
-                            <span className="text-[10px] font-bold text-slate-300 dark:text-slate-600 uppercase">Sem Categoria</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex flex-col">
-                          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                            {p.last_visit_at ? new Date(p.last_visit_at).toLocaleDateString('pt-BR') : 'Nunca'}
-                          </span>
-                          {(!p.last_visit_at || new Date(p.last_visit_at) < new Date(new Date().setDate(new Date().getDate() - 30))) && (
-                            <span className="text-[9px] font-bold text-red-500 uppercase mt-1">Pendente</span>
-                          )}
-                          {p.categories?.includes('Criança') && (() => {
-                            if (!p.birth_date) return null;
-                            const birth = parseDate(p.birth_date);
-                            if (!birth) return null;
-                            
-                            const sixMonthsDate = new Date(birth);
-                            sixMonthsDate.setMonth(birth.getMonth() + 6);
-                            const now = new Date();
-                            const diffDays = Math.ceil((sixMonthsDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                            
-                            if (diffDays <= 15 && diffDays >= -15) {
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                              {p.last_visit_at ? new Date(p.last_visit_at).toLocaleDateString('pt-BR') : 'Nunca'}
+                            </span>
+                            {(() => {
+                              const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
+                              const daysAgo = lastVisit ? Math.floor((Date.now() - lastVisit.getTime()) / (1000 * 60 * 60 * 24)) : null;
+                              const statusInfo = !lastVisit
+                                ? { label: 'Nunca visitado', cls: 'text-red-500' }
+                                : daysAgo! > 30
+                                ? { label: `Atrasado ${daysAgo}d`, cls: 'text-orange-500' }
+                                : { label: 'Regular', cls: 'text-green-500' };
+                              
                               return (
-                                <div className="flex items-center gap-1 mt-1 text-red-500 animate-pulse">
-                                  <AlertCircle className="w-3 h-3" />
-                                  <span className="text-[9px] font-bold uppercase">Visita 6 Meses Próxima</span>
+                                <div className={`flex items-center gap-1 mt-1 text-[9px] font-bold uppercase ${statusInfo.cls}`}>
+                                  {statusInfo.label}
                                 </div>
                               );
-                            }
-                            return null;
-                          })()}
-                          {p.categories?.includes('Criança') && (() => {
-                            const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
-                            const vaccines = p.clinical_data?.crianca?.vacinas || {};
-                            const dueVaccines = VACCINE_SCHEDULE
-                              .filter(group => group.age <= ageInMonths)
-                              .flatMap(group => group.vaccines);
-                            const hasPending = dueVaccines.some(v => vaccines[v.id] !== 'Sim');
-                            
-                            return hasPending ? (
-                              <span className="text-[9px] font-bold text-orange-500 uppercase mt-1">Vacina Atrasada</span>
-                            ) : null;
-                          })()}
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-2">
-                          {(user.role === 'Administrador' || (user.role === 'Agente' && p.agent_id === user.id)) && (
-                            <>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/editar-paciente/${p.id}`);
-                                }}
-                                className="p-2 text-slate-300 dark:text-slate-600 hover:text-primary transition-colors"
-                                title="Editar Paciente"
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeleteConfirm(p.id);
-                                }}
-                                className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors"
-                                title="Excluir Paciente"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
-                          <button className="p-2 text-slate-300 dark:text-slate-600 group-hover:text-primary transition-colors">
-                            <ChevronRight className="w-5 h-5" />
-                          </button>
-                        </div>
+                            })()}
+                            {p.categories?.includes('Criança') && (() => {
+                              if (!p.birth_date) return null;
+                              const birth = parseDate(p.birth_date);
+                              if (!birth) return null;
+                              
+                              const sixMonthsDate = new Date(birth);
+                              sixMonthsDate.setMonth(birth.getMonth() + 6);
+                              const now = new Date();
+                              const diffDays = Math.ceil((sixMonthsDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                              
+                              if (diffDays <= 15 && diffDays >= -15) {
+                                return (
+                                  <div className="flex items-center gap-1 mt-1 text-red-500 animate-pulse">
+                                    <AlertCircle className="w-3 h-3" />
+                                    <span className="text-[9px] font-bold uppercase">Visita 6 Meses Próxima</span>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+                            {p.categories?.includes('Criança') && (() => {
+                              const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
+                              const vaccines = p.clinical_data?.crianca?.vacinas || {};
+                              const dueVaccines = VACCINE_SCHEDULE
+                                .filter(group => group.age <= ageInMonths)
+                                .flatMap(group => group.vaccines);
+                              const hasPending = dueVaccines.some(v => vaccines[v.id] !== 'Sim');
+                              
+                              return hasPending ? (
+                                <span className="text-[9px] font-bold text-orange-500 uppercase mt-1">Vacina Atrasada</span>
+                              ) : null;
+                            })()}
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-2">
+                            {(user.role === 'Administrador' || (user.role === 'Agente' && p.agent_id === user.id)) && (
+                              <>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/editar-paciente/${p.id}`);
+                                  }}
+                                  className="p-2 text-slate-300 dark:text-slate-600 hover:text-primary transition-colors"
+                                  title="Editar Paciente"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteConfirm(p.id);
+                                  }}
+                                  className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors"
+                                  title="Excluir Paciente"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                            <button className="p-2 text-slate-300 dark:text-slate-600 group-hover:text-primary transition-colors">
+                              <ChevronRight className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="px-8 py-20 text-center text-slate-400 dark:text-slate-500 font-medium">
+                        Nenhum cidadão encontrado.
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="px-8 py-20 text-center text-slate-400 dark:text-slate-500 font-medium">
-                      Nenhum cidadão encontrado.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Card View */}
-          <div className="lg:hidden divide-y divide-slate-50 dark:divide-slate-800">
-            {filteredPatients.length > 0 ? (
-              filteredPatients.map((p) => (
-                <div 
-                  key={p.id} 
-                  className="p-6 space-y-4 active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors"
-                  onClick={() => p.household_id ? navigate(`/domicilio/${p.household_id}`) : navigate(`/editar-paciente/${p.id}`)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-primary/10`} style={{ backgroundColor: p.area_color || '#00488d' }}>
-                        {p.name.charAt(0)}
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-base font-bold text-on-surface">{p.name}</span>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
-                          {p.gender}, {p.birth_date ? calculateAge(p.birth_date) : 'N/A'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/editar-paciente/${p.id}`);
-                        }}
-                        className="p-2 text-slate-400"
-                      >
-                        <Pencil className="w-5 h-5" />
-                      </button>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteConfirm(p.id);
-                        }}
-                        className="p-2 text-slate-400"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">CNS</span>
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{p.cns}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Última Visita</span>
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                        {p.last_visit_at ? new Date(p.last_visit_at).toLocaleDateString('pt-BR') : 'Nunca'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {p.categories?.map((cat: string) => (
-                      <div key={cat} className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                        {getCategoryIcon([cat])}
-                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">{cat}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {(p.contact || p.message_contact) && (
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl space-y-2">
-                      {p.contact && (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-primary uppercase">Contato:</span>
-                            <span className="text-xs text-slate-600 dark:text-slate-400">{p.contact}</span>
-                          </div>
-                          <button onClick={(e) => copyToClipboard(p.contact, e)} className="p-1 text-slate-400">
-                            <Copy className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                      {p.message_contact && (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-orange-500 uppercase">Recado:</span>
-                            <span className="text-xs text-slate-600 dark:text-slate-400">{p.message_contact}</span>
-                          </div>
-                          <button onClick={(e) => copyToClipboard(p.message_contact, e)} className="p-1 text-slate-400">
-                            <Copy className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
                   )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden divide-y divide-slate-50 dark:divide-slate-800">
+              {displayPatients.length > 0 ? (
+                displayPatients.map((p) => (
+                  <div 
+                    key={p.id} 
+                    className="p-6 space-y-4 active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors"
+                    onClick={() => p.household_id ? navigate(`/domicilio/${p.household_id}`) : navigate(`/editar-paciente/${p.id}`)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-primary/10`} style={{ backgroundColor: p.area_color || '#00488d' }}>
+                          {p.name.charAt(0)}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-base font-bold text-on-surface">{p.name}</span>
+                          <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
+                            {p.gender}, {p.birth_date ? calculateAge(p.birth_date) : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/editar-paciente/${p.id}`);
+                          }}
+                          className="p-2 text-slate-400"
+                        >
+                          <Pencil className="w-5 h-5" />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteConfirm(p.id);
+                          }}
+                          className="p-2 text-slate-400"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">CNS</span>
+                        <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{p.cns}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</span>
+                        {(() => {
+                            const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
+                            const daysAgo = lastVisit ? Math.floor((Date.now() - lastVisit.getTime()) / (1000 * 60 * 60 * 24)) : null;
+                            const statusInfo = !lastVisit
+                              ? { label: 'Nunca visitado', cls: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' }
+                              : daysAgo! > 30
+                              ? { label: `Atrasado ${daysAgo}d`, cls: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' }
+                              : { label: 'Regular', cls: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' };
+                            
+                            return (
+                              <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${statusInfo.cls}`}>
+                                {statusInfo.label}
+                              </div>
+                            );
+                          })()}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {p.categories?.map((cat: string) => (
+                        <div key={cat} className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                          {getCategoryIcon([cat])}
+                          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">{cat}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {(p.contact || p.message_contact) && (
+                      <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl space-y-2">
+                        {p.contact && (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold text-primary uppercase">Contato:</span>
+                              <span className="text-xs text-slate-600 dark:text-slate-400">{p.contact}</span>
+                            </div>
+                            <button onClick={(e) => copyToClipboard(p.contact, e)} className="p-1 text-slate-400">
+                              <Copy className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                        {p.message_contact && (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold text-orange-500 uppercase">Recado:</span>
+                              <span className="text-xs text-slate-600 dark:text-slate-400">{p.message_contact}</span>
+                            </div>
+                            <button onClick={(e) => copyToClipboard(p.message_contact, e)} className="p-1 text-slate-400">
+                              <Copy className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="px-8 py-20 text-center text-slate-400">
+                  Nenhum cidadão encontrado.
                 </div>
-              ))
-            ) : (
-              <div className="px-8 py-20 text-center text-slate-400">
-                Nenhum cidadão encontrado.
-              </div>
-            )}
+              )}
+            </div>
           </div>
+
+          {/* Load More Button */}
+          {hasMore && !loading && (
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={() => setPage(prev => prev + 1)}
+                disabled={loadingMore}
+                className="flex items-center gap-2 px-8 py-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl font-bold text-slate-600 dark:text-slate-300 shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                {loadingMore ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Carregando...
+                  </>
+                ) : (
+                  'Carregar Mais'
+                )}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

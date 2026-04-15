@@ -15,10 +15,12 @@ import {
   Droplets,
   Heart
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getAgeInMonths, VACCINE_SCHEDULE } from '../lib/dateUtils';
 
 export function Dashboard({ user }: { user: any }) {
+  const navigate = useNavigate();
+
   const [stats, setStats] = useState({
     totalPatients: 0,
     gestantes: 0,
@@ -179,10 +181,18 @@ export function Dashboard({ user }: { user: any }) {
 
   return (
     <div className="space-y-10 animate-in fade-in duration-500">
+        <div>
+          <h2 className="text-3xl font-extrabold text-primary tracking-tight font-headline">
+            {(() => {
+              const hour = new Date().getHours();
+              if (hour < 12) return 'Bom dia';
+              if (hour < 18) return 'Boa tarde';
+              return 'Boa noite';
+            })()}, {user.role === 'Administrador' ? 'Administrador' : user.role === 'Gestor' ? 'Gestor' : 'ACS'} {user.name ? user.name.split(' ')[0] : (user.email ? user.email.split('@')[0] : '')}!
+          </h2>
+          <p className="text-slate-500 mt-1 font-medium">Aqui está o resumo do seu território de atuação hoje.</p>
+        </div>
       <section>
-        <h3 className="text-3xl font-bold tracking-tight text-on-surface font-headline">
-          Bom dia, {user.role === 'Administrador' ? 'Administrador' : user.role === 'Gestor' ? 'Gestor' : 'ACS'} {user.name ? user.name.split(' ')[0] : (user.email ? user.email.split('@')[0] : '')}
-        </h3>
         <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">
           {user.role === 'Administrador' ? (
             'Você tem acesso total a todos os dados do sistema.'
@@ -319,8 +329,20 @@ export function Dashboard({ user }: { user: any }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                  {recentPatients.length > 0 ? recentPatients.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                  {recentPatients.length > 0 ? recentPatients.map((p) => {
+                    const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
+                    const daysAgo = lastVisit ? Math.floor((Date.now() - lastVisit.getTime()) / (1000 * 60 * 60 * 24)) : null;
+                    const statusInfo = !lastVisit
+                      ? { label: 'Nunca visitado', cls: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' }
+                      : daysAgo! > 30
+                      ? { label: `Atrasado ${daysAgo}d`, cls: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' }
+                      : { label: 'Regular', cls: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' };
+                    return (
+                    <tr
+                      key={p.id}
+                      onClick={() => navigate(`/editar-paciente/${p.id}`)}
+                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                    >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
@@ -342,13 +364,16 @@ export function Dashboard({ user }: { user: any }) {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-[10px] font-bold rounded-full whitespace-nowrap">Regular</span>
+                        <span className={`px-2 py-1 text-[10px] font-bold rounded-full whitespace-nowrap ${statusInfo.cls}`}>
+                          {statusInfo.label}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600" />
+                        <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-primary transition-colors" />
                       </td>
                     </tr>
-                  )) : (
+                  );
+                  }) : (
                     <tr>
                       <td colSpan={4} className="px-6 py-10 text-center text-slate-400 text-sm">
                         Nenhum paciente cadastrado na microárea {user.microarea}.

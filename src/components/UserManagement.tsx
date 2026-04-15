@@ -14,15 +14,18 @@ import {
   CheckCircle2,
   AlertCircle,
   Pencil,
-  X as CloseIcon
+  X as CloseIcon,
+  AlertTriangle
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function UserManagement({ currentUser }: { currentUser: any }) {
   const navigate = useNavigate();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (currentUser && currentUser.role !== 'Administrador') {
@@ -71,13 +74,16 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setMessage({ type: '', text: '' });
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão não encontrada. Faça login novamente.");
+
       const response = await fetch('/api/admin/create-user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify(formData),
       });
@@ -97,31 +103,44 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
         throw new Error(data.error || 'Erro ao criar usuário');
       }
 
-      setMessage({ type: 'success', text: 'Usuário criado com sucesso!' });
+      toast.success('Usuário criado com sucesso!');
       setFormData({ name: '', email: '', password: '', role: 'Agente', color: '#00488d', microarea: '' });
       fetchUsers();
     } catch (error: any) {
       console.error("Error creating user:", error);
-      setMessage({ type: 'error', text: error.message || 'Erro ao criar usuário.' });
+      toast.error(error.message || 'Erro ao criar usuário.');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
+    setDeleteConfirm(userId);
+  };
+
+  const executeDeleteUser = async () => {
+    if (!deleteConfirm) return;
+    const userId = deleteConfirm;
+    
     if (userId === currentUser.id) {
-      alert("Você não pode excluir seu próprio usuário.");
+      toast.error("Você não pode excluir seu próprio usuário.");
+      setDeleteConfirm(null);
       return;
     }
 
-    if (!window.confirm("Tem certeza que deseja excluir este usuário? Isso removerá permanentemente o acesso e o perfil.")) {
-      return;
-    }
+    setDeleting(true);
 
     try {
       console.log(`Solicitando exclusão do usuário: ${userId}`);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão não encontrada. Faça login novamente.");
+
       const response = await fetch(`/api/admin/delete-user/${userId}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        }
       });
 
       console.log(`Resposta da exclusão: ${response.status} ${response.statusText}`);
@@ -141,14 +160,17 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
         throw new Error(data.error || 'Erro ao excluir usuário');
       }
 
-      setMessage({ type: 'success', text: 'Usuário excluído com sucesso.' });
+      toast.success('Usuário excluído com sucesso.');
+      setDeleteConfirm(null);
       // Small delay to ensure database propagation
       setTimeout(() => {
         fetchUsers();
       }, 500);
     } catch (error: any) {
       console.error("Error deleting user:", error);
-      setMessage({ type: 'error', text: error.message || 'Erro ao excluir usuário.' });
+      toast.error(error.message || 'Erro ao excluir usuário.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -179,12 +201,12 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
 
       if (error) throw error;
       
-      setMessage({ type: 'success', text: 'Usuário atualizado com sucesso.' });
+      toast.success('Usuário atualizado com sucesso.');
       setEditingUser(null);
       fetchUsers();
     } catch (error) {
       console.error("Error updating user:", error);
-      setMessage({ type: 'error', text: 'Erro ao atualizar usuário.' });
+      toast.error('Erro ao atualizar usuário.');
     } finally {
       setSubmitting(false);
     }
@@ -215,15 +237,6 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
               <UserPlus className="w-5 h-5" />
               Novo Usuário
             </h3>
-
-            {message.text && (
-              <div className={`p-4 rounded-xl text-xs font-bold flex items-center gap-2 ${
-                message.type === 'success' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'
-              }`}>
-                {message.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                {message.text}
-              </div>
-            )}
 
             <div className="space-y-4">
               <div className="space-y-1">
@@ -520,6 +533,50 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                 {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Salvar Alterações'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-300">
+            <div className="flex flex-col items-center text-center space-y-6">
+              <div className="w-20 h-20 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-600 dark:text-red-400">
+                <AlertTriangle className="w-10 h-10" />
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-on-surface font-headline">Excluir Usuário?</h3>
+                <p className="text-slate-500 dark:text-slate-400 font-medium">
+                  Esta ação é irreversível. O acesso do agente será bloqueado permanentemente e seu perfil será removido.
+                </p>
+              </div>
+
+              <div className="flex flex-col w-full gap-3">
+                <button 
+                  onClick={executeDeleteUser}
+                  disabled={deleting}
+                  className="w-full py-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg shadow-red-600/20 hover:bg-red-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {deleting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Excluindo...
+                    </>
+                  ) : (
+                    'Sim, Excluir Usuário'
+                  )}
+                </button>
+                <button 
+                  onClick={() => setDeleteConfirm(null)}
+                  disabled={deleting}
+                  className="w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
