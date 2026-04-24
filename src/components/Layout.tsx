@@ -75,11 +75,14 @@ export function Layout({ user, onProfileUpdate }: LayoutProps) {
             const birth = parseDate(p.birth_date);
             if (!birth) return;
             
-            const sixMonthsDate = new Date(birth);
-            sixMonthsDate.setMonth(birth.getMonth() + 6);
-            const diffDays = Math.ceil((sixMonthsDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            // Calculate age in months accurately
+            const diffMonths = now.getMonth() - birth.getMonth() + (12 * (now.getFullYear() - birth.getFullYear()));
             
-            if (diffDays <= 15 && diffDays >= -15) {
+            const alreadyVisited = !!p.clinical_data?.crianca?.visita6meses;
+            
+            if (diffMonths >= 5 && diffMonths <= 9 && !alreadyVisited) {
+              const sixMonthsDate = new Date(birth);
+              sixMonthsDate.setMonth(birth.getMonth() + 6);
               const formattedDate = `${sixMonthsDate.getDate().toString().padStart(2, '0')}/${(sixMonthsDate.getMonth() + 1).toString().padStart(2, '0')}/${sixMonthsDate.getFullYear()}`;
               alerts.push({
                 id: p.id,
@@ -217,14 +220,6 @@ export function Layout({ user, onProfileUpdate }: LayoutProps) {
             referrerPolicy="no-referrer"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-[9px] font-bold text-primary uppercase tracking-widest mb-0.5">
-              {(() => {
-                const hour = new Date().getHours();
-                if (hour < 12) return 'Bom dia';
-                if (hour < 18) return 'Boa tarde';
-                return 'Boa noite';
-              })()}
-            </p>
             <p className="text-xs font-bold text-on-surface truncate">{user.name || 'Agente'}</p>
             <div className="flex flex-col">
               <p className="text-[10px] text-on-surface-variant uppercase tracking-tighter truncate">

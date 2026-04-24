@@ -306,34 +306,14 @@ export function Reports({ user }: { user: any }) {
     const doc = new jsPDF();
     
     // Header
-    doc.setFontSize(22);
+    doc.setFontSize(18);
     doc.setTextColor(0, 72, 141); // Primary Blue
-    doc.setFont('helvetica', 'bold');
     doc.text('Relatório Territorial de Saúde', 14, 22);
     
-    // Horizontal Line
-    doc.setDrawColor(0, 72, 141);
-    doc.setLineWidth(0.5);
-    doc.line(14, 26, 196, 26);
-    
-    // Agent Info Header Box
-    doc.setFontSize(9);
-    doc.setTextColor(50);
-    doc.setFont('helvetica', 'normal');
-    
-    const colorName = user.color === '#00488d' ? 'Azul' : 
-                      user.color === '#eab308' ? 'Amarelo' : 
-                      user.color === '#64748b' ? 'Cinza' : 
-                      user.color === '#db2777' ? 'Rosa' : 
-                      user.color === '#78350f' ? 'Marrom' : user.color || 'Padrão';
-
-    doc.text(`Agente: ${user.name || 'Não informado'}`, 14, 34);
-    doc.text(`Microárea: ${user.microarea || 'N/A'}`, 14, 39);
-    doc.text(`Cor da Área: ${colorName}`, 14, 44);
-    
-    doc.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 140, 34);
-    doc.text(`Filtro: ${categoryFilter}`, 140, 39);
-    doc.text(`Registros: ${categoryFilter === 'Domicílios' ? filteredHouseholds.length : filteredPatients.length}`, 140, 44);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Agente: ${user.name} | Microárea: ${user.microarea} | Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
+    doc.text(`Filtro: ${categoryFilter} | Total: ${categoryFilter === 'Domicílios' ? filteredHouseholds.length : filteredPatients.length} registros`, 14, 36);
 
     const gestantes = filteredPatients.filter(p => p.categories?.includes('Gestante'));
     const criancas = filteredPatients.filter(p => p.categories?.includes('Criança'));
@@ -348,7 +328,7 @@ export function Reports({ user }: { user: any }) {
       ]);
 
       autoTable(doc, {
-        startY: 55,
+        startY: 45,
         head: [['Endereço', 'Nº', 'Comp.', 'Responsável', 'Moradores']],
         body: householdData,
         headStyles: { fillColor: [0, 72, 141] },
@@ -372,7 +352,7 @@ export function Reports({ user }: { user: any }) {
       });
 
       autoTable(doc, {
-        startY: 55,
+        startY: 45,
         head: [['Nome', 'Nascimento', 'DUM', 'DPP', 'Consultas', 'Testes Realizados', 'Testes Pendentes', 'Vacinas', 'Saúde Bucal']],
         body: gestanteData,
         headStyles: { fillColor: [0, 72, 141] },
@@ -392,7 +372,7 @@ export function Reports({ user }: { user: any }) {
       });
 
       autoTable(doc, {
-        startY: 55,
+        startY: 45,
         head: [['Nome', 'Nascimento', 'Consultas', 'Vacinas Tomadas', 'Vacinas Pendentes']],
         body: criancaData,
         headStyles: { fillColor: [0, 72, 141] },
@@ -408,7 +388,7 @@ export function Reports({ user }: { user: any }) {
       ]);
 
       autoTable(doc, {
-        startY: 55,
+        startY: 45,
         head: [['Nome', 'Nascimento', 'Benefícios', 'Categorias']],
         body: beneficiarioData,
         headStyles: { fillColor: [0, 72, 141] },
@@ -420,22 +400,16 @@ export function Reports({ user }: { user: any }) {
         p.name,
         p.birth_date ? formatDate(p.birth_date) : '',
         p.categories?.join(', ') || '',
-        (() => {
-          const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
-          const daysAgo = lastVisit ? Math.floor((Date.now() - lastVisit.getTime()) / (1000 * 60 * 60 * 24)) : null;
-          return !lastVisit ? 'Nunca visitado' : daysAgo! > 30 ? `Atrasado ${daysAgo}d` : 'Regular';
-        })(),
         getClinicalSummary(p)
       ]);
 
       autoTable(doc, {
-        startY: 55,
-        head: [['Nome', 'Nascimento', 'Categorias', 'Status', 'Informações Clínicas']],
+        startY: 45,
+        head: [['Nome', 'Nascimento', 'Categorias', 'Informações Clínicas']],
         body: mainTableData,
         headStyles: { fillColor: [0, 72, 141] },
-        styles: { fontSize: 7, cellPadding: 2 },
-        alternateRowStyles: { fillColor: [245, 247, 250] },
-        columnStyles: { 3: { cellWidth: 25 } }
+        styles: { fontSize: 8, cellPadding: 3 },
+        alternateRowStyles: { fillColor: [245, 247, 250] }
       });
 
       let currentY = (doc as any).lastAutoTable.finalY + 15;
@@ -502,31 +476,7 @@ export function Reports({ user }: { user: any }) {
       }
     }
 
-    // Signature Section
-    let finalY = (doc as any).lastAutoTable?.finalY || 150;
-    
-    // Check if signature fits on current page
-    if (finalY > 240) {
-      doc.addPage();
-      finalY = 30;
-    } else {
-      finalY += 30;
-    }
-    
-    doc.setDrawColor(150);
-    doc.setLineWidth(0.2);
-    doc.line(60, finalY, 150, finalY);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(50);
-    doc.setFont('helvetica', 'bold');
-    doc.text(user.name || 'Assinatura do Agente', 105, finalY + 5, { align: 'center' });
-    
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Agente Comunitário de Saúde / Responsável Técnico', 105, finalY + 10, { align: 'center' });
-
-    doc.save(`Relatorio_Microarea_${user.microarea || 'Geral'}_${categoryFilter}.pdf`);
+    doc.save(`Relatorio_Microarea_${user.microarea}_${categoryFilter}.pdf`);
   };
 
   const categories = ['Todas', 'Gestante', 'Criança', 'AcamadoDomiciliado', 'Idoso', 'Adulto', 'SaudeMental', 'Beneficiários', 'Domicílios'];
@@ -635,7 +585,6 @@ export function Reports({ user }: { user: any }) {
                       <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Cidadão</th>
                       <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Nascimento</th>
                       <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Categorias</th>
-                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Status</th>
                       <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Resumo Clínico</th>
                     </>
                   )}
@@ -732,23 +681,6 @@ export function Reports({ user }: { user: any }) {
                               </span>
                             ))}
                           </div>
-                        </td>
-                        <td className="px-8 py-5">
-                          {(() => {
-                            const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
-                            const daysAgo = lastVisit ? Math.floor((Date.now() - lastVisit.getTime()) / (1000 * 60 * 60 * 24)) : null;
-                            const statusInfo = !lastVisit
-                              ? { label: 'Nunca visitado', cls: 'text-red-500' }
-                              : daysAgo! > 30
-                              ? { label: `Atrasado ${daysAgo}d`, cls: 'text-orange-500' }
-                              : { label: 'Regular', cls: 'text-green-500' };
-                            
-                            return (
-                              <span className={`text-[9px] font-bold uppercase ${statusInfo.cls}`}>
-                                {statusInfo.label}
-                              </span>
-                            );
-                          })()}
                         </td>
                         <td className="px-8 py-5">
                           <span className="text-xs font-medium text-slate-600 dark:text-slate-400 italic">

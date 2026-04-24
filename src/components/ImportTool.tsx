@@ -236,26 +236,30 @@ export function ImportTool({ user }: { user: any }) {
               }
             };
 
-            // 4. Insert Patient
+            // 4. Map clinical fields not in main table
+            const finalClinicalData = {
+              ...clinicalData,
+              contact: getColumnValue(row, ['Contato', 'Telefone']) || '',
+              message_contact: getColumnValue(row, ['Recado']) || '',
+              responsible_cns: respCns
+            };
+
+            // 5. Insert Patient
             const { error: pError } = await supabase
               .from('patients')
               .insert([{
                 name,
                 cns,
-                responsible_cns: respCns,
                 is_family_responsible: isResp,
                 birth_date: formatDate(getColumnValue(row, ['DN', 'Data de Nascimento', 'Nascimento'])),
                 gender: getColumnValue(row, ['Gênero', 'Genero', 'Sexo']) || 'Feminino',
-                visit_date: formatDate(getColumnValue(row, ['Data da Visita', 'Visita'])) || new Date().toISOString().split('T')[0],
-                contact: getColumnValue(row, ['Contato', 'Telefone']) || '',
-                message_contact: getColumnValue(row, ['Recado']) || '',
                 household_id: householdId,
                 categories,
                 microarea: user.microarea || '000',
                 area_color: user.color || '#00488d',
                 agent_id: user.id,
                 last_visit_at: formatDate(getColumnValue(row, ['Data da Visita', 'Visita'])) || new Date().toISOString(),
-                clinical_data: clinicalData
+                clinical_data: finalClinicalData
               }]);
 
             if (pError) throw pError;
