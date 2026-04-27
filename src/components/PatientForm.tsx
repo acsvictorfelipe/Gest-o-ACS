@@ -1124,321 +1124,270 @@ export function PatientForm({ user }: { user: any }) {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-10 animate-in slide-in-from-bottom-4 duration-500">
-      <div className="flex justify-between items-end">
-        <div>
-          <h2 className="text-3xl font-extrabold text-primary tracking-tight font-headline">Novo Cadastro de Cidadão</h2>
-          <p className="text-slate-500 mt-2 font-medium">Preencha as informações detalhadas para o prontuário eletrônico territorial.</p>
+    <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom-2 duration-300">
+      <div className="flex justify-between items-center bg-white dark:bg-slate-900 px-6 py-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <header className="flex flex-col gap-1">
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white uppercase">{id ? 'Editar Cadastro' : 'Novo Cadastro'}</h2>
+          <p className="text-xs text-slate-500 font-medium tracking-tight">Preencha as informações detalhadas do prontuário.</p>
+        </header>
+        <div className="flex items-center gap-2">
+          {id && (
+            <button 
+              type="button" 
+              onClick={generatePatientPDF}
+              className="p-2 text-slate-500 hover:text-primary transition-colors bg-slate-50 rounded-lg"
+              title="Gerar Ficha PDF"
+            >
+              <Download className="w-5 h-5" />
+            </button>
+          )}
+          <button onClick={() => navigate('/')} className="p-2 text-slate-500 hover:text-red-500 transition-colors bg-slate-50 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <button onClick={() => navigate('/')} className="p-2 text-slate-400 hover:text-error transition-colors">
-          <X className="w-6 h-6" />
-        </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-12">
+      <form onSubmit={handleSubmit} className="space-y-6 pb-20">
         {/* Identificação Geral */}
-        <section className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-1.5 h-8 bg-primary rounded-full"></div>
-            <h3 className="text-xl font-bold text-primary font-headline">Identificação Geral</h3>
+        <section className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+          <div className="flex items-center gap-2 text-primary">
+            <User className="w-4 h-4" />
+            <h3 className="text-sm font-bold uppercase tracking-tight">Identificação Geral</h3>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-            <div className="md:col-span-4">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
-                {formData.isFamilyResponsible ? 'Seu CNS (Responsável)' : 'CNS do Responsável Familiar (Opcional)'}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-4">
+            <div className="md:col-span-4 space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                {formData.isFamilyResponsible ? 'Seu CNS (Responsável)' : 'CNS do Responsável'}
               </label>
               <input 
                 type="text" 
                 value={(formData.isFamilyResponsible ? formData.cns : formData.responsibleCns) || ''}
                 onChange={e => setFormData({...formData, responsibleCns: e.target.value})}
                 disabled={formData.isFamilyResponsible}
-                className={`w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20 ${formData.isFamilyResponsible ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 appearance-none disabled:opacity-50" 
                 placeholder="000 0000 0000 0000" 
               />
-              {!formData.isFamilyResponsible && (
-                <p className="text-[9px] text-slate-400 mt-1 italic">Use o CNS para vincular este cidadão a uma família existente.</p>
-              )}
-              {!formData.isFamilyResponsible && !formData.responsibleCns && (
-                <div className="mt-2 p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-center gap-2">
-                  <AlertTriangle className="w-3 h-3 text-amber-500" />
-                  <span className="text-[9px] font-bold text-amber-700 uppercase">Responsável Pendente: O domicílio não será gerado.</span>
-                </div>
-              )}
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Resp. Familiar?</label>
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Responsável?</label>
               <select 
                 value={formData.isFamilyResponsible ? 'Sim' : 'Não'}
                 onChange={e => setFormData({...formData, isFamilyResponsible: e.target.value === 'Sim'})}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20"
               >
                 <option>Não</option>
                 <option>Sim</option>
               </select>
             </div>
-            <div className="md:col-span-6">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Nome Completo</label>
-                <button 
-                  type="button"
-                  onClick={() => navigator.clipboard.writeText(formData.name)}
-                  className="p-1 text-slate-300 hover:text-primary transition-colors"
-                  title="Copiar Nome"
-                >
-                  <Copy className="w-3 h-3" />
-                </button>
-              </div>
+            <div className="md:col-span-6 space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Nome Completo</label>
               <input 
                 type="text" 
                 value={formData.name || ''}
                 onChange={e => setFormData({...formData, name: e.target.value})}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
-                placeholder="Nome do paciente" 
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20" 
               />
             </div>
-            <div className="md:col-span-4">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">SUS do Cidadão</label>
+            <div className="md:col-span-4 space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">SUS / CNS</label>
               <input 
                 type="text" 
                 value={formData.cns || ''}
                 onChange={e => setFormData({...formData, cns: e.target.value})}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
-                placeholder="000 0000 0000 0000" 
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20" 
               />
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Gênero</label>
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Gênero</label>
               <select 
                 value={formData.gender || 'Feminino'}
                 onChange={e => setFormData({...formData, gender: e.target.value})}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20"
               >
                 <option>Feminino</option>
                 <option>Masculino</option>
                 <option>Outro</option>
               </select>
             </div>
-            <div className="md:col-span-3">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Data de Nascimento</label>
-                <button 
-                  type="button"
-                  onClick={() => navigator.clipboard.writeText(formData.birthDate)}
-                  className="p-1 text-slate-300 hover:text-primary transition-colors"
-                  title="Copiar Data"
-                >
-                  <Copy className="w-3 h-3" />
-                </button>
-              </div>
+            <div className="md:col-span-3 space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Nascimento</label>
               <input 
                 type="date" 
                 value={formData.birthDate || ''}
                 onChange={e => setFormData({...formData, birthDate: e.target.value})}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20" 
               />
             </div>
-            <div className="md:col-span-3">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Idade (Automática)</label>
+            <div className="md:col-span-3 space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Idade</label>
               <input 
                 disabled
                 type="text" 
                 value={calculateAge(formData.birthDate) || ''}
-                className="w-full bg-slate-100 border-none rounded-xl p-3 text-sm text-slate-500" 
+                className="w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-500 font-medium" 
               />
             </div>
-            <div id="secao-visita" className="md:col-span-4">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Data da Visita</label>
-              <input 
-                type="date" 
-                value={formData.visitDate || ''}
-                onChange={e => setFormData({...formData, visitDate: e.target.value})}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
-              />
-            </div>
-
-            {/* Benefícios Sociais */}
-            <div className="md:col-span-12">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Benefícios Sociais</label>
-              <div className="flex flex-wrap gap-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                {['Bolsa Família', 'LOAS', 'BPC', 'Outros'].map(benefit => (
-                  <label key={benefit} className="flex items-center gap-3 cursor-pointer group">
-                    <div className="relative flex items-center">
-                      <input 
-                        type="checkbox"
-                        checked={formData.clinicalData?.socialBenefits?.includes(benefit)}
-                        onChange={e => {
-                          const current = formData.clinicalData?.socialBenefits || [];
-                          const next = e.target.checked 
-                            ? [...current, benefit]
-                            : current.filter(b => b !== benefit);
-                          setFormData(prev => ({
-                            ...prev,
-                            clinicalData: { ...prev.clinicalData, socialBenefits: next }
-                          }));
-                        }}
-                        className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary/20 transition-all cursor-pointer"
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-slate-600 group-hover:text-primary transition-colors">{benefit}</span>
-                  </label>
-                ))}
+            
+            <div id="secao-visita" className="md:col-span-12 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Data da Visita Atual</label>
+                  <input 
+                    type="date" 
+                    value={formData.visitDate || ''}
+                    onChange={e => setFormData({...formData, visitDate: e.target.value})}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20" 
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Tipo de Visita</label>
+                  <select 
+                    value={formData.visitType}
+                    onChange={e => setFormData({...formData, visitType: e.target.value})}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option>Rotina</option>
+                    <option>Acompanhamento</option>
+                    <option>Urgência</option>
+                    <option>Pós-Parto</option>
+                    <option>Recém-Nascido</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Benefícios</label>
+                   <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 h-[38px] px-3 rounded-lg border border-slate-100 dark:border-slate-800">
+                    {['Bolsa Família', 'BPC', 'Outros'].map(benefit => (
+                      <label key={benefit} className="flex items-center gap-1.5 cursor-pointer">
+                        <input 
+                          type="checkbox"
+                          checked={formData.clinicalData?.socialBenefits?.includes(benefit)}
+                          onChange={e => {
+                            const current = formData.clinicalData?.socialBenefits || [];
+                            const next = e.target.checked ? [...current, benefit] : current.filter(b => b !== benefit);
+                            setFormData(prev => ({...prev, clinicalData: { ...prev.clinicalData, socialBenefits: next }}));
+                          }}
+                          className="w-4 h-4 rounded border-slate-200 text-primary"
+                        />
+                        <span className="text-[9px] font-bold text-slate-600 dark:text-slate-400 uppercase">{benefit === 'Bolsa Família' ? 'BF' : benefit}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="md:col-span-4">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Tipo de Visita</label>
-              <select 
-                value={formData.visitType}
-                onChange={e => setFormData({...formData, visitType: e.target.value})}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20"
-              >
-                <option>Rotina</option>
-                <option>Acompanhamento</option>
-                <option>Urgência</option>
-                <option>Pós-Parto</option>
-                <option>Recém-Nascido</option>
-              </select>
-            </div>
-            <div className="md:col-span-5">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Endereço</label>
+          </div>
+        </section>
+
+        {/* Localização e Contato */}
+        <section className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+          <div className="flex items-center gap-2 text-primary">
+            <Home className="w-4 h-4" />
+            <h3 className="text-sm font-bold uppercase tracking-tight">Endereço e Contato</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-4">
+            <div className="md:col-span-8 space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Logradouro / Rua</label>
               <input 
                 type="text" 
                 value={formData.address || ''}
                 onChange={e => setFormData({...formData, address: e.target.value})}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20" 
               />
             </div>
-            <div className="md:col-span-1">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Nº</label>
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Número</label>
               <input 
                 type="text" 
                 value={formData.number || ''}
                 onChange={e => setFormData({...formData, number: e.target.value})}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20" 
               />
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Complemento</label>
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Compl.</label>
               <input 
                 type="text" 
                 value={formData.complement || ''}
                 onChange={e => setFormData({...formData, complement: e.target.value})}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20" 
               />
             </div>
-            <div className="md:col-span-2">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Contato</label>
-                {formData.contact && (
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(formData.contact);
-                      alert('Contato copiado!');
-                    }}
-                    className="text-primary hover:text-primary/80 transition-colors"
-                    title="Copiar Contato"
-                  >
-                    <Copy className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
+            <div className="md:col-span-6 space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Telefone / WhatsApp</label>
               <input 
                 type="text" 
                 value={formData.contact || ''}
                 onChange={e => setFormData({...formData, contact: e.target.value})}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20" 
                 placeholder="(00) 00000-0000"
               />
             </div>
-            <div className="md:col-span-2">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Recado</label>
-                {formData.messageContact && (
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(formData.messageContact);
-                      alert('Contato de recado copiado!');
-                    }}
-                    className="text-primary hover:text-primary/80 transition-colors"
-                    title="Copiar Contato de Recado"
-                  >
-                    <Copy className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
+            <div className="md:col-span-6 space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Nome para Recado</label>
               <input 
                 type="text" 
                 value={formData.messageContact || ''}
                 onChange={e => setFormData({...formData, messageContact: e.target.value})}
-                className="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary/20" 
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20" 
               />
             </div>
           </div>
         </section>
 
         {/* Visitas Realizadas */}
-        <section className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border border-slate-100 dark:border-slate-800">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-lg font-bold text-primary font-headline flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Visitas Realizadas
-              </h3>
-              <p className="text-[10px] text-slate-400 mt-1">Histórico de visitas e ocorrências registradas.</p>
+        <section className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-primary">
+              <Calendar className="w-4 h-4" />
+              <h3 className="text-sm font-bold uppercase tracking-tight">Histórico de Visitas</h3>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button 
                 type="button"
                 onClick={() => addDateToList('root', 'visitasGerais')}
-                className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-xl text-xs font-bold hover:bg-primary/20 transition-all"
+                className="px-3 py-1.5 bg-primary/5 text-primary rounded-lg text-[10px] font-bold uppercase transition-all tracking-tight"
               >
-                <Plus className="w-4 h-4" />
-                Adicionar Visita Antiga
+                + Visita Antiga
               </button>
               {id && (
                 <button 
                   type="button"
                   onClick={() => navigate('/historico', { state: { search: formData.cns } })}
-                  className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-all"
+                  className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-bold uppercase transition-all tracking-tight"
                 >
-                  <RefreshCw className="w-4 h-4" />
-                  Ver Histórico Completo
+                  Ver Tudo
                 </button>
               )}
             </div>
           </div>
 
-          {/* Resumo da Visita Atual (se data preenchida) */}
+          {/* Resumo da Visita Atual */}
           {formData.visitDate && (
-            <div className="mb-8 p-6 bg-primary/5 rounded-2xl border border-primary/10 animate-in fade-in slide-in-from-top-2">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                <h4 className="text-xs font-bold uppercase tracking-widest text-primary">Resumo da Visita Atual ({formatDate(formData.visitDate)})</h4>
+            <div className="p-4 bg-primary/5 rounded-lg border border-primary/10 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary">Anotações da Visita: {formatDate(formData.visitDate)}</h4>
               </div>
               <textarea 
                 value={formData.visitSummary || ''}
                 onChange={e => setFormData({...formData, visitSummary: e.target.value})}
-                className="w-full bg-white dark:bg-slate-800 border-none rounded-xl p-4 text-sm focus:ring-2 focus:ring-primary/20 min-h-[100px]" 
-                placeholder="Descreva o que ocorreu nesta visita..."
+                className="w-full bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg p-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 min-h-[80px]" 
+                placeholder="O que aconteceu hoje?"
               />
             </div>
           )}
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {formData.clinicalData.visitasGerais?.map((visit, index) => (
-              <div key={index} className="relative p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 group">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-slate-400" />
-                    <input 
-                      type="date" 
-                      value={visit.date || ''}
-                      onChange={e => updateDateInList('root', 'visitasGerais', index, { ...visit, date: e.target.value })}
-                      className="bg-transparent border-none p-0 text-sm font-bold text-on-surface focus:ring-0" 
-                    />
-                  </div>
+              <div key={index} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800 relative group">
+                <div className="flex items-center justify-between mb-3">
+                  <input 
+                    type="date" 
+                    value={visit.date || ''}
+                    onChange={e => updateDateInList('root', 'visitasGerais', index, { ...visit, date: e.target.value })}
+                    className="bg-white px-2 py-1 border border-slate-200 dark:border-slate-800 rounded text-xs font-bold text-slate-900 dark:text-white" 
+                  />
                   <button 
                     type="button"
                     onClick={() => removeDateFromList('root', 'visitasGerais', index)}
@@ -1450,35 +1399,26 @@ export function PatientForm({ user }: { user: any }) {
                 <textarea 
                   value={visit.summary || ''}
                   onChange={e => updateDateInList('root', 'visitasGerais', index, { ...visit, summary: e.target.value })}
-                  className="w-full bg-white dark:bg-slate-800 border-none rounded-xl p-3 text-xs focus:ring-2 focus:ring-primary/20 min-h-[80px]" 
-                  placeholder="Ocorrência desta visita..."
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg p-2 text-xs font-medium focus:ring-2 focus:ring-primary/20 min-h-[60px]" 
                 />
               </div>
             ))}
-            {(!formData.clinicalData.visitasGerais || formData.clinicalData.visitasGerais.length === 0) && !formData.visitDate && (
-              <div className="col-span-full py-12 text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[2rem]">
-                <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="w-6 h-6 text-slate-300" />
-                </div>
-                <p className="text-sm text-slate-400 font-medium italic">Nenhuma visita registrada ainda.</p>
-              </div>
-            )}
           </div>
         </section>
 
-        {/* Rastreamento e Prevenção (Baseado em Idade/Gênero) */}
+        {/* Rastreamento e Prevenção */}
         {( (formData.gender === 'Feminino' && getAgeNumber(formData.birthDate) >= 14 && getAgeNumber(formData.birthDate) <= 69) || 
            (getAgeNumber(formData.birthDate) >= 9 && getAgeNumber(formData.birthDate) <= 14) ) && (
-          <section className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border border-slate-100 dark:border-slate-800">
-            <h3 className="text-lg font-bold text-primary font-headline flex items-center gap-2 mb-6">
-              <Stethoscope className="w-5 h-5" />
-              Rastreamento e Prevenção
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <section className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+            <div className="flex items-center gap-2 text-primary">
+              <Stethoscope className="w-4 h-4" />
+              <h3 className="text-sm font-bold uppercase tracking-tight">Rastreamento e Prevenção</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
               {/* Mulheres 25-64: Citopatológico */}
               {formData.gender === 'Feminino' && getAgeNumber(formData.birthDate) >= 25 && getAgeNumber(formData.birthDate) <= 64 && (
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Exame Citopatológico (Sim/Não)</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Exame Citopatológico</label>
                   <select 
                     value={formData.clinicalData.rastreamento?.exameCitopatologico || 'Não'}
                     onChange={e => setFormData(prev => ({
@@ -1488,7 +1428,7 @@ export function PatientForm({ user }: { user: any }) {
                         rastreamento: { ...(prev.clinicalData?.rastreamento || {}), exameCitopatologico: e.target.value } 
                       }
                     }))}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm text-on-surface"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20"
                   >
                     <option>Não</option>
                     <option>Sim</option>
@@ -1498,8 +1438,8 @@ export function PatientForm({ user }: { user: any }) {
 
               {/* Mulheres 14-69: Saúde Sexual Reprodutiva */}
               {formData.gender === 'Feminino' && getAgeNumber(formData.birthDate) >= 14 && getAgeNumber(formData.birthDate) <= 69 && (
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Saúde Sexual Reprodutiva (Sim/Não)</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Saúde Sexual Reprodutiva</label>
                   <select 
                     value={formData.clinicalData.rastreamento?.saudeSexualReprodutiva || 'Não'}
                     onChange={e => setFormData(prev => ({
@@ -1509,7 +1449,7 @@ export function PatientForm({ user }: { user: any }) {
                         rastreamento: { ...(prev.clinicalData?.rastreamento || {}), saudeSexualReprodutiva: e.target.value } 
                       }
                     }))}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm text-on-surface"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20"
                   >
                     <option>Não</option>
                     <option>Sim</option>
@@ -1519,8 +1459,8 @@ export function PatientForm({ user }: { user: any }) {
 
               {/* Mulheres 50-69: Mamografia */}
               {formData.gender === 'Feminino' && getAgeNumber(formData.birthDate) >= 50 && getAgeNumber(formData.birthDate) <= 69 && (
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Mamografia (Sim/Não)</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Mamografia</label>
                   <select 
                     value={formData.clinicalData.rastreamento?.mamografia || 'Não'}
                     onChange={e => setFormData(prev => ({
@@ -1530,7 +1470,7 @@ export function PatientForm({ user }: { user: any }) {
                         rastreamento: { ...(prev.clinicalData?.rastreamento || {}), mamografia: e.target.value } 
                       }
                     }))}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm text-on-surface"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20"
                   >
                     <option>Não</option>
                     <option>Sim</option>
@@ -1540,8 +1480,8 @@ export function PatientForm({ user }: { user: any }) {
 
               {/* Todos 9-14: Vacina HPV */}
               {getAgeNumber(formData.birthDate) >= 9 && getAgeNumber(formData.birthDate) <= 14 && (
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-2">Vacina HPV (Sim/Não)</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Vacina HPV</label>
                   <select 
                     value={formData.clinicalData.rastreamento?.vacinaHpv || 'Não'}
                     onChange={e => setFormData(prev => ({
@@ -1551,7 +1491,7 @@ export function PatientForm({ user }: { user: any }) {
                         rastreamento: { ...(prev.clinicalData?.rastreamento || {}), vacinaHpv: e.target.value } 
                       }
                     }))}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-sm text-on-surface"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20"
                   >
                     <option>Não</option>
                     <option>Sim</option>
@@ -1563,9 +1503,12 @@ export function PatientForm({ user }: { user: any }) {
         )}
 
         {/* Categorias de Acompanhamento */}
-        <section className="bg-slate-50 rounded-2xl p-8 border border-slate-100">
-          <h3 className="text-lg font-bold text-primary mb-6 font-headline">Categorias de Acompanhamento</h3>
-          <div className="flex flex-wrap gap-4">
+        <section className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border border-slate-200 dark:border-slate-800 space-y-4">
+          <div className="flex items-center gap-2 text-primary">
+            <CheckCircle2 className="w-4 h-4" />
+            <h3 className="text-xs font-bold uppercase tracking-widest">Acompanhamentos Específicos</h3>
+          </div>
+          <div className="flex flex-wrap gap-2">
             {categories.map((cat) => {
               const isSelected = formData.categories.includes(cat.id);
               return (
@@ -1573,15 +1516,14 @@ export function PatientForm({ user }: { user: any }) {
                   key={cat.id}
                   type="button"
                   onClick={() => toggleCategory(cat.id)}
-                  className={`flex items-center gap-3 px-6 py-3 rounded-full border-2 transition-all ${
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
                     isSelected 
-                      ? `${cat.color} bg-white shadow-md scale-105` 
-                      : 'border-slate-200 bg-white/50 text-slate-400 hover:border-slate-300'
+                      ? `${cat.color} bg-white dark:bg-slate-900 shadow-sm font-bold border-current scale-[1.02]` 
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 hover:border-slate-300'
                   }`}
                 >
-                  <cat.icon className="w-5 h-5" />
-                  <span className="text-sm font-bold">{cat.label || cat.id}</span>
-                  {isSelected && <CheckCircle2 className="w-4 h-4" />}
+                  <cat.icon className="w-4 h-4" />
+                  <span className="text-[11px] font-bold uppercase tracking-tight">{cat.label || cat.id}</span>
                 </button>
               );
             })}
@@ -2314,49 +2256,39 @@ export function PatientForm({ user }: { user: any }) {
           </div>
         ))}
 
-        <div className="flex items-center justify-end gap-4 pb-20">
-          {id && (
-            <button 
-              type="button"
-              onClick={generatePatientPDF}
-              className="flex items-center gap-2 px-6 py-3 bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 rounded-2xl transition-all"
-            >
-              <FileText className="w-5 h-5" />
-              Gerar PDF
-            </button>
-          )}
+        <div className="flex items-center justify-end gap-4 pt-6 border-t border-slate-100 dark:border-slate-800">
           {id && (
             <button 
               type="button"
               onClick={() => setDeleteConfirm(true)}
-              className="mr-auto flex items-center gap-2 px-6 py-3 text-red-500 font-bold hover:bg-red-50 rounded-2xl transition-all"
+              className="mr-auto flex items-center gap-2 py-2 px-4 text-red-500 font-bold hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg text-xs transition-all tracking-tight uppercase"
             >
-              <Trash2 className="w-5 h-5" />
-              Excluir Cadastro
+              <Trash2 className="w-4 h-4" />
+              Excluir Registro
             </button>
           )}
           <button 
             type="button"
             onClick={() => navigate('/')}
-            className="px-8 py-3 text-slate-500 dark:text-slate-400 font-bold hover:text-primary transition-colors"
+            className="px-6 py-2.5 text-slate-500 dark:text-slate-400 font-bold hover:text-slate-700 dark:hover:text-white transition-colors text-xs uppercase tracking-widest"
           >
             Cancelar
           </button>
           <button 
             type="submit"
             disabled={loading}
-            className="px-10 py-4 bg-primary text-white rounded-2xl font-bold shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 min-w-[200px]"
+            className="px-8 py-2.5 bg-primary text-white rounded-lg font-bold shadow-sm hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 min-w-[160px] uppercase text-xs tracking-widest"
           >
             {loading ? (
-              <span className="flex items-center gap-2">
-                <RefreshCw className="w-5 h-5 animate-spin" />
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
                 Salvando...
-              </span>
+              </>
             ) : (
-              <span className="flex items-center gap-2">
-                <Save className="w-5 h-5" />
-                {id ? 'Salvar Alterações' : 'Finalizar Cadastro'}
-              </span>
+              <>
+                <Save className="w-4 h-4" />
+                {id ? 'Salvar Alterações' : 'Concluir Cadastro'}
+              </>
             )}
           </button>
         </div>
@@ -2364,41 +2296,41 @@ export function PatientForm({ user }: { user: any }) {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-300">
-            <div className="flex flex-col items-center text-center space-y-6">
-              <div className="w-20 h-20 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-600 dark:text-red-400">
-                <AlertTriangle className="w-10 h-10" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-[2px] animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-14 h-14 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-600 dark:text-red-400">
+                <AlertTriangle className="w-8 h-8" />
               </div>
               
               <div className="space-y-2">
-                <h3 className="text-2xl font-black text-on-surface font-headline">Excluir Cadastro?</h3>
-                <p className="text-slate-500 dark:text-slate-400 font-medium">
-                  Esta ação é irreversível. Todos os dados deste paciente e seu histórico de visitas serão removidos permanentemente.
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight uppercase">Excluir Cadastro?</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+                  Esta ação é irreversível. Todos os dados e histórico de visitas serão removidos permanentemente.
                 </p>
               </div>
 
-              <div className="flex flex-col w-full gap-3">
+              <div className="grid grid-cols-1 w-full gap-2 pt-2">
                 <button 
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="w-full py-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg shadow-red-600/20 hover:bg-red-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full py-2.5 bg-red-600 text-white rounded-lg font-bold text-xs uppercase tracking-widest shadow-sm hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {deleting ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      Excluindo...
+                      Removendo...
                     </>
                   ) : (
-                    'Sim, Excluir Permanentemente'
+                    'Confirmar Exclusão'
                   )}
                 </button>
                 <button 
                   onClick={() => setDeleteConfirm(false)}
                   disabled={deleting}
-                  className="w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all disabled:opacity-50"
+                  className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 uppercase tracking-widest"
                 >
-                  Cancelar
+                  Manter Cadastro
                 </button>
               </div>
             </div>

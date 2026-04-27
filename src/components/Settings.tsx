@@ -89,184 +89,143 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
   ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div>
-        <h2 className="text-3xl font-extrabold text-primary tracking-tight font-headline">Configurações do Perfil</h2>
-        <p className="text-slate-500 mt-1 font-medium">Gerencie suas informações pessoais e credenciais de acesso.</p>
-      </div>
+    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
+      <header className="flex flex-col gap-1">
+        <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Configurações</h2>
+        <p className="text-sm text-slate-500 font-medium tracking-tight">Gerencie suas informações de perfil e segurança.</p>
+      </header>
 
       {message && (
-        <div className={`p-4 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top-2 ${
+        <div className={`p-3 rounded-lg flex items-center gap-2 animate-in slide-in-from-top-1 ${
           message.type === 'success' 
-            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-100 dark:border-green-900/30' 
-            : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900/30'
+            ? 'bg-green-50 text-green-700 border border-green-100' 
+            : 'bg-red-50 text-red-700 border border-red-100'
         }`}>
-          {message.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-          <p className="text-sm font-bold">{message.text}</p>
+          {message.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+          <p className="text-xs font-bold uppercase tracking-tight">{message.text}</p>
         </div>
       )}
 
       <form onSubmit={handleUpdateProfile} className="space-y-6">
         {/* Perfil Profissional */}
-        <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-2 bg-primary/10 text-primary rounded-xl">
-              <User className="w-5 h-5" />
-            </div>
-            <h3 className="text-xl font-bold text-on-surface font-headline">Perfil Profissional</h3>
+        <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
+          <div className="flex items-center gap-2 text-slate-900 dark:text-white">
+            <User className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-bold uppercase tracking-tight">Perfil Profissional</h3>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">Nome Completo</label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
-                <input 
-                  type="text" 
-                  value={formData.name || ''}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-3 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
-                  placeholder="Seu nome completo"
-                />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Nome Completo</label>
+              <input 
+                type="text" 
+                value={formData.name || ''}
+                onChange={e => setFormData({...formData, name: e.target.value})}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-slate-900 dark:text-white"
+                placeholder="Seu nome"
+              />
             </div>
 
             {user.role === 'Agente' && (
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">Microárea de Atuação</label>
-                <div className="relative">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
-                  <input 
-                    type="text" 
-                    value={formData.microarea || ''}
-                    onChange={e => setFormData({...formData, microarea: e.target.value})}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-3 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
-                    placeholder="Ex: 001"
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Microárea</label>
+                <input 
+                  type="text" 
+                  value={formData.microarea || ''}
+                  onChange={e => setFormData({...formData, microarea: e.target.value})}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-slate-900 dark:text-white"
+                  placeholder="Ex: 001"
+                />
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">Função no Sistema</label>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Cargo / Função</label>
               <select 
                 value={formData.role}
                 onChange={e => setFormData({...formData, role: e.target.value})}
                 disabled={user.role !== 'Administrador'}
-                className={`w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-3 px-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface ${user.role !== 'Administrador' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-slate-900 dark:text-white appearance-none disabled:opacity-50"
               >
-                <option value="Agente">Agente Comunitário (ACS)</option>
+                <option value="Agente">Agente Comunitário</option>
                 <option value="Gestor">Gestor de Área</option>
                 <option value="Administrador">Administrador</option>
               </select>
-              <p className="text-[9px] text-slate-400 dark:text-slate-500 ml-1">
-                {user.role !== 'Administrador' 
-                  ? 'Apenas administradores podem alterar a função de um usuário.' 
-                  : (formData.role === 'Agente' 
-                    ? 'Você verá apenas os dados que você mesmo cadastrou.' 
-                    : formData.role === 'Gestor'
-                      ? 'Você verá todos os dados cadastrados na sua cor de área.'
-                      : 'Você terá acesso total a todos os dados do sistema.')}
-              </p>
             </div>
 
             {(user.role === 'Agente' || user.role === 'Gestor') && (
-              <div className="md:col-span-2 space-y-4">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1 flex items-center gap-2">
-                  <Palette className="w-3 h-3" />
-                  Cor de Identificação {user.role === 'Gestor' && '(Apenas Visualização)'}
-                </label>
-                <div className="flex flex-wrap gap-3">
+              <div className="md:col-span-2 space-y-3">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Cor de Identificação</label>
+                <div className="flex flex-wrap gap-2">
                   {colors.map((c) => (
                     <button
                       key={c.value}
                       type="button"
                       disabled={user.role === 'Gestor'}
                       onClick={() => setFormData({...formData, color: c.value})}
-                      className={`group relative w-12 h-12 rounded-2xl transition-all ${
-                        formData.color === c.value ? 'ring-4 ring-primary/20 scale-110 shadow-lg' : 'hover:scale-105'
-                      } ${user.role === 'Gestor' ? 'cursor-default' : ''}`}
+                      className={`relative w-8 h-8 rounded-lg transition-all ${
+                        formData.color === c.value ? 'ring-2 ring-primary ring-offset-2' : ''
+                      }`}
                       style={{ backgroundColor: c.value }}
-                      title={c.name}
                     >
-                      {formData.color === c.value && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <CheckCircle2 className="w-5 h-5 text-white drop-shadow-md" />
-                        </div>
-                      )}
+                      {formData.color === c.value && <CheckCircle2 className="w-4 h-4 text-white absolute -top-1 -right-1 bg-primary rounded-full" />}
                     </button>
                   ))}
                 </div>
               </div>
             )}
           </div>
-        </div>
+        </section>
 
-        {/* Segurança e Acesso */}
-        <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-2 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-xl">
-              <Lock className="w-5 h-5" />
-            </div>
-            <h3 className="text-xl font-bold text-on-surface font-headline">Segurança e Acesso</h3>
+        {/* Segurança */}
+        <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
+          <div className="flex items-center gap-2 text-slate-900 dark:text-white">
+            <Lock className="w-4 h-4 text-orange-500" />
+            <h3 className="text-sm font-bold uppercase tracking-tight">Segurança</h3>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2 space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">Email de Acesso</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
-                <input 
-                  type="email" 
-                  value={formData.email || ''}
-                  onChange={e => setFormData({...formData, email: e.target.value})}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-3 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
-                  placeholder="seu@email.com"
-                />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Email</label>
+              <input 
+                type="email" 
+                value={formData.email || ''}
+                onChange={e => setFormData({...formData, email: e.target.value})}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-slate-900 dark:text-white"
+                placeholder="seu@email.com"
+              />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">Nova Senha</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
-                <input 
-                  type="password" 
-                  value={formData.newPassword || ''}
-                  onChange={e => setFormData({...formData, newPassword: e.target.value})}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-3 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
-                  placeholder="Deixe em branco para manter"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Nova Senha</label>
+              <input 
+                type="password" 
+                value={formData.newPassword || ''}
+                onChange={e => setFormData({...formData, newPassword: e.target.value})}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-slate-900 dark:text-white"
+                placeholder="Opcional"
+              />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">Confirmar Nova Senha</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
-                <input 
-                  type="password" 
-                  value={formData.confirmPassword || ''}
-                  onChange={e => setFormData({...formData, confirmPassword: e.target.value})}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-3 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
-                  placeholder="Repita a nova senha"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Confirmar Senha</label>
+              <input 
+                type="password" 
+                value={formData.confirmPassword || ''}
+                onChange={e => setFormData({...formData, confirmPassword: e.target.value})}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-slate-900 dark:text-white"
+              />
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="flex justify-end pt-4">
+        <div className="flex justify-end">
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-2 px-10 py-4 bg-primary text-white rounded-2xl font-bold shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
+            className="flex items-center gap-2 px-8 py-2.5 bg-primary text-white rounded-lg font-bold shadow-sm hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 text-sm"
           >
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Save className="w-5 h-5" />
-            )}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Salvar Alterações
           </button>
         </div>

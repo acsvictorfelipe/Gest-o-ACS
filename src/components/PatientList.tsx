@@ -23,9 +23,14 @@ import {
   AlertCircle,
   Smile,
   Bed,
-  ArrowLeft
+  ArrowLeft,
+  CheckCircle,
+  ShieldAlert,
+  Heart
 } from 'lucide-react';
+import { UI_CONFIG } from '../constants';
 
+import { format, isSameDay } from 'date-fns';
 import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE, formatDate, parseDate } from '../lib/dateUtils';
 
 export function PatientList({ user }: { user: any }) {
@@ -104,11 +109,28 @@ export function PatientList({ user }: { user: any }) {
     const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          p.cns?.includes(searchTerm);
     
-    if (activeFilter === 'pending') {
+    if (activeFilter === 'date' && searchParams.get('date')) {
+      const targetDate = new Date(searchParams.get('date')!);
+      const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
+      if (!lastVisit) return false;
+      const dueDate = new Date(lastVisit);
+      dueDate.setDate(dueDate.getDate() + 30);
+      return matchesSearch && isSameDay(targetDate, dueDate);
+    }
+
+    if (activeFilter === 'pending' || activeFilter === 'visitas-atraso' || activeFilter === 'visitas_atrasadas') {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
       return matchesSearch && (!lastVisit || lastVisit < thirtyDaysAgo);
+    }
+
+    if (activeFilter === 'bebes-pendentes' || activeFilter === 'criancas_pendentes') {
+      const isChild = p.categories?.includes('Criança');
+      const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 99;
+      const visited6m = p.clinical_data?.crianca?.visita6meses === 'Sim';
+      
+      return matchesSearch && isChild && ageInMonths >= 5 && ageInMonths <= 6 && !visited6m;
     }
 
     if (activeFilter === 'vaccine') {
@@ -143,8 +165,16 @@ export function PatientList({ user }: { user: any }) {
       return matchesSearch && inWindow && !alreadyVisited;
     }
 
-    if (activeFilter === 'gestantes') return matchesSearch && p.categories?.includes('Gestante');
-    if (activeFilter === 'crianças') return matchesSearch && p.categories?.includes('Criança');
+    if (activeFilter === 'criancas' || activeFilter === 'crianças') {
+      const isChild = p.categories?.includes('Criança');
+      const isAdult = p.categories?.includes('Adulto') || p.categories?.includes('Idoso');
+      
+      if (!isChild || isAdult) return false;
+      
+      const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
+      // Define children as up to 12 years (144 months)
+      return matchesSearch && ageInMonths < 144;
+    }
     if (activeFilter === 'acamados') return matchesSearch && p.categories?.includes('AcamadoDomiciliado');
     if (activeFilter === 'idosos') return matchesSearch && p.categories?.includes('Idoso');
     if (activeFilter === 'hipertensos') {
@@ -161,6 +191,7 @@ export function PatientList({ user }: { user: any }) {
         clinical.idoso?.pressaoAlta === 'Sim'
       );
     }
+    if (activeFilter === 'adultos') return matchesSearch && p.categories?.includes('Adulto');
     if (activeFilter === 'diabéticos') {
       const clinical = p.clinical_data || {};
       return matchesSearch && (
@@ -248,23 +279,29 @@ export function PatientList({ user }: { user: any }) {
   };
 
   const getCategoryIcon = (categories: string[]) => {
-    if (categories?.includes('Gestante')) return <Baby className="w-4 h-4 text-blue-500" />;
-    if (categories?.includes('Criança')) return <Smile className="w-4 h-4 text-green-500" />;
-    if (categories?.includes('AcamadoDomiciliado')) return <Bed className="w-4 h-4 text-teal-500" />;
-    if (categories?.includes('Idoso')) return <HeartPulse className="w-4 h-4 text-red-500" />;
-    return <User className="w-4 h-4 text-slate-400" />;
+    if (categories?.includes('Gestante')) return <UI_CONFIG.categorias.gestantes.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.gestantes.color }} />;
+    if (categories?.includes('Criança')) return <UI_CONFIG.categorias.criancas.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.criancas.color }} />;
+    if (categories?.includes('Idoso')) return <UI_CONFIG.categorias.idosos.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.idosos.color }} />;
+    if (categories?.includes('Hipertensos')) return <UI_CONFIG.categorias.hipertensos.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.hipertensos.color }} />;
+    if (categories?.includes('Diabéticos')) return <UI_CONFIG.categorias.diabeticos.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.diabeticos.color }} />;
+    return <UI_CONFIG.categorias.outros.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.outros.color }} />;
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-extrabold text-primary tracking-tight font-headline">Lista de Cidadãos</h2>
-          <p className="text-slate-500 mt-1 font-medium">Gerencie todos os pacientes cadastrados na sua microárea.</p>
-        </div>
+        <header className="flex flex-col gap-1">
+          <h2 className="text-2xl font-headline font-black tracking-tight text-slate-900 leading-none">
+            {activeFilter === 'bebes-pendentes' ? 'Bebês com Visitas Pendentes' :
+             activeFilter === 'visitas-atraso' ? 'Visitas em Atraso' :
+             activeFilter === 'adultos' ? 'Adultos' :
+             'Pacientes'}
+          </h2>
+          <p className="text-[12px] text-slate-500 font-medium mt-1">Gerencie os atendimentos e registros da sua microárea.</p>
+        </header>
         <button 
           onClick={() => navigate('/novo-cadastro')}
-          className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-all"
+          className="flex items-center gap-2 px-6 py-2.5 bg-teal-600 text-white rounded-xl font-bold shadow-md shadow-teal-600/20 hover:bg-teal-700 transition-all text-sm"
         >
           <Plus className="w-5 h-5" />
           Novo Cadastro
@@ -272,239 +309,177 @@ export function PatientList({ user }: { user: any }) {
       </div>
 
       {/* Search Bar & Filters */}
-      <div className="space-y-3">
-        <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Pesquisar por Nome ou CNS..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-slate-900 border-none rounded-xl py-3 pl-11 pr-6 shadow-sm focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium text-on-surface"
-          />
-        </div>
+      <div className="space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+           <div className="relative group flex-1 max-w-xl">
+             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-600 transition-colors" />
+             <input 
+               type="text" 
+               placeholder="Pesquisar por nome ou CNS..."
+               value={searchTerm}
+               onChange={(e) => setSearchTerm(e.target.value)}
+               className="w-full bg-white border border-slate-100 rounded-xl py-3 pl-11 pr-6 shadow-sm focus:ring-2 focus:ring-teal-600/10 focus:border-teal-600/30 transition-all text-[13px] font-medium text-slate-900"
+             />
+           </div>
 
-        {activeFilter !== 'all' && (
-          <div className="flex items-center gap-3 animate-in slide-in-from-left-2">
-            <button 
-              onClick={clearFilter}
-              className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full text-xs font-bold transition-colors"
-            >
-              <ArrowLeft className="w-3 h-3" />
-              Voltar
-            </button>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-bold">
-              <Filter className="w-3 h-3" />
-              {activeFilter === 'pending' ? 'Visitas Pendentes' : 
-               activeFilter === 'vaccine' ? 'Vacinas Atrasadas' : 
-               activeFilter === 'gestantes' ? 'Gestantes' :
-               activeFilter === 'pending_6m' ? 'Visitas 6 Meses Pendentes' :
-               activeFilter === 'crianças' ? 'Crianças < 2a' :
-               activeFilter === 'acamados' ? 'Acamados / Domiciliados' :
-               activeFilter === 'idosos' ? 'Idosos' :
-               activeFilter === 'hipertensos' ? 'Hipertensos' :
-               activeFilter === 'diabéticos' ? 'Diabéticos' :
-               activeFilter}
-              <button 
-                onClick={clearFilter}
-                className="p-0.5 hover:bg-primary/20 rounded-full transition-colors"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-            <span className="text-xs text-slate-400 font-medium">
-              {filteredPatients.length} {filteredPatients.length === 1 ? 'resultado encontrado' : 'resultados encontrados'}
-            </span>
-          </div>
-        )}
+           <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1">
+             {[
+               { id: 'all', label: 'Todos' },
+               { id: 'gestantes', label: 'Gestantes' },
+               { id: 'criancas', label: 'Crianças' },
+               { id: 'idosos', label: 'Idosos' },
+               { id: 'hipertensos', label: 'Hipertensos' },
+               { id: 'diabéticos', label: 'Diabéticos' },
+               { id: 'acamados', label: 'Acamados' },
+             ].map((f) => (
+               <button
+                 key={f.id}
+                 onClick={() => setActiveFilter(f.id)}
+                 className={`px-4 py-2 rounded-xl text-[12px] font-bold whitespace-nowrap transition-all ${
+                   activeFilter === f.id 
+                     ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20' 
+                     : 'bg-white text-slate-500 border border-slate-100 hover:border-slate-200'
+                 }`}
+               >
+                 {f.label}
+               </button>
+             ))}
+           </div>
+        </div>
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-          <Loader2 className="w-10 h-10 animate-spin mb-4" />
-          <p className="font-medium">Carregando cidadãos...</p>
+        <div className="flex flex-col items-center justify-center py-24 text-slate-400">
+          <Loader2 className="w-8 h-8 animate-spin mb-3 text-[#14B8A6]" />
+          <p className="text-sm font-medium">Carregando dados...</p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+        <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm shadow-slate-100">
           {/* Desktop Table View */}
           <div className="hidden lg:block overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[800px]">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Cidadão</th>
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">CNS</th>
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Categorias</th>
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Última Visita</th>
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Ações</th>
+                <tr className="bg-slate-50/50">
+                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Paciente</th>
+                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Monitoramento</th>
+                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Idade</th>
+                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-wider text-slate-400 text-center">Situação</th>
+                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-wider text-slate-400 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+              <tbody className="divide-y divide-slate-50">
                 {filteredPatients.length > 0 ? (
-                  filteredPatients.map((p) => (
-                    <tr 
-                      key={p.id} 
-                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
-                      onClick={() => p.household_id ? navigate(`/domicilio/${p.household_id}`) : navigate(`/editar-paciente/${p.id}`)}
-                    >
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 font-bold text-sm group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                            {p.name?.substring(0, 2).toUpperCase()}
+                  filteredPatients.map((p) => {
+                    const isAtraso = !p.last_visit_at || new Date(p.last_visit_at) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                    return (
+                      <tr 
+                        key={p.id} 
+                        className="hover:bg-slate-50 transition-all cursor-pointer group"
+                        onClick={() => p.household_id ? navigate(`/domicilio/${p.household_id}`) : navigate(`/editar-paciente/${p.id}`)}
+                      >
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-black text-xs group-hover:bg-teal-600 group-hover:text-white transition-all uppercase shadow-sm">
+                              {p.name?.substring(0, 2)}
+                            </div>
+                            <div>
+                               <p className="text-[14px] font-bold text-slate-900 leading-tight group-hover:text-teal-600 transition-colors uppercase">{p.name}</p>
+                               <div className="flex items-center gap-2 mt-0.5">
+                                 <p className="text-[11px] text-slate-400 font-medium">{p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}</p>
+                               </div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-bold text-on-surface">{p.name}</p>
-                              <button 
-                                onClick={(e) => copyToClipboard(p.name, e)}
-                                className="p-1 text-slate-300 hover:text-primary transition-colors"
-                                title="Copiar Nome"
-                              >
-                                <Copy className="w-3 h-3" />
-                              </button>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-                                {p.gender}, {p.birth_date ? calculateAge(p.birth_date) : 'N/A'}
-                              </p>
-                              <button 
-                                onClick={(e) => copyToClipboard(p.birth_date, e)}
-                                className="p-1 text-slate-300 hover:text-primary transition-colors"
-                                title="Copiar Data de Nascimento"
-                              >
-                                <Copy className="w-3 h-3" />
-                              </button>
-                            </div>
-                              {(p.clinical_data?.contact || p.clinical_data?.message_contact) && (
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                                  {p.clinical_data?.contact && (
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-[9px] font-bold text-primary uppercase">Tel:</span>
-                                      <span className="text-[9px] text-slate-400">{p.clinical_data.contact}</span>
-                                      <button 
-                                        onClick={(e) => copyToClipboard(p.clinical_data.contact, e)}
-                                        className="p-1 text-slate-300 hover:text-primary transition-colors"
-                                        title="Copiar Contato"
-                                      >
-                                        <Copy className="w-2.5 h-2.5" />
-                                      </button>
-                                    </div>
-                                  )}
-                                  {p.clinical_data?.message_contact && (
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-[9px] font-bold text-orange-500 uppercase">Recado:</span>
-                                      <span className="text-[9px] text-slate-400">{p.clinical_data.message_contact}</span>
-                                      <button 
-                                        onClick={(e) => copyToClipboard(p.clinical_data.message_contact, e)}
-                                        className="p-1 text-slate-300 hover:text-primary transition-colors"
-                                        title="Copiar Contato de Recado"
-                                      >
-                                        <Copy className="w-2.5 h-2.5" />
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{p.cns}</span>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex flex-wrap gap-2">
-                          {p.categories?.map((cat: string) => (
-                            <div key={cat} className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors">
-                              {getCategoryIcon([cat])}
-                              <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">{cat}</span>
-                            </div>
-                          ))}
-                          {(!p.categories || p.categories.length === 0) && (
-                            <span className="text-[10px] font-bold text-slate-300 dark:text-slate-600 uppercase">Sem Categoria</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex flex-col">
-                          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                            {p.last_visit_at ? new Date(p.last_visit_at).toLocaleDateString('pt-BR') : 'Nunca'}
-                          </span>
-                          {(!p.last_visit_at || new Date(p.last_visit_at) < new Date(new Date().setDate(new Date().getDate() - 30))) && (
-                            <span className="text-[9px] font-bold text-red-500 uppercase mt-1">Pendente</span>
-                          )}
-                          {p.categories?.includes('Criança') && (() => {
-                            if (!p.birth_date) return null;
-                            const birth = parseDate(p.birth_date);
-                            if (!birth) return null;
-                            
-                            const alreadyVisited = !!p.clinical_data?.crianca?.visita6meses && p.clinical_data.crianca.visita6meses !== 'Não';
-                            if (alreadyVisited) return null;
-
-                            const sixMonthsDate = new Date(birth);
-                            sixMonthsDate.setMonth(birth.getMonth() + 6);
-                            const now = new Date();
-                            const diffDays = Math.ceil((sixMonthsDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                            
-                            if (diffDays <= 15 && diffDays >= -15) {
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="flex flex-wrap gap-1.5">
+                            {p.categories?.slice(0, 3).map((cat: string) => {
+                              const config = Object.values(UI_CONFIG.categorias).find(c => cat.includes(c.label.slice(0, -1))) || UI_CONFIG.categorias.outros;
                               return (
-                                <div className="flex items-center gap-1 mt-1 text-red-500 animate-pulse">
-                                  <AlertCircle className="w-3 h-3" />
-                                  <span className="text-[9px] font-bold uppercase">Visita 6 Meses Próxima</span>
-                                </div>
+                                <span 
+                                  key={cat} 
+                                  className="px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-tight border" 
+                                  style={{ 
+                                    backgroundColor: `color-mix(in srgb, ${config.color}, transparent 90%)`, 
+                                    color: config.color, 
+                                    borderColor: `color-mix(in srgb, ${config.color}, transparent 70%)` 
+                                  }}
+                                >
+                                  {cat}
+                                </span>
                               );
-                            }
-                            return null;
-                          })()}
-                          {p.categories?.includes('Criança') && (() => {
-                            const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
-                            const vaccines = p.clinical_data?.crianca?.vacinas || {};
-                            const dueVaccines = VACCINE_SCHEDULE
-                              .filter(group => group.age <= ageInMonths)
-                              .flatMap(group => group.vaccines);
-                            const hasPending = dueVaccines.some(v => vaccines[v.id] !== 'Sim');
+                            })}
                             
-                            return hasPending ? (
-                              <span className="text-[9px] font-bold text-orange-500 uppercase mt-1">Vacina Atrasada</span>
-                            ) : null;
-                          })()}
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-2">
-                          {(user.role === 'Administrador' || (user.role === 'Agente' && p.agent_id === user.id)) && (
-                            <>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/editar-paciente/${p.id}`);
+                            {/* Clinical Indicators */}
+                            {(p.clinical_data?.chronic?.hipertensao === 'Sim' || p.clinical_data?.adulto?.hipertensao === 'Sim' || p.clinical_data?.idoso?.hipertensao === 'Sim') && (
+                              <span 
+                                className="px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-tight border italic" 
+                                style={{ 
+                                  backgroundColor: `color-mix(in srgb, var(--color-cat-hipertensos), transparent 90%)`, 
+                                  color: 'var(--color-cat-hipertensos)', 
+                                  borderColor: `color-mix(in srgb, var(--color-cat-hipertensos), transparent 70%)` 
                                 }}
-                                className="p-2 text-slate-300 dark:text-slate-600 hover:text-primary transition-colors"
-                                title="Editar Paciente"
                               >
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeleteConfirm(p.id);
+                                HIP
+                              </span>
+                            )}
+                            {(p.clinical_data?.chronic?.diabetes === 'Sim' || p.clinical_data?.adulto?.diabetes === 'Sim' || p.clinical_data?.idoso?.diabetes === 'Sim') && (
+                              <span 
+                                className="px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-tight border italic" 
+                                style={{ 
+                                  backgroundColor: `color-mix(in srgb, var(--color-cat-diabeticos), transparent 90%)`, 
+                                  color: 'var(--color-cat-diabeticos)', 
+                                  borderColor: `color-mix(in srgb, var(--color-cat-diabeticos), transparent 70%)` 
                                 }}
-                                className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors"
-                                title="Excluir Paciente"
                               >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
-                          <button className="p-2 text-slate-300 dark:text-slate-600 group-hover:text-primary transition-colors">
-                            <ChevronRight className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                                DIA
+                              </span>
+                            )}
+                            {p.categories?.includes('SaudeMental') && (
+                              <span 
+                                className="px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-tight border italic" 
+                                style={{ 
+                                  backgroundColor: `color-mix(in srgb, #A855F7, transparent 90%)`, 
+                                  color: '#A855F7', 
+                                  borderColor: `color-mix(in srgb, #A855F7, transparent 70%)` 
+                                }}
+                              >
+                                S.M
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                           <span className="text-[12px] font-bold text-slate-600">{p.birth_date ? `${calculateAge(p.birth_date)}` : 'N/A'}</span>
+                        </td>
+                        <td className="px-8 py-5 text-center">
+                          <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-md border ${
+                            !isAtraso 
+                              ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                              : 'bg-orange-50 text-orange-600 border-orange-100'
+                          }`}>
+                            {!isAtraso ? 'Em dia' : 'Atraso'}
+                          </span>
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                             <button className="p-2 text-slate-400 hover:text-teal-600 transition-colors">
+                               <Pencil className="w-4.5 h-4.5" />
+                             </button>
+                             <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 group-hover:text-teal-600 transition-colors">
+                               <ChevronRight className="w-5 h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
+                             </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-8 py-20 text-center text-slate-400 dark:text-slate-500 font-medium">
-                      Nenhum cidadão encontrado.
+                    <td colSpan={5} className="px-8 py-24 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <User className="w-10 h-10 text-slate-200" />
+                        <p className="text-sm font-bold text-slate-400">Nenhum cidadão encontrado.</p>
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -513,100 +488,103 @@ export function PatientList({ user }: { user: any }) {
           </div>
 
           {/* Mobile Card View */}
-          <div className="lg:hidden divide-y divide-slate-50 dark:divide-slate-800">
+          <div className="lg:hidden divide-y divide-slate-100 dark:divide-slate-800">
             {filteredPatients.length > 0 ? (
               filteredPatients.map((p) => (
                 <div 
                   key={p.id} 
-                  className="p-6 space-y-4 active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors"
+                  className="p-4 space-y-3 active:bg-slate-50 transition-colors"
                   onClick={() => p.household_id ? navigate(`/domicilio/${p.household_id}`) : navigate(`/editar-paciente/${p.id}`)}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-primary/10`} style={{ backgroundColor: p.area_color || '#00488d' }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 font-bold text-sm uppercase">
                         {p.name.charAt(0)}
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-base font-bold text-on-surface">{p.name}</span>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
-                          {p.gender}, {p.birth_date ? calculateAge(p.birth_date) : 'N/A'}
-                        </p>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">{p.name}</h4>
+                        <div className="flex flex-col gap-1 mt-1">
+                          <div className="flex items-center gap-2">
+                            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">CNS: {p.cns}</p>
+                            {p.cns && (
+                              <button 
+                                onClick={(e) => copyToClipboard(p.cns, e)}
+                                className="p-1 rounded text-slate-400"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                          {p.birth_date && (
+                            <div className="flex items-center gap-2">
+                              <p className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">Nasc: {formatDate(p.birth_date)}</p>
+                              <button 
+                                onClick={(e) => copyToClipboard(formatDate(p.birth_date), e)}
+                                className="p-1 rounded text-slate-400"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/editar-paciente/${p.id}`);
-                        }}
-                        className="p-2 text-slate-400"
-                      >
-                        <Pencil className="w-5 h-5" />
-                      </button>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteConfirm(p.id);
-                        }}
-                        className="p-2 text-slate-400"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300" />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">CNS</span>
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{p.cns}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Última Visita</span>
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                        {p.last_visit_at ? new Date(p.last_visit_at).toLocaleDateString('pt-BR') : 'Nunca'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                     {p.categories?.map((cat: string) => (
-                      <div key={cat} className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                        {getCategoryIcon([cat])}
-                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">{cat}</span>
-                      </div>
+                      <span key={cat} className="px-1.5 py-0.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 text-slate-500 text-[9px] font-bold rounded uppercase whitespace-nowrap">
+                        {cat}
+                      </span>
                     ))}
-                  </div>
+                    
+                    {/* clinical indicators */}
+                    {(p.clinical_data?.chronic?.hipertensao === 'Sim' || p.clinical_data?.adulto?.hipertensao === 'Sim' || p.clinical_data?.idoso?.hipertensao === 'Sim') && (
+                      <span 
+                        className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase whitespace-nowrap italic border"
+                        style={{ 
+                          backgroundColor: `color-mix(in srgb, var(--color-cat-hipertensos), transparent 90%)`, 
+                          color: 'var(--color-cat-hipertensos)', 
+                          borderColor: `color-mix(in srgb, var(--color-cat-hipertensos), transparent 70%)` 
+                        }}
+                      >
+                        HIP
+                      </span>
+                    )}
+                    {(p.clinical_data?.chronic?.diabetes === 'Sim' || p.clinical_data?.adulto?.diabetes === 'Sim' || p.clinical_data?.idoso?.diabetes === 'Sim') && (
+                      <span 
+                        className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase whitespace-nowrap italic border"
+                        style={{ 
+                          backgroundColor: `color-mix(in srgb, var(--color-cat-diabeticos), transparent 90%)`, 
+                          color: 'var(--color-cat-diabeticos)', 
+                          borderColor: `color-mix(in srgb, var(--color-cat-diabeticos), transparent 70%)` 
+                        }}
+                      >
+                        DIA
+                      </span>
+                    )}
+                    {p.categories?.includes('SaudeMental') && (
+                      <span 
+                        className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase whitespace-nowrap italic border"
+                        style={{ 
+                          backgroundColor: `color-mix(in srgb, #A855F7, transparent 90%)`, 
+                          color: '#A855F7', 
+                          borderColor: `color-mix(in srgb, #A855F7, transparent 70%)` 
+                        }}
+                      >
+                        S.M
+                      </span>
+                    )}
 
-                  {(p.clinical_data?.contact || p.clinical_data?.message_contact) && (
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl space-y-2">
-                      {p.clinical_data?.contact && (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-primary uppercase">Contato:</span>
-                            <span className="text-xs text-slate-600 dark:text-slate-400">{p.clinical_data.contact}</span>
-                          </div>
-                          <button onClick={(e) => copyToClipboard(p.clinical_data.contact, e)} className="p-1 text-slate-400">
-                            <Copy className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                      {p.clinical_data?.message_contact && (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-orange-500 uppercase">Recado:</span>
-                            <span className="text-xs text-slate-600 dark:text-slate-400">{p.clinical_data.message_contact}</span>
-                          </div>
-                          <button onClick={(e) => copyToClipboard(p.clinical_data.message_contact, e)} className="p-1 text-slate-400">
-                            <Copy className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    {!p.last_visit_at && (
+                      <span className="px-1.5 py-0.5 bg-red-50 text-red-600 border border-red-100 rounded text-[9px] font-bold uppercase whitespace-nowrap">Visita Pendente</span>
+                    )}
+                  </div>
                 </div>
               ))
             ) : (
-              <div className="px-8 py-20 text-center text-slate-400">
+              <div className="px-8 py-12 text-center text-slate-400 text-sm font-medium">
                 Nenhum cidadão encontrado.
               </div>
             )}
@@ -618,37 +596,37 @@ export function PatientList({ user }: { user: any }) {
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-300">
-            <div className="flex flex-col items-center text-center space-y-6">
-              <div className="w-20 h-20 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-600 dark:text-red-400">
-                <AlertTriangle className="w-10 h-10" />
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-600 dark:text-red-400">
+                <AlertTriangle className="w-8 h-8" />
               </div>
               
-              <div className="space-y-2">
-                <h3 className="text-2xl font-black text-on-surface font-headline">Excluir Cadastro?</h3>
-                <p className="text-slate-500 dark:text-slate-400 font-medium">
+              <div className="space-y-1">
+                <h3 className="text-xl font-bold text-on-surface font-headline">Excluir Cadastro?</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                   Esta ação é irreversível. Todos os dados do paciente e seu histórico de visitas serão removidos permanentemente.
                 </p>
               </div>
 
-              <div className="flex flex-col w-full gap-3">
+              <div className="flex flex-col w-full gap-2">
                 <button 
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="w-full py-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg shadow-red-600/20 hover:bg-red-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full py-3 bg-red-600 text-white rounded-xl font-bold shadow-sm hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {deleting ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       Excluindo...
                     </>
                   ) : (
-                    'Sim, Excluir Permanentemente'
+                    'Sim, Excluir Cadastro'
                   )}
                 </button>
                 <button 
                   onClick={() => setDeleteConfirm(null)}
                   disabled={deleting}
-                  className="w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all disabled:opacity-50"
+                  className="w-full py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors disabled:opacity-50"
                 >
                   Cancelar
                 </button>

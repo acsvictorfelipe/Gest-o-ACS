@@ -1,32 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useSync } from '../lib/useSync';
 import { 
   LayoutDashboard, 
   Users, 
-  UserPlus, 
   BarChart3, 
   Settings, 
   RefreshCw, 
-  Search, 
+  Calendar as CalendarIcon,
   Bell, 
-  HelpCircle,
   LogOut,
   Home,
   Menu,
-  X,
-  Sun,
-  Moon,
   UserCog,
   FileUp,
   AlertCircle,
   Baby,
-  Wifi,
-  WifiOff
+  UserCheck,
+  ClipboardList,
+  Syringe,
+  Download,
+  Map as MapIcon,
+  Bed,
+  ChevronRight
 } from 'lucide-react';
 import { SetupProfile } from './SetupProfile';
-import { formatDate, parseDate } from '../lib/dateUtils';
+import { parseDate, getAgeInMonths, VACCINE_SCHEDULE } from '../lib/dateUtils';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface LayoutProps {
   user: any;
@@ -36,19 +37,18 @@ interface LayoutProps {
 export function Layout({ user, onProfileUpdate }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [criticalAlerts, setCriticalAlerts] = useState<any[]>([]);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const { isOnline, pendingCount, isSyncing, sync } = useSync();
-  const [showSetup, setShowSetup] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [criticalAlerts, setCriticalAlerts] = React.useState<any[]>([]);
+  const { isSyncing, sync } = useSync();
+  const [showSetup, setShowSetup] = React.useState(false);
+  const [stats, setStats] = React.useState({ pendingVisits: 0, lateVaccines: 0 });
 
   const handleSetupComplete = () => {
     setShowSetup(false);
     if (onProfileUpdate) onProfileUpdate();
   };
 
-  useEffect(() => {
-    // Check if setup is needed
+  React.useEffect(() => {
     if (user.role === 'Agente' && (!user.microarea || !user.color)) {
       setShowSetup(true);
     } else if (user.role === 'Gestor' && !user.color) {
@@ -58,7 +58,7 @@ export function Layout({ user, onProfileUpdate }: LayoutProps) {
     }
   }, [user]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const fetchAlerts = async () => {
       try {
         const { data: patients, error } = await supabase
@@ -69,15 +69,41 @@ export function Layout({ user, onProfileUpdate }: LayoutProps) {
 
         const alerts: any[] = [];
         const now = new Date();
+        let pendingV = 0;
+        let lateV = 0;
+
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
         patients?.forEach(p => {
+          // Calculate pending visits
+          const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
+          if (!lastVisit || lastVisit < thirtyDaysAgo) {
+            pendingV++;
+          }
+
+          // Calculate late vaccines
+          if (p.categories?.includes('Criança') && !p.categories?.includes('Adulto') && !p.categories?.includes('Idoso')) {
+            const vaccines = p.clinical_data?.crianca?.vacinas || {};
+            const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 99;
+            const dueVaccines = VACCINE_SCHEDULE
+              .filter(group => group.age <= ageInMonths)
+              .flatMap(group => group.vaccines);
+            
+            let hasLate = false;
+            dueVaccines.forEach(v => {
+              if (vaccines[v.id] !== 'Sim') {
+                hasLate = true;
+              }
+            });
+            if (hasLate) lateV++;
+          }
+
           if (p.categories?.includes('Criança') && p.birth_date) {
             const birth = parseDate(p.birth_date);
             if (!birth) return;
             
-            // Calculate age in months accurately
             const diffMonths = now.getMonth() - birth.getMonth() + (12 * (now.getFullYear() - birth.getFullYear()));
-            
             const alreadyVisited = !!p.clinical_data?.crianca?.visita6meses;
             
             if (diffMonths >= 5 && diffMonths <= 9 && !alreadyVisited) {
@@ -94,7 +120,6 @@ export function Layout({ user, onProfileUpdate }: LayoutProps) {
               });
             }
 
-            // Check for late vaccines
             const vaccines = p.clinical_data?.crianca?.vacinas || {};
             const hasEmptyVaccine = Object.values(vaccines).some(v => !v);
             if (hasEmptyVaccine) {
@@ -112,13 +137,13 @@ export function Layout({ user, onProfileUpdate }: LayoutProps) {
         });
 
         setCriticalAlerts(alerts);
+        setStats({ pendingVisits: pendingV, lateVaccines: lateV });
       } catch (error) {
         console.error("Error fetching alerts:", error);
       }
     };
 
     fetchAlerts();
-    // Refresh alerts every 5 minutes
     const interval = setInterval(fetchAlerts, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -128,264 +153,213 @@ export function Layout({ user, onProfileUpdate }: LayoutProps) {
     navigate('/login');
   };
 
-  const navItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/pacientes', icon: Users, label: 'Pacientes' },
-    { path: '/domicilios', icon: Home, label: 'Domicílios' },
-    { path: '/historico', icon: RefreshCw, label: 'Histórico' },
-    { path: '/novo-cadastro', icon: UserPlus, label: 'Novo Cadastro' },
-    { path: '/importar', icon: FileUp, label: 'Importar' },
-    { path: '/relatorios', icon: BarChart3, label: 'Relatórios' },
-    { path: '/configuracoes', icon: Settings, label: 'Configurações' },
+  const sections = [
+    {
+      title: 'VISÃO GERAL',
+      items: [
+        { path: '/', icon: LayoutDashboard, label: 'Visão Geral' },
+      ]
+    },
+    {
+      title: 'CADASTROS',
+      items: [
+        { path: '/pacientes', icon: Users, label: 'Pacientes' },
+        { path: '/pacientes?filter=gestantes', icon: UserCheck, label: 'Gestantes' },
+        { path: '/pacientes?filter=criancas', icon: Baby, label: 'Crianças' },
+        { path: '/pacientes?filter=idosos', icon: UserCog, label: 'Idosos' },
+        { path: '/pacientes?filter=acamados', icon: Bed, label: 'Acamados' },
+        { path: '/domicilios', icon: Home, label: 'Visitas Domiciliares' },
+      ]
+    },
+    {
+      title: 'ACOMPANHAMENTO',
+      items: [
+        { path: '/pacientes?filter=visitas_atrasadas', icon: AlertCircle, label: 'Visitas Pendentes', badge: stats.pendingVisits.toString() },
+        { path: '/pacientes?filter=vaccine', icon: Syringe, label: 'Vacinas em Atraso', badge: stats.lateVaccines.toString() },
+        { path: '/relatorios?tab=indicadores', icon: ClipboardList, label: 'Condicionantes' },
+      ]
+    },
+    {
+      title: 'RELATÓRIOS',
+      items: [
+        { path: '/indicadores', icon: BarChart3, label: 'Indicadores' },
+        { path: '/relatorios', icon: FileUp, label: 'Relatórios' },
+        { path: '/exportacao', icon: Download, label: 'Exportações' },
+      ]
+    },
+    {
+      title: 'CONFIGURAÇÕES',
+      items: [
+        { path: '/usuarios', icon: Users, label: 'Usuários', adminOnly: true },
+        { path: '/microareas', icon: MapIcon, label: 'Microáreas', adminOnly: true },
+        { path: '/configuracoes', icon: Settings, label: 'Configurações' },
+      ]
+    }
   ];
 
-  if (user.role === 'Administrador') {
-    navItems.splice(5, 0, { path: '/usuarios', icon: UserCog, label: 'Usuários' });
-  }
-
-  const SidebarContent = () => (
-    <>
-      <div className="px-6 mb-10 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-primary font-headline">Gestão ACS</h1>
+  const sidebarContent = (
+    <div className="flex flex-col h-full bg-white border-r border-slate-100 relative overflow-hidden">
+      {/* Brand */}
+      <div className="px-6 h-[100px] flex items-center shrink-0 border-b border-slate-50 relative z-10">
+        <div className="flex items-center gap-3.5 group cursor-pointer" onClick={() => navigate('/')}>
+          <div className="w-11 h-11 bg-teal-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-500/20 transition-transform group-hover:rotate-3">
+            <LayoutDashboard className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl font-black text-slate-900 tracking-tighter leading-none">Gestão ACS</h1>
+            <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Prontuário Digital</p>
+          </div>
         </div>
-        <button 
-          onClick={() => setIsMobileMenuOpen(false)}
-          className="lg:hidden p-2 text-slate-400 hover:text-primary transition-colors"
-        >
-          <X className="w-6 h-6" />
-        </button>
       </div>
 
-      <nav className="flex-1 space-y-1">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`flex items-center px-6 py-3 transition-all ${
-                isActive 
-                  ? 'text-primary font-bold border-r-4 border-primary bg-primary/5' 
-                  : 'text-slate-500 dark:text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              <item.icon className={`w-5 h-5 mr-3 ${isActive ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`} />
-              <span className="text-sm">{item.label}</span>
-            </Link>
-          );
-        })}
+      {/* Navigation */}
+      <nav className="flex-1 px-4 py-8 space-y-8 overflow-y-auto custom-scrollbar relative z-10">
+        {sections.map((section, idx) => (
+          <div key={idx} className="space-y-2">
+            <h3 className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 opacity-80">
+              {section.title}
+            </h3>
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                if (item.adminOnly && user.role !== 'Administrador') return null;
+                const isActive = location.pathname === item.path || (item.path !== '/' && location.search.includes(item.path.split('?')[1] || '____'));
+                
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 group relative ${
+                      isActive 
+                        ? 'bg-teal-50 text-teal-600' 
+                        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 relative z-10">
+                      <item.icon className={`w-[18px] h-[18px] transition-transform duration-200 ${isActive ? 'text-teal-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                      <span className="tracking-tight">{item.label}</span>
+                    </div>
+                    {item.badge && (
+                      <span className={`relative z-10 text-[10px] font-bold min-w-[20px] h-[20px] px-1.5 rounded-full flex items-center justify-center ${
+                        isActive ? 'bg-teal-600 text-white' : 'bg-red-500 text-white shadow-sm shadow-red-500/20'
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
+                    {isActive && (
+                      <motion.div 
+                        layoutId="nav-pill"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 bg-teal-600 rounded-r-full"
+                        initial={false}
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                      />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      <div className="px-6 mt-auto space-y-6">
-        <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</span>
-            {isOnline ? (
-              <div className="flex items-center gap-1 text-green-500">
-                <Wifi className="w-3 h-3" />
-                <span className="text-[10px] font-bold">Online</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 text-orange-500">
-                <WifiOff className="w-3 h-3" />
-                <span className="text-[10px] font-bold">Offline</span>
-              </div>
-            )}
+      {/* User Area */}
+      <div className="p-4 border-t border-slate-50 relative z-10 bg-white">
+        <div className="flex items-center gap-3 px-4 py-4 bg-slate-50 rounded-2xl border border-transparent hover:border-slate-100 transition-all group">
+          <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center text-white font-black text-xs shadow-md shadow-teal-600/20">
+            {user.name?.charAt(0).toUpperCase() || 'A'}
           </div>
-          
-          {pendingCount > 0 && (
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pendentes</span>
-              <span className="text-[10px] font-bold text-orange-500">{pendingCount} itens</span>
-            </div>
-          )}
-
-          <button 
-            onClick={sync}
-            disabled={!isOnline || isSyncing}
-            className={`w-full py-3 ${isOnline ? 'bg-primary' : 'bg-slate-300'} text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50`}
-          >
-            {isSyncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
-          </button>
-        </div>
-
-        <div className="flex items-center gap-3 pt-6 border-t border-slate-100 dark:border-slate-800">
-          <img 
-            src={user.photoURL || `https://ui-avatars.com/api/?name=${user.name || user.email}&background=${(user.color || '#00488d').replace('#', '')}&color=fff`} 
-            alt="Profile" 
-            className="w-10 h-10 rounded-full object-cover border-2 border-primary/10"
-            referrerPolicy="no-referrer"
-          />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-on-surface truncate">{user.name || 'Agente'}</p>
-            <div className="flex flex-col">
-              <p className="text-[10px] text-on-surface-variant uppercase tracking-tighter truncate">
-                {user.role || 'Agente'} • {user.microarea ? `MA ${user.microarea}` : 'Sem MA'}
-              </p>
-            </div>
+            <p className="text-[13px] font-bold text-slate-900 truncate leading-tight">{user.name || 'Agente'}</p>
+            <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5">ACS • Microárea {user.microarea || '02'}</p>
           </div>
-          <div className="flex items-center gap-1">
-            <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-error transition-colors" title="Sair">
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
+          <ChevronRight className="w-4 h-4 text-slate-300" />
         </div>
       </div>
-    </>
+    </div>
   );
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-[#F1F4F9] flex flex-col lg:flex-row selection:bg-teal-600/30">
       {showSetup && (
         <SetupProfile 
           user={user} 
           onComplete={handleSetupComplete} 
         />
       )}
+      
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 fixed left-0 top-0 h-full bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex-col py-6 z-50">
-        <SidebarContent />
-      </aside>
-
-      {/* Mobile Sidebar Overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-[60] lg:hidden backdrop-blur-sm transition-all"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Mobile Sidebar */}
-      <aside className={`
-        fixed left-0 top-0 h-full bg-white dark:bg-slate-900 w-72 z-[70] lg:hidden flex flex-col py-6 transition-transform duration-300 ease-in-out
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <SidebarContent />
+      <aside className="hidden lg:flex w-[260px] fixed left-0 top-0 h-full z-50">
+        {sidebarContent}
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-64 min-h-screen flex flex-col">
-        {/* Top Bar */}
-        <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-4 lg:px-8 py-3 lg:py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3 lg:gap-4 flex-1">
+      <main className="flex-1 lg:ml-[260px] min-h-screen flex flex-col relative overflow-x-hidden">
+        {/* Header */}
+        <header className="sticky top-0 z-40 bg-white border-b border-slate-100 h-[80px] px-8 lg:px-10 flex justify-between items-center shadow-sm shadow-slate-100/50">
+          <div className="flex items-center gap-4 flex-1">
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              className="lg:hidden p-2 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
             >
-              <Menu className="w-5 h-5 lg:w-6 lg:h-6" />
+              <Menu className="w-6 h-6" />
             </button>
-            
-            <div className="hidden md:block flex-1 max-w-md">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder="Buscar paciente..." 
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-full text-sm focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      const value = (e.target as HTMLInputElement).value;
-                      navigate(`/pacientes?search=${encodeURIComponent(value)}`);
-                    }
-                  }}
-                />
-              </div>
-            </div>
           </div>
 
-          <div className="flex items-center gap-3 lg:gap-6">
-            <div className="flex gap-2 lg:gap-4 text-slate-400 relative">
-              <button 
-                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className={`p-2 hover:text-primary transition-colors relative ${criticalAlerts.length > 0 ? 'text-red-500' : ''}`}
-              >
-                <Bell className="w-5 h-5" />
-                {criticalAlerts.length > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></span>
-                )}
-              </button>
-
-              {isNotificationsOpen && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-[80]" 
-                    onClick={() => setIsNotificationsOpen(false)}
-                  />
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 z-[90] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <div className="p-4 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
-                      <h4 className="text-sm font-bold text-on-surface">Alertas Críticos</h4>
-                      <span className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                        {criticalAlerts.length} Pendentes
-                      </span>
-                    </div>
-                    <div className="max-h-96 overflow-y-auto">
-                      {criticalAlerts.length > 0 ? (
-                        criticalAlerts.map((alert) => (
-                          <div 
-                            key={alert.id} 
-                            className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer border-b border-slate-50 dark:border-slate-800 last:border-none"
-                            onClick={() => {
-                              navigate(`/editar-paciente/${alert.patientId || alert.id}`);
-                              setIsNotificationsOpen(false);
-                            }}
-                          >
-                            <div className="flex gap-3">
-                              <div className={`w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 ${alert.color}`}>
-                                <alert.icon className="w-4 h-4" />
-                              </div>
-                              <div>
-                                <p className="text-xs font-bold text-on-surface">{alert.name}</p>
-                                <p className="text-[10px] font-bold text-primary uppercase mt-0.5">{alert.type}</p>
-                                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{alert.message}</p>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="p-8 text-center">
-                          <Bell className="w-8 h-8 text-slate-200 dark:text-slate-700 mx-auto mb-2" />
-                          <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">Nenhum alerta crítico no momento.</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </>
+          <div className="flex items-center gap-4">
+            <button 
+              className="p-2 text-slate-400 hover:text-teal-600 transition-all relative group"
+              onClick={() => {
+                // Here we could open a dropdown with criticalAlerts
+              }}
+            >
+              <Bell className="w-6 h-6" />
+              {criticalAlerts.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
               )}
-            </div>
-            <div className="h-8 w-[1px] bg-slate-100 dark:bg-slate-800 hidden sm:block"></div>
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-black text-primary uppercase tracking-widest">Portal ACS</p>
-              <p className="text-[10px] text-slate-400 uppercase font-bold">Unidade Central</p>
-            </div>
+            </button>
           </div>
         </header>
 
-        <div className="p-4 lg:p-8 flex-1 pb-24 lg:pb-8">
-          <div className="max-w-7xl mx-auto">
-            <Outlet />
-          </div>
+        {/* Content with Animation */}
+        <div className="p-8 lg:p-12 flex-1 max-w-[1800px] w-full mx-auto relative z-10">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname + location.search}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="h-full"
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </div>
-
-        {/* Mobile Bottom Navigation */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 px-6 py-3 flex justify-between items-center z-50 pb-safe">
-          {navItems.slice(0, 5).map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex flex-col items-center gap-1 ${isActive ? 'text-primary' : 'text-slate-400'}`}
-              >
-                <item.icon className={`w-5 h-5 ${isActive ? 'text-primary' : 'text-slate-400'}`} />
-                <span className="text-[9px] font-bold uppercase tracking-tighter">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
       </main>
+
+      {/* Mobile Sidebar Overlay */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 z-[100] lg:hidden backdrop-blur-sm" 
+              onClick={() => setIsMobileMenuOpen(false)} 
+            />
+            <motion.div 
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed left-0 top-0 bottom-0 w-[280px] z-[110] lg:hidden shadow-3xl"
+            >
+              {sidebarContent}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

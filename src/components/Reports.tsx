@@ -482,226 +482,175 @@ export function Reports({ user }: { user: any }) {
   const categories = ['Todas', 'Gestante', 'Criança', 'AcamadoDomiciliado', 'Idoso', 'Adulto', 'SaudeMental', 'Beneficiários', 'Domicílios'];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-extrabold text-primary tracking-tight font-headline">Relatórios Territoriais</h2>
-          <p className="text-slate-500 mt-1 font-medium">Gere documentos PDF com os dados consolidados da sua microárea.</p>
-        </div>
+        <header className="flex flex-col gap-1">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Relatórios</h2>
+          <p className="text-sm text-slate-500 font-medium tracking-tight">Gere documentos consolidados da sua microárea.</p>
+        </header>
         <button 
           onClick={generatePDF}
           disabled={categoryFilter === 'Domicílios' ? filteredHouseholds.length === 0 : filteredPatients.length === 0}
-          className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-bold shadow-sm hover:opacity-90 transition-all disabled:opacity-50"
         >
-          <FileDown className="w-5 h-5" />
+          <FileDown className="w-4 h-4" />
           Gerar PDF
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 space-y-4">
-        <div className="flex items-center gap-2 text-primary mb-1">
-          <Filter className="w-4 h-4" />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Filtros</span>
+      {/* Filters Bar */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap gap-2 overflow-x-auto pb-1 no-scrollbar lg:pb-0">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setCategoryFilter(cat)}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all tracking-tight whitespace-nowrap ${
+                categoryFilter === cat 
+                  ? 'bg-primary text-white shadow-sm' 
+                  : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
           <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
             <input 
               type="text" 
               placeholder={categoryFilter === 'Domicílios' ? "Pesquisar endereço ou responsável..." : "Pesquisar nome ou CNS..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-2 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg py-2 pl-11 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-slate-900 dark:text-white"
             />
           </div>
 
           {categoryFilter === 'Domicílios' && (
             <div className="relative group">
-              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
+              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
               <input 
                 type="text" 
                 placeholder="Filtrar por rua..."
                 value={streetFilter}
                 onChange={(e) => setStreetFilter(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-2 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg py-2 pl-11 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-slate-900 dark:text-white"
               />
             </div>
           )}
-
-          <div className={`flex gap-2 overflow-x-auto pb-1 scrollbar-hide ${categoryFilter === 'Domicílios' ? 'md:col-span-1' : 'md:col-span-1'}`}>
-            {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setCategoryFilter(cat)}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${
-                  categoryFilter === cat 
-                    ? 'bg-primary text-white shadow-md' 
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-          <Loader2 className="w-10 h-10 animate-spin mb-4" />
-          <p className="font-medium">Carregando dados para o relatório...</p>
+        <div className="flex flex-col items-center justify-center py-24 text-slate-400">
+          <Loader2 className="w-8 h-8 animate-spin mb-3 text-primary" />
+          <p className="text-sm font-medium">Carregando dados...</p>
         </div>
       ) : (
-        <div className="space-y-8">
-          <div className="flex items-center gap-2 text-primary">
-            <Activity className="w-5 h-5" />
-            <h3 className="text-lg font-bold font-headline">
-              {categoryFilter === 'Domicílios' ? 'Lista de Domicílios' : 'Lista Geral de Pacientes'}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+            <Activity className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">
+              {categoryFilter === 'Domicílios' ? 'Lista de Domicílios' : 'Lista de Cidadãos'}
             </h3>
           </div>
-          <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-            <div className="overflow-x-auto">
+          <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                      {categoryFilter === 'Beneficiários' ? (
-                        <>
-                          <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Cidadão</th>
-                          <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Nascimento</th>
-                          <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Benefícios</th>
-                          <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Categorias</th>
-                        </>
-                      ) : categoryFilter === 'Domicílios' ? (
+                <tr className="bg-slate-50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800">
+                  {categoryFilter === 'Beneficiários' ? (
                     <>
-                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Endereço</th>
-                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Nº / Comp.</th>
-                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Responsável</th>
-                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Moradores</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Cidadão</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Nascimento</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Benefícios</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Monitoramento</th>
+                    </>
+                  ) : categoryFilter === 'Domicílios' ? (
+                    <>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Endereço</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Nº / Comp.</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Responsável</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 text-right">Moradores</th>
                     </>
                   ) : (
                     <>
-                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Cidadão</th>
-                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Nascimento</th>
-                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Categorias</th>
-                      <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Resumo Clínico</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Cidadão</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Nascimento</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Categorias</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Resumo Clínico</th>
                     </>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
                 {categoryFilter === 'Beneficiários' ? (
-                  filteredPatients.length > 0 ? (
-                    filteredPatients.map((p) => (
-                      <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                        <td className="px-8 py-5">
-                          <p className="text-sm font-bold text-on-surface">{p.name}</p>
-                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{p.cns}</p>
-                        </td>
-                        <td className="px-8 py-5">
-                          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                            {p.birth_date ? formatDate(p.birth_date) : ''}
-                          </span>
-                        </td>
-                        <td className="px-8 py-5">
-                          <div className="flex flex-wrap gap-1">
-                            {p.clinical_data?.socialBenefits?.map((benefit: string) => (
-                              <span key={benefit} className="text-[9px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded uppercase">
-                                {benefit}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-8 py-5">
-                          <div className="flex flex-wrap gap-1">
-                            {p.categories?.map((cat: string) => (
-                              <span key={cat} className="text-[9px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded uppercase">
-                                {cat}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={4} className="px-8 py-20 text-center text-slate-400 dark:text-slate-500 font-medium">
-                        Nenhum beneficiário encontrado.
+                  filteredPatients.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 font-semibold text-slate-900 dark:text-white">{p.name}</td>
+                      <td className="px-6 py-4 text-slate-500 font-medium">{p.birth_date ? formatDate(p.birth_date) : '-'}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-1">
+                          {p.clinical_data?.socialBenefits?.map((benefit: string) => (
+                            <span key={benefit} className="text-[9px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded uppercase">{benefit}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-1">
+                          {p.categories?.map((cat: string) => (
+                            <span key={cat} className="text-[9px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded uppercase">{cat}</span>
+                          ))}
+                        </div>
                       </td>
                     </tr>
-                  )
+                  ))
                 ) : categoryFilter === 'Domicílios' ? (
-                  filteredHouseholds.length > 0 ? (
-                    filteredHouseholds.map((h) => (
-                      <tr key={h.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                        <td className="px-8 py-5">
-                          <p className="text-sm font-bold text-on-surface">{h.address}</p>
-                        </td>
-                        <td className="px-8 py-5">
-                          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                            {h.number} {h.complement ? ` - ${h.complement}` : ''}
-                          </span>
-                        </td>
-                        <td className="px-8 py-5">
-                          <p className="text-sm font-bold text-on-surface">{h.responsible_name}</p>
-                        </td>
-                        <td className="px-8 py-5">
-                          <span className="px-3 py-1 bg-primary/5 text-primary text-xs font-bold rounded-full">
-                            {h.patients?.length || 0} pessoas
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={4} className="px-8 py-20 text-center text-slate-400 dark:text-slate-500 font-medium">
-                        Nenhum domicílio encontrado.
+                  filteredHouseholds.map((h) => (
+                    <tr key={h.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 font-semibold text-slate-900 dark:text-white">{h.address}</td>
+                      <td className="px-6 py-4 text-slate-500 font-medium">{h.number} {h.complement ? `- ${h.complement}` : ''}</td>
+                      <td className="px-6 py-4 font-semibold text-slate-900 dark:text-white">{h.responsible_name}</td>
+                      <td className="px-6 py-4 text-right">
+                        <span className="px-2 py-0.5 bg-primary/5 text-primary text-[10px] font-bold rounded uppercase">
+                          {h.patients?.length || 0} Pessoas
+                        </span>
                       </td>
                     </tr>
-                  )
+                  ))
                 ) : (
-                  filteredPatients.length > 0 ? (
-                    filteredPatients.map((p) => (
-                      <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                        <td className="px-8 py-5">
-                          <p className="text-sm font-bold text-on-surface">{p.name}</p>
-                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{p.cns}</p>
-                        </td>
-                        <td className="px-8 py-5">
-                          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                            {p.birth_date ? formatDate(p.birth_date) : ''}
-                          </span>
-                        </td>
-                        <td className="px-8 py-5">
-                          <div className="flex flex-wrap gap-1">
-                            {p.categories?.map((cat: string) => (
-                              <span key={cat} className="text-[9px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded uppercase">
-                                {cat}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-8 py-5">
-                          <span className="text-xs font-medium text-slate-600 dark:text-slate-400 italic">
-                            {getClinicalSummary(p)}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={4} className="px-8 py-20 text-center text-slate-400 dark:text-slate-500 font-medium">
-                        Nenhum paciente encontrado com os filtros aplicados.
+                  filteredPatients.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 font-semibold text-slate-900 dark:text-white">{p.name}</td>
+                      <td className="px-6 py-4 text-slate-500 font-medium">{p.birth_date ? formatDate(p.birth_date) : '-'}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-1">
+                          {p.categories?.map((cat: string) => (
+                            <span key={cat} className="text-[9px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded uppercase">{cat}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-500 italic font-medium leading-relaxed truncate max-w-sm">
+                        {getClinicalSummary(p)}
                       </td>
                     </tr>
-                  )
+                  ))
+                )}
+                {(categoryFilter === 'Domicílios' ? filteredHouseholds.length : filteredPatients.length) === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-8 py-24 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <BarChart3 className="w-8 h-8 text-slate-200" />
+                        <p className="text-sm font-medium text-slate-400">Nenhum dado encontrado para os filtros atuais.</p>
+                      </div>
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
-      </div>
       )}
     </div>
   );
