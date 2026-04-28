@@ -64,3 +64,4 @@ export function AddressInfo({ formData, setFormData }: AddressInfoProps) {
     </section>
   );
 }
+

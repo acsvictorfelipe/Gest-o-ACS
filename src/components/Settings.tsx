@@ -233,3 +233,4 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
     </div>
   );
 }
+

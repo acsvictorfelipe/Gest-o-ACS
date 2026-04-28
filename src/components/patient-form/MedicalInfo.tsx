@@ -217,3 +217,4 @@ export function MedicalInfo({ formData, setFormData, id }: MedicalInfoProps) {
     </div>
   );
 }
+

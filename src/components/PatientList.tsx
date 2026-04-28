@@ -647,3 +647,4 @@ export function PatientList({ user }: { user: any }) {
     </div>
   );
 }
+

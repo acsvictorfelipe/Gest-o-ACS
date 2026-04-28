@@ -131,3 +131,4 @@ export function AcamadoSection({ formData, setFormData }: AcamadoSectionProps) {
     </section>
   );
 }
+

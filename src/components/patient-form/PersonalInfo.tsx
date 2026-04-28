@@ -140,3 +140,4 @@ export function PersonalInfo({ formData, setFormData }: PersonalInfoProps) {
     </section>
   );
 }
+

@@ -33,3 +33,4 @@ export function SaudeMentalSection({ formData, setFormData }: SaudeMentalSection
     </section>
   );
 }
+

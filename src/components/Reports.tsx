@@ -696,3 +696,4 @@ export function Reports({ user }: { user: any }) {
     </div>
   );
 }
+

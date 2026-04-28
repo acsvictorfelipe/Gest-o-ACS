@@ -83,3 +83,4 @@ export function CommonSections({ formData, setFormData }: CommonSectionsProps) {
     </>
   );
 }
+

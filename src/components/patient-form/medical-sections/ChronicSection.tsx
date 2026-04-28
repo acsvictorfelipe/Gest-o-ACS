@@ -240,3 +240,4 @@ export function ChronicSection({ formData, setFormData }: ChronicSectionProps) {
     </section>
   );
 }
+
