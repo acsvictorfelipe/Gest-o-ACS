@@ -175,8 +175,11 @@ export function PatientList({ user }: { user: any }) {
       // Define children as up to 12 years (144 months)
       return matchesSearch && ageInMonths < 144;
     }
+    if (activeFilter === 'gestantes') return matchesSearch && p.categories?.includes('Gestante');
     if (activeFilter === 'acamados') return matchesSearch && p.categories?.includes('AcamadoDomiciliado');
     if (activeFilter === 'idosos') return matchesSearch && p.categories?.includes('Idoso');
+    if (activeFilter === 'adultos') return matchesSearch && p.categories?.includes('Adulto');
+    if (activeFilter === 'saudemental' || activeFilter === 'saude-mental') return matchesSearch && p.categories?.includes('SaudeMental');
     if (activeFilter === 'hipertensos') {
       const clinical = p.clinical_data || {};
       return matchesSearch && (
@@ -191,8 +194,7 @@ export function PatientList({ user }: { user: any }) {
         clinical.idoso?.pressaoAlta === 'Sim'
       );
     }
-    if (activeFilter === 'adultos') return matchesSearch && p.categories?.includes('Adulto');
-    if (activeFilter === 'diabéticos') {
+    if (activeFilter === 'diabéticos' || activeFilter === 'diabeticos') {
       const clinical = p.clinical_data || {};
       return matchesSearch && (
         clinical.chronic?.diabetes === 'Sim' ||
@@ -279,29 +281,36 @@ export function PatientList({ user }: { user: any }) {
   };
 
   const getCategoryIcon = (categories: string[]) => {
-    if (categories?.includes('Gestante')) return <UI_CONFIG.categorias.gestantes.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.gestantes.color }} />;
-    if (categories?.includes('Criança')) return <UI_CONFIG.categorias.criancas.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.criancas.color }} />;
-    if (categories?.includes('Idoso')) return <UI_CONFIG.categorias.idosos.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.idosos.color }} />;
-    if (categories?.includes('Hipertensos')) return <UI_CONFIG.categorias.hipertensos.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.hipertensos.color }} />;
-    if (categories?.includes('Diabéticos')) return <UI_CONFIG.categorias.diabeticos.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.diabeticos.color }} />;
-    return <UI_CONFIG.categorias.outros.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.outros.color }} />;
+    if (categories?.includes('Gestante')) return <UI_CONFIG.categorias.gestantes.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.gestantes.primary }} />;
+    if (categories?.includes('Criança')) return <UI_CONFIG.categorias.criancas.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.criancas.primary }} />;
+    if (categories?.includes('Idoso')) return <UI_CONFIG.categorias.idosos.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.idosos.primary }} />;
+    if (categories?.includes('Hipertensos')) return <UI_CONFIG.categorias.hipertensos.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.hipertensos.primary }} />;
+    if (categories?.includes('Diabéticos')) return <UI_CONFIG.categorias.diabeticos.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.diabeticos.primary }} />;
+    return <UI_CONFIG.categorias.outros.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.outros.primary }} />;
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <header className="flex flex-col gap-1">
-          <h2 className="text-2xl font-headline font-black tracking-tight text-slate-900 leading-none">
-            {activeFilter === 'bebes-pendentes' ? 'Bebês com Visitas Pendentes' :
-             activeFilter === 'visitas-atraso' ? 'Visitas em Atraso' :
+          <h2 className="text-2xl font-headline font-bold tracking-tight text-text-primary leading-none">
+            {activeFilter === 'gestantes' ? 'Gestantes' :
+             activeFilter === 'criancas' || activeFilter === 'crianças' ? 'Crianças' :
+             activeFilter === 'idosos' ? 'Idosos' :
+             activeFilter === 'acamados' ? 'Acamados / Domiciliados' :
+             activeFilter === 'hipertensos' ? 'Hipertensos' :
+             activeFilter === 'diabeticos' || activeFilter === 'diabéticos' ? 'Diabéticos' :
              activeFilter === 'adultos' ? 'Adultos' :
+             activeFilter === 'saudemental' || activeFilter === 'saude-mental' ? 'Saúde Mental' :
+             activeFilter === 'bebes-pendentes' ? 'Bebês com Visitas Pendentes' :
+             activeFilter === 'visitas-atraso' ? 'Visitas em Atraso' :
              'Pacientes'}
           </h2>
           <p className="text-[12px] text-slate-500 font-medium mt-1">Gerencie os atendimentos e registros da sua microárea.</p>
         </header>
         <button 
           onClick={() => navigate('/novo-cadastro')}
-          className="flex items-center gap-2 px-6 py-2.5 bg-teal-600 text-white rounded-xl font-bold shadow-md shadow-teal-600/20 hover:bg-teal-700 transition-all text-sm"
+          className="flex items-center gap-2 px-6 py-2.5 bg-teal-600 text-white rounded-xl font-semibold shadow-md shadow-teal-600/20 hover:bg-teal-700 transition-all text-sm"
         >
           <Plus className="w-5 h-5" />
           Novo Cadastro
@@ -318,7 +327,7 @@ export function PatientList({ user }: { user: any }) {
                placeholder="Pesquisar por nome ou CNS..."
                value={searchTerm}
                onChange={(e) => setSearchTerm(e.target.value)}
-               className="w-full bg-white border border-slate-100 rounded-xl py-3 pl-11 pr-6 shadow-sm focus:ring-2 focus:ring-teal-600/10 focus:border-teal-600/30 transition-all text-[13px] font-medium text-slate-900"
+               className="w-full bg-bg-secondary border border-border rounded-xl py-3 pl-11 pr-6 shadow-sm focus:ring-2 focus:ring-teal-600/10 focus:border-teal-600/30 transition-all text-[13px] font-medium text-slate-900"
              />
            </div>
 
@@ -335,10 +344,10 @@ export function PatientList({ user }: { user: any }) {
                <button
                  key={f.id}
                  onClick={() => setActiveFilter(f.id)}
-                 className={`px-4 py-2 rounded-xl text-[12px] font-bold whitespace-nowrap transition-all ${
+                 className={`px-4 py-2 rounded-xl text-[12px] font-semibold whitespace-nowrap transition-all ${
                    activeFilter === f.id 
                      ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20' 
-                     : 'bg-white text-slate-500 border border-slate-100 hover:border-slate-200'
+                     : 'bg-white text-slate-500 border border-border hover:border-slate-200'
                  }`}
                >
                  {f.label}
@@ -354,17 +363,17 @@ export function PatientList({ user }: { user: any }) {
           <p className="text-sm font-medium">Carregando dados...</p>
         </div>
       ) : (
-        <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm shadow-slate-100">
+        <div className="bg-bg-secondary rounded-3xl border border-border overflow-hidden shadow-sm shadow-slate-100">
           {/* Desktop Table View */}
           <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Paciente</th>
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Monitoramento</th>
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Idade</th>
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-wider text-slate-400 text-center">Situação</th>
-                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-wider text-slate-400 text-right">Ações</th>
+                <tr className="bg-bg-primary/50">
+                  <th className="px-8 py-5 text-[10px] font-semibold uppercase tracking-wider text-text-muted">Paciente</th>
+                  <th className="px-8 py-5 text-[10px] font-semibold uppercase tracking-wider text-text-muted">Monitoramento</th>
+                  <th className="px-8 py-5 text-[10px] font-semibold uppercase tracking-wider text-text-muted">Idade</th>
+                  <th className="px-8 py-5 text-[10px] font-semibold uppercase tracking-wider text-text-muted text-center">Situação</th>
+                  <th className="px-8 py-5 text-[10px] font-semibold uppercase tracking-wider text-text-muted text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -379,13 +388,13 @@ export function PatientList({ user }: { user: any }) {
                       >
                         <td className="px-8 py-5">
                           <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-black text-xs group-hover:bg-teal-600 group-hover:text-white transition-all uppercase shadow-sm">
+                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs group-hover:bg-teal-600 group-hover:text-white transition-all uppercase shadow-sm">
                               {p.name?.substring(0, 2)}
                             </div>
                             <div>
-                               <p className="text-[14px] font-bold text-slate-900 leading-tight group-hover:text-teal-600 transition-colors uppercase">{p.name}</p>
+                               <p className="text-[14px] font-semibold text-text-primary leading-tight group-hover:text-teal-600 transition-colors uppercase">{p.name}</p>
                                <div className="flex items-center gap-2 mt-0.5">
-                                 <p className="text-[11px] text-slate-400 font-medium">{p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}</p>
+                                 <p className="text-[11px] text-text-muted font-medium">{p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}</p>
                                </div>
                             </div>
                           </div>
@@ -393,18 +402,23 @@ export function PatientList({ user }: { user: any }) {
                         <td className="px-8 py-5">
                           <div className="flex flex-wrap gap-1.5">
                             {p.categories?.slice(0, 3).map((cat: string) => {
-                              const config = Object.values(UI_CONFIG.categorias).find(c => cat.includes(c.label.slice(0, -1))) || UI_CONFIG.categorias.outros;
+                              const catMap: Record<string, { primary: string; label: string }> = {
+                                'Gestante':            { primary: '#EC4899', label: 'Gestante' },
+                                'Criança':             { primary: '#3B82F6', label: 'Criança' },
+                                'Idoso':               { primary: '#F97316', label: 'Idoso' },
+                                'Adulto':              { primary: '#10B981', label: 'Adulto' },
+                                'AcamadoDomiciliado':  { primary: '#64748B', label: 'Acamado' },
+                                'SaudeMental':         { primary: '#6366F1', label: 'S. Mental' },
+                              };
+                              const matched = catMap[cat];
+                              if (!matched) return null;
                               return (
                                 <span 
                                   key={cat} 
-                                  className="px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-tight border" 
-                                  style={{ 
-                                    backgroundColor: `color-mix(in srgb, ${config.color}, transparent 90%)`, 
-                                    color: config.color, 
-                                    borderColor: `color-mix(in srgb, ${config.color}, transparent 70%)` 
-                                  }}
+                                  className="px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-tight text-white" 
+                                  style={{ backgroundColor: matched.primary }}
                                 >
-                                  {cat}
+                                  {matched.label}
                                 </span>
                               );
                             })}
@@ -412,47 +426,35 @@ export function PatientList({ user }: { user: any }) {
                             {/* Clinical Indicators */}
                             {(p.clinical_data?.chronic?.hipertensao === 'Sim' || p.clinical_data?.adulto?.hipertensao === 'Sim' || p.clinical_data?.idoso?.hipertensao === 'Sim') && (
                               <span 
-                                className="px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-tight border italic" 
-                                style={{ 
-                                  backgroundColor: `color-mix(in srgb, var(--color-cat-hipertensos), transparent 90%)`, 
-                                  color: 'var(--color-cat-hipertensos)', 
-                                  borderColor: `color-mix(in srgb, var(--color-cat-hipertensos), transparent 70%)` 
-                                }}
+                                className="px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-tight text-white" 
+                                style={{ backgroundColor: '#EF4444' }}
                               >
-                                HIP
+                                Hipertenso
                               </span>
                             )}
                             {(p.clinical_data?.chronic?.diabetes === 'Sim' || p.clinical_data?.adulto?.diabetes === 'Sim' || p.clinical_data?.idoso?.diabetes === 'Sim') && (
                               <span 
-                                className="px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-tight border italic" 
-                                style={{ 
-                                  backgroundColor: `color-mix(in srgb, var(--color-cat-diabeticos), transparent 90%)`, 
-                                  color: 'var(--color-cat-diabeticos)', 
-                                  borderColor: `color-mix(in srgb, var(--color-cat-diabeticos), transparent 70%)` 
-                                }}
+                                className="px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-tight text-white" 
+                                style={{ backgroundColor: '#8B5CF6' }}
                               >
-                                DIA
+                                Diabético
                               </span>
                             )}
                             {p.categories?.includes('SaudeMental') && (
                               <span 
-                                className="px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-tight border italic" 
-                                style={{ 
-                                  backgroundColor: `color-mix(in srgb, #A855F7, transparent 90%)`, 
-                                  color: '#A855F7', 
-                                  borderColor: `color-mix(in srgb, #A855F7, transparent 70%)` 
-                                }}
+                                className="px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-tight text-white" 
+                                style={{ backgroundColor: '#6366F1' }}
                               >
-                                S.M
+                                S. Mental
                               </span>
                             )}
                           </div>
                         </td>
                         <td className="px-8 py-5">
-                           <span className="text-[12px] font-bold text-slate-600">{p.birth_date ? `${calculateAge(p.birth_date)}` : 'N/A'}</span>
+                           <span className="text-[12px] font-semibold text-slate-600">{p.birth_date ? `${calculateAge(p.birth_date)}` : 'N/A'}</span>
                         </td>
                         <td className="px-8 py-5 text-center">
-                          <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-md border ${
+                          <span className={`px-2.5 py-1 text-[10px] font-bold uppercase rounded-md border ${
                             !isAtraso 
                               ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
                               : 'bg-orange-50 text-orange-600 border-orange-100'
@@ -462,7 +464,7 @@ export function PatientList({ user }: { user: any }) {
                         </td>
                         <td className="px-8 py-5 text-right">
                           <div className="flex items-center justify-end gap-2">
-                             <button className="p-2 text-slate-400 hover:text-teal-600 transition-colors">
+                             <button className="p-2 text-text-muted hover:text-teal-600 transition-colors">
                                <Pencil className="w-4.5 h-4.5" />
                              </button>
                              <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 group-hover:text-teal-600 transition-colors">
@@ -478,7 +480,7 @@ export function PatientList({ user }: { user: any }) {
                     <td colSpan={5} className="px-8 py-24 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <User className="w-10 h-10 text-slate-200" />
-                        <p className="text-sm font-bold text-slate-400">Nenhum cidadão encontrado.</p>
+                        <p className="text-sm font-semibold text-text-muted">Nenhum cidadão encontrado.</p>
                       </div>
                     </td>
                   </tr>
@@ -498,31 +500,31 @@ export function PatientList({ user }: { user: any }) {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 font-bold text-sm uppercase">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 font-semibold text-sm uppercase">
                         {p.name.charAt(0)}
                       </div>
                       <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">{p.name}</h4>
+                        <h4 className="text-sm font-semibold text-text-primary dark:text-white leading-tight">{p.name}</h4>
                         <div className="flex flex-col gap-1 mt-1">
                           <div className="flex items-center gap-2">
-                            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">CNS: {p.cns}</p>
+                            <p className="text-[10px] text-text-muted font-medium uppercase tracking-tight">CNS: {p.cns}</p>
                             {p.cns && (
                               <button 
                                 onClick={(e) => copyToClipboard(p.cns, e)}
-                                className="p-1 rounded text-slate-400"
+                                className="p-1 rounded"
                               >
-                                <Copy className="w-3 h-3" />
+                                <Copy className="w-3 h-3 text-text-muted" />
                               </button>
                             )}
                           </div>
                           {p.birth_date && (
                             <div className="flex items-center gap-2">
-                              <p className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">Nasc: {formatDate(p.birth_date)}</p>
+                              <p className="text-[10px] text-text-muted font-medium uppercase tracking-tight">Nasc: {formatDate(p.birth_date)}</p>
                               <button 
                                 onClick={(e) => copyToClipboard(formatDate(p.birth_date), e)}
-                                className="p-1 rounded text-slate-400"
+                                className="p-1 rounded"
                               >
-                                <Copy className="w-3 h-3" />
+                                <Copy className="w-3 h-3 text-text-muted" />
                               </button>
                             </div>
                           )}
@@ -533,40 +535,47 @@ export function PatientList({ user }: { user: any }) {
                   </div>
 
                   <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-                    {p.categories?.map((cat: string) => (
-                      <span key={cat} className="px-1.5 py-0.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 text-slate-500 text-[9px] font-bold rounded uppercase whitespace-nowrap">
-                        {cat}
-                      </span>
-                    ))}
+                    {p.categories?.map((cat: string) => {
+                      const catMap: Record<string, { primary: string; label: string }> = {
+                        'Gestante':            { primary: '#EC4899', label: 'Gestante' },
+                        'Criança':             { primary: '#3B82F6', label: 'Criança' },
+                        'Idoso':               { primary: '#F97316', label: 'Idoso' },
+                        'Adulto':              { primary: '#10B981', label: 'Adulto' },
+                        'AcamadoDomiciliado':  { primary: '#64748B', label: 'Acamado' },
+                        'SaudeMental':         { primary: '#6366F1', label: 'S. Mental' },
+                      };
+                      const matched = catMap[cat];
+                      if (!matched) return null;
+                      return (
+                        <span key={cat}
+                          className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase whitespace-nowrap text-white"
+                          style={{ backgroundColor: matched.primary }}
+                        >
+                          {matched.label}
+                        </span>
+                      );
+                    })}
                     
                     {/* clinical indicators */}
                     {(p.clinical_data?.chronic?.hipertensao === 'Sim' || p.clinical_data?.adulto?.hipertensao === 'Sim' || p.clinical_data?.idoso?.hipertensao === 'Sim') && (
                       <span 
-                        className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase whitespace-nowrap italic border"
-                        style={{ 
-                          backgroundColor: `color-mix(in srgb, var(--color-cat-hipertensos), transparent 90%)`, 
-                          color: 'var(--color-cat-hipertensos)', 
-                          borderColor: `color-mix(in srgb, var(--color-cat-hipertensos), transparent 70%)` 
-                        }}
+                        className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase whitespace-nowrap text-white"
+                        style={{ backgroundColor: '#EF4444' }}
                       >
-                        HIP
+                        Hipertenso
                       </span>
                     )}
                     {(p.clinical_data?.chronic?.diabetes === 'Sim' || p.clinical_data?.adulto?.diabetes === 'Sim' || p.clinical_data?.idoso?.diabetes === 'Sim') && (
                       <span 
-                        className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase whitespace-nowrap italic border"
-                        style={{ 
-                          backgroundColor: `color-mix(in srgb, var(--color-cat-diabeticos), transparent 90%)`, 
-                          color: 'var(--color-cat-diabeticos)', 
-                          borderColor: `color-mix(in srgb, var(--color-cat-diabeticos), transparent 70%)` 
-                        }}
+                        className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase whitespace-nowrap text-white"
+                        style={{ backgroundColor: '#8B5CF6' }}
                       >
-                        DIA
+                        Diabético
                       </span>
                     )}
                     {p.categories?.includes('SaudeMental') && (
                       <span 
-                        className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase whitespace-nowrap italic border"
+                        className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase whitespace-nowrap italic border"
                         style={{ 
                           backgroundColor: `color-mix(in srgb, #A855F7, transparent 90%)`, 
                           color: '#A855F7', 
@@ -578,7 +587,7 @@ export function PatientList({ user }: { user: any }) {
                     )}
 
                     {!p.last_visit_at && (
-                      <span className="px-1.5 py-0.5 bg-red-50 text-red-600 border border-red-100 rounded text-[9px] font-bold uppercase whitespace-nowrap">Visita Pendente</span>
+                      <span className="px-1.5 py-0.5 bg-red-50 text-red-600 border border-red-100 rounded text-[9px] font-semibold uppercase whitespace-nowrap">Visita Pendente</span>
                     )}
                   </div>
                 </div>
@@ -595,14 +604,14 @@ export function PatientList({ user }: { user: any }) {
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-300">
+          <div className="bg-bg-secondary dark:bg-slate-900 rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-border dark:border-slate-800 animate-in zoom-in-95 duration-300">
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-600 dark:text-red-400">
                 <AlertTriangle className="w-8 h-8" />
               </div>
               
               <div className="space-y-1">
-                <h3 className="text-xl font-bold text-on-surface font-headline">Excluir Cadastro?</h3>
+                <h3 className="text-xl font-semibold text-on-surface font-headline">Excluir Cadastro?</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                   Esta ação é irreversível. Todos os dados do paciente e seu histórico de visitas serão removidos permanentemente.
                 </p>
@@ -612,7 +621,7 @@ export function PatientList({ user }: { user: any }) {
                 <button 
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="w-full py-3 bg-red-600 text-white rounded-xl font-bold shadow-sm hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full py-3 bg-red-600 text-white rounded-xl font-semibold shadow-sm hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {deleting ? (
                     <>
@@ -626,7 +635,7 @@ export function PatientList({ user }: { user: any }) {
                 <button 
                   onClick={() => setDeleteConfirm(null)}
                   disabled={deleting}
-                  className="w-full py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors disabled:opacity-50"
+                  className="w-full py-3 bg-slate-100 text-slate-600 rounded-xl font-semibold hover:bg-slate-200 transition-colors disabled:opacity-50"
                 >
                   Cancelar
                 </button>

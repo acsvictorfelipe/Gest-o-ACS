@@ -25,8 +25,8 @@ export const StatCard: React.FC<StatCardProps> = ({
   return (
     <Card className={cn("p-6 flex items-center justify-between group", className)}>
       <div className="relative z-10">
-        <p className="text-xs uppercase text-slate-400 font-bold tracking-wider mb-1">{label}</p>
-        <h4 className="text-3xl font-bold text-slate-900 dark:text-white">{value}</h4>
+        <p className="text-xs uppercase text-text-muted font-bold tracking-wider mb-1">{label}</p>
+        <h4 className="text-3xl font-bold text-text-primary dark:text-white">{value}</h4>
       </div>
       <div className={cn(
         "relative z-10 p-3 rounded-xl transition-colors duration-300",

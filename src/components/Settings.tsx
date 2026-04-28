@@ -91,8 +91,8 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
       <header className="flex flex-col gap-1">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Configurações</h2>
-        <p className="text-sm text-slate-500 font-medium tracking-tight">Gerencie suas informações de perfil e segurança.</p>
+        <h2 className="text-2xl font-semibold tracking-tight text-text-primary dark:text-white">Configurações</h2>
+        <p className="text-sm text-text-secondary font-medium tracking-tight">Gerencie suas informações de perfil e segurança.</p>
       </header>
 
       {message && (
@@ -102,50 +102,50 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
             : 'bg-red-50 text-red-700 border border-red-100'
         }`}>
           {message.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-          <p className="text-xs font-bold uppercase tracking-tight">{message.text}</p>
+          <p className="text-xs font-semibold uppercase tracking-tight">{message.text}</p>
         </div>
       )}
 
       <form onSubmit={handleUpdateProfile} className="space-y-6">
         {/* Perfil Profissional */}
-        <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
-          <div className="flex items-center gap-2 text-slate-900 dark:text-white">
+        <section className="bg-bg-secondary dark:bg-slate-900 rounded-xl border border-border dark:border-slate-800 p-6 shadow-sm space-y-6">
+          <div className="flex items-center gap-2 text-text-primary dark:text-white">
             <User className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-bold uppercase tracking-tight">Perfil Profissional</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-tight">Perfil Profissional</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Nome Completo</label>
+              <label className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Nome Completo</label>
               <input 
                 type="text" 
                 value={formData.name || ''}
                 onChange={e => setFormData({...formData, name: e.target.value})}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-slate-900 dark:text-white"
+                className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-text-primary dark:text-white"
                 placeholder="Seu nome"
               />
             </div>
 
             {user.role === 'Agente' && (
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Microárea</label>
+                <label className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Microárea</label>
                 <input 
                   type="text" 
                   value={formData.microarea || ''}
                   onChange={e => setFormData({...formData, microarea: e.target.value})}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-slate-900 dark:text-white"
+                  className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-text-primary dark:text-white"
                   placeholder="Ex: 001"
                 />
               </div>
             )}
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Cargo / Função</label>
+              <label className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Cargo / Função</label>
               <select 
                 value={formData.role}
                 onChange={e => setFormData({...formData, role: e.target.value})}
                 disabled={user.role !== 'Administrador'}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-slate-900 dark:text-white appearance-none disabled:opacity-50"
+                className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-text-primary dark:text-white appearance-none disabled:opacity-50"
               >
                 <option value="Agente">Agente Comunitário</option>
                 <option value="Gestor">Gestor de Área</option>
@@ -155,7 +155,7 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
 
             {(user.role === 'Agente' || user.role === 'Gestor') && (
               <div className="md:col-span-2 space-y-3">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Cor de Identificação</label>
+                <label className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Cor de Identificação</label>
                 <div className="flex flex-wrap gap-2">
                   {colors.map((c) => (
                     <button
@@ -178,42 +178,42 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
         </section>
 
         {/* Segurança */}
-        <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
-          <div className="flex items-center gap-2 text-slate-900 dark:text-white">
+        <section className="bg-bg-secondary dark:bg-slate-900 rounded-xl border border-border dark:border-slate-800 p-6 shadow-sm space-y-6">
+          <div className="flex items-center gap-2 text-text-primary dark:text-white">
             <Lock className="w-4 h-4 text-orange-500" />
-            <h3 className="text-sm font-bold uppercase tracking-tight">Segurança</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-tight">Segurança</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
             <div className="md:col-span-2 space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Email</label>
+              <label className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Email</label>
               <input 
                 type="email" 
                 value={formData.email || ''}
                 onChange={e => setFormData({...formData, email: e.target.value})}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-slate-900 dark:text-white"
+                className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-text-primary dark:text-white"
                 placeholder="seu@email.com"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Nova Senha</label>
+              <label className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Nova Senha</label>
               <input 
                 type="password" 
                 value={formData.newPassword || ''}
                 onChange={e => setFormData({...formData, newPassword: e.target.value})}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-slate-900 dark:text-white"
+                className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-text-primary dark:text-white"
                 placeholder="Opcional"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Confirmar Senha</label>
+              <label className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Confirmar Senha</label>
               <input 
                 type="password" 
                 value={formData.confirmPassword || ''}
                 onChange={e => setFormData({...formData, confirmPassword: e.target.value})}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-slate-900 dark:text-white"
+                className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-text-primary dark:text-white"
               />
             </div>
           </div>
@@ -223,7 +223,7 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-2 px-8 py-2.5 bg-primary text-white rounded-lg font-bold shadow-sm hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 text-sm"
+            className="flex items-center gap-2 px-8 py-2.5 bg-primary text-white rounded-lg font-semibold shadow-sm hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 text-sm"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Salvar Alterações

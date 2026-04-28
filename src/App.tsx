@@ -18,11 +18,20 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'light' || saved === 'dark') return saved;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove('dark');
-    root.classList.add('light');
-  }, []);
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
   useEffect(() => {
     // 1. Check current session
@@ -152,7 +161,7 @@ export default function App() {
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
         
         {user ? (
-          <Route element={<Layout user={user} onProfileUpdate={() => fetchProfile(user)} />}>
+          <Route element={<Layout user={user} theme={theme} toggleTheme={toggleTheme} onProfileUpdate={() => fetchProfile(user)} />}>
             <Route path="/" element={<Dashboard user={user} />} />
             <Route path="/pacientes" element={<PatientList user={user} />} />
             <Route path="/domicilios" element={<HouseholdList user={user} />} />

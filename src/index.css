@@ -1,5 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Configuração de Dark Mode para Tailwind v4 (Suporte a Classe) */
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   /* FONTS */
@@ -11,15 +14,15 @@
   --color-primary: #14B8A6;
   --color-primary-foreground: #ffffff;
 
-  /* BACKGROUND */
+  /* BACKGROUND (Default Light) */
   --color-bg-primary: #F8FAFC;
   --color-bg-secondary: #FFFFFF;
   --color-bg-tertiary: #FFFFFF;
 
-  /* TEXT */
+  /* TEXT (Default Light) */
   --color-text-primary: #0F172A;
-  --color-text-secondary: #64748B;
-  --color-text-muted: #94A3B8;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748B;
 
   /* BORDER */
   --color-border: #E2E8F0;
@@ -40,6 +43,22 @@
 }
 
 @layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  /* Overrides para Modo Escuro via Classe */
+  :root.dark, .dark {
+    color-scheme: dark;
+    --color-bg-primary: #020617;
+    --color-bg-secondary: #0F172A;
+    --color-bg-tertiary: #020617;
+    --color-text-primary: #F1F5F9;
+    --color-text-secondary: #94A3B8;
+    --color-text-muted: #64748B;
+    --color-border: #1E293B;
+  }
+
   body {
     background-color: var(--color-bg-primary);
     color: var(--color-text-primary);
@@ -64,40 +83,17 @@
   ::-webkit-scrollbar-thumb:hover {
     background: var(--color-text-muted);
   }
+
+  input::placeholder, textarea::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.8;
+  }
 }
 
-/* UTILITÁRIOS */
 @layer utilities {
-  .bg-primary {
-    background-color: var(--color-primary);
-  }
-
-  .bg-card {
-    background-color: var(--color-bg-secondary);
-  }
-
-  .text-primary {
-    color: var(--color-text-primary);
-  }
-
-  .text-secondary {
-    color: var(--color-text-secondary);
-  }
-
-  .border-default {
-    border-color: var(--color-border);
-  }
-}
-
-/* DARK MODE */
-.dark {
-  --color-bg-primary: #020617;
-  --color-bg-secondary: #0F172A;
-  --color-bg-tertiary: #020617;
-
-  --color-text-primary: #F1F5F9;
-  --color-text-secondary: #94A3B8;
-  --color-text-muted: #64748B;
-
-  --color-border: #1E293B;
+  .bg-primary { background-color: var(--color-primary); }
+  .bg-card { background-color: var(--color-bg-secondary); }
+  .text-primary { color: var(--color-text-primary); }
+  .text-secondary { color: var(--color-text-secondary); }
+  .border-default { border-color: var(--color-border); }
 }

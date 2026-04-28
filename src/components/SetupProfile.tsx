@@ -59,29 +59,29 @@ export function SetupProfile({ user, onComplete }: { user: any, onComplete: () =
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+    <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="w-full max-w-lg bg-bg-secondary dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
         <div className="p-10 space-y-8">
           <div className="text-center space-y-2">
             <div className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Palette className="w-8 h-8" />
             </div>
             <h2 className="text-2xl font-extrabold text-primary font-headline">Configuração Inicial</h2>
-            <p className="text-slate-500 text-sm">Olá, {user.name}! Antes de começar, precisamos configurar seu perfil de trabalho.</p>
+            <p className="text-text-secondary text-sm">Olá, {user.name}! Antes de começar, precisamos configurar seu perfil de trabalho.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Seu Nome Completo</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted ml-1">Seu Nome Completo</label>
                 <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
                   <input 
                     required
                     type="text" 
                     value={formData.name || ''}
                     onChange={e => setFormData({...formData, name: e.target.value})}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all"
+                    className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-2xl py-4 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all"
                     placeholder="Como você quer ser chamado?"
                   />
                 </div>
@@ -89,24 +89,24 @@ export function SetupProfile({ user, onComplete }: { user: any, onComplete: () =
 
               {user.role === 'Agente' && (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Sua Microárea</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted ml-1">Sua Microárea</label>
                   <div className="relative">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
                     <input 
                       required
                       type="text" 
                       value={formData.microarea || ''}
                       onChange={e => setFormData({...formData, microarea: e.target.value})}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-2xl py-4 pl-12 pr-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all"
                       placeholder="Ex: 001"
                     />
                   </div>
-                  <p className="text-[10px] text-slate-400 ml-1">Isso define quais pacientes você verá no sistema.</p>
+                  <p className="text-[10px] text-text-muted ml-1">Isso define quais pacientes você verá no sistema.</p>
                 </div>
               )}
 
               <div className="space-y-4">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted ml-1 flex items-center gap-2">
                   <Palette className="w-3 h-3" />
                   Cor da sua Área
                 </label>
@@ -130,7 +130,7 @@ export function SetupProfile({ user, onComplete }: { user: any, onComplete: () =
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] text-center text-slate-400">
+                <p className="text-[10px] text-center text-text-muted">
                   {user.role === 'Gestor' 
                     ? 'Como Gestor, você verá todos os dados desta cor.' 
                     : 'Escolha a cor que identifica sua microárea.'}
@@ -151,7 +151,7 @@ export function SetupProfile({ user, onComplete }: { user: any, onComplete: () =
               <button
                 type="button"
                 onClick={() => supabase.auth.signOut()}
-                className="w-full py-3 text-slate-400 hover:text-slate-600 text-xs font-bold transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 text-text-muted hover:text-text-secondary text-xs font-bold transition-all flex items-center justify-center gap-2"
               >
                 <LogOut className="w-4 h-4" />
                 Sair do Sistema

@@ -2,38 +2,21 @@ import * as React from 'react';
 import { supabase } from '../lib/supabase';
 import { 
   Baby, 
-  Heart, 
-  AlertCircle, 
   Calendar as CalendarIcon,
-  RefreshCw,
-  LogOut,
-  CalendarDays,
   ChevronRight,
-  Smile,
-  Users,
-  Clock,
-  Droplets,
-  Search,
-  ShieldAlert,
   TrendingUp,
   TrendingDown,
   Eye,
-  UserCheck,
-  UserCog,
-  BarChart3,
-  Syringe,
-  CheckCircle,
-  HeartPulse
+  Bed
 } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
-import { getAgeInMonths, VACCINE_SCHEDULE } from '../lib/dateUtils';
+import { useNavigate } from 'react-router-dom';
+import { getAgeInMonths, VACCINE_SCHEDULE, formatDate, calculateAge } from '../lib/dateUtils';
 import { Badge } from './Badge';
-import { Card } from './Card';
 import { PendingCalendar } from './PendingCalendar';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import {
   LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area
+  XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
 } from 'recharts';
 import { UI_CONFIG } from '../constants';
 
@@ -55,7 +38,6 @@ export function Dashboard({ user }: { user: any }) {
   });
   const [allPatients, setAllPatients] = React.useState<any[]>([]);
   const [recentPatients, setRecentPatients] = React.useState<any[]>([]);
-  const [pendingChildList, setPendingChildList] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -108,15 +90,12 @@ export function Dashboard({ user }: { user: any }) {
           adultos: 0,
           hipertensos: 0, 
           diabeticos: 0, 
+          saudeMental: 0,
           pendingVisits: 0, 
           lateVaccines: 0, 
           childVisitAlerts: 0 
         };
         
-        const pendingChildren: any[] = [];
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
         patientsData.forEach(p => {
           const clinical = p.clinical_data || {};
           const categories = p.categories || [];
@@ -133,29 +112,12 @@ export function Dashboard({ user }: { user: any }) {
               newStats.criancas2y++;
             }
             
-            if (p.birth_date && ageInMonths <= 6) {
+            if (p.birth_date && ageInMonths === 6) {
               const visited6m = clinical.crianca?.visita6meses === 'Sim';
-              const lastVisitAt = p.last_visit_at ? new Date(p.last_visit_at) : null;
-              const hasNoRecentVisit = !lastVisitAt || lastVisitAt < thirtyDaysAgo;
-
-              if (hasNoRecentVisit || !visited6m) {
+              if (!visited6m) {
                 newStats.childVisitAlerts++;
-                pendingChildren.push({
-                  id: p.id,
-                  name: p.name,
-                  age: ageInMonths,
-                  last_visit: p.last_visit_at
-                });
               }
             }
-            
-            const vaccines = clinical.crianca?.vacinas || {};
-            const dueVaccines = VACCINE_SCHEDULE
-              .filter(group => group.age <= ageInMonths)
-              .flatMap(group => group.vaccines);
-              
-            const hasPendingVaccine = dueVaccines.some(v => vaccines[v.id] !== 'Sim');
-            if (hasPendingVaccine) newStats.lateVaccines++;
           }
 
           const isDiabetico = clinical.chronic?.diabetes === 'Sim' || clinical.gestante?.diabetes === 'Sim';
@@ -168,20 +130,20 @@ export function Dashboard({ user }: { user: any }) {
           if (categories.includes('AcamadoDomiciliado')) newStats.acamados++;
           if (categories.includes('Idoso')) newStats.idosos++;
           if (categories.includes('Adulto')) newStats.adultos++;
+          if (categories.includes('SaudeMental') || categories.includes('Saúde Mental')) newStats.saudeMental++;
         });
 
         setStats(newStats);
-        setPendingChildList(pendingChildren);
-        setRecentPatients(patientsData.sort((a,b) => new Date(b.last_visit_at || 0).getTime() - new Date(a.last_visit_at || 0).getTime()).slice(0, 7));
+        setRecentPatients(patientsData.sort((a,b) => new Date(b.last_visit_at || 0).getTime() - new Date(a.last_visit_at || 0).getTime()).slice(0, 5));
 
       } catch (error) {
-        console.error("Dashboard data error:", error);
+        console.error("Dashboard error:", error);
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [user.microarea, user.id, user.role, user.color]);
+  }, [user]);
 
   const statCards = [
     {
@@ -191,7 +153,7 @@ export function Dashboard({ user }: { user: any }) {
       label: 'Cidadãos',
       sublabel: 'Total cadastrados',
       trend: { direction: 'up', value: '8% este mês' },
-      color: UI_CONFIG.categorias.outros.color,
+      config: UI_CONFIG.categorias.outros,
       filter: 'all'
     },
     {
@@ -201,7 +163,7 @@ export function Dashboard({ user }: { user: any }) {
       label: 'GESTANTES',
       sublabel: 'Acompanhadas',
       trend: { direction: 'up', value: '2 este mês' },
-      color: UI_CONFIG.categorias.gestantes.color,
+      config: UI_CONFIG.categorias.gestantes,
       filter: 'gestantes'
     },
     {
@@ -211,7 +173,7 @@ export function Dashboard({ user }: { user: any }) {
       label: 'CRIANÇAS < 2 ANOS',
       sublabel: 'Em acompanhamento',
       trend: { direction: 'up', value: '12 este mês' },
-      color: UI_CONFIG.categorias.criancas.color,
+      config: UI_CONFIG.categorias.criancas,
       filter: 'criancas'
     },
     {
@@ -221,7 +183,7 @@ export function Dashboard({ user }: { user: any }) {
       label: 'IDOSOS',
       sublabel: 'Em acompanhamento',
       trend: { direction: 'up', value: '12 este mês' },
-      color: UI_CONFIG.categorias.idosos.color,
+      config: UI_CONFIG.categorias.idosos,
       filter: 'idosos'
     },
     {
@@ -231,7 +193,7 @@ export function Dashboard({ user }: { user: any }) {
       label: 'HIPERTENSOS',
       sublabel: 'Em acompanhamento',
       trend: { direction: 'up', value: '16 este mês' },
-      color: UI_CONFIG.categorias.hipertensos.color,
+      config: UI_CONFIG.categorias.hipertensos,
       filter: 'hipertensos'
     },
     {
@@ -241,18 +203,18 @@ export function Dashboard({ user }: { user: any }) {
       label: 'DIABÉTICOS',
       sublabel: 'Em acompanhamento',
       trend: { direction: 'up', value: '7 este mês' },
-      color: UI_CONFIG.categorias.diabeticos.color,
+      config: UI_CONFIG.categorias.diabeticos,
       filter: 'diabeticos'
     },
     {
-      id: 'vacinas',
-      icon: UI_CONFIG.status.alerta.icon,
-      value: stats.lateVaccines,
-      label: 'VACINAS ATRASADAS',
-      sublabel: 'Crianças',
-      trend: { direction: 'down', value: '5 este mês' },
-      color: UI_CONFIG.status.alerta.color,
-      filter: 'vaccine'
+      id: 'acamados',
+      icon: Bed,
+      value: stats.acamados,
+      label: 'ACAMADOS',
+      sublabel: 'Domiciliados',
+      trend: { direction: 'up', value: '1 este mês' },
+      config: UI_CONFIG.categorias.acamados,
+      filter: 'acamados'
     }
   ];
 
@@ -267,68 +229,77 @@ export function Dashboard({ user }: { user: any }) {
   ];
 
   const distribuicaoData = [
-    { name: 'Crianças', value: stats.criancasTotal, color: UI_CONFIG.categorias.criancas.color },
-    { name: 'Gestantes', value: stats.gestantes, color: UI_CONFIG.categorias.gestantes.color },
-    { name: 'Idosos', value: stats.idosos, color: UI_CONFIG.categorias.idosos.color },
-    { name: 'Hipertensos', value: stats.hipertensos, color: UI_CONFIG.categorias.hipertensos.color },
-    { name: 'Diabéticos', value: stats.diabeticos, color: UI_CONFIG.categorias.diabeticos.color },
-    { name: 'Outros', value: stats.totalPatients - (stats.criancasTotal + stats.gestantes + stats.idosos + stats.hipertensos + stats.diabeticos), color: UI_CONFIG.categorias.outros.color },
-  ].filter(d => d.value >= 0);
+    { name: 'Crianças', value: stats.criancasTotal, color: UI_CONFIG.categorias.criancas.primary },
+    { name: 'Gestantes', value: stats.gestantes, color: UI_CONFIG.categorias.gestantes.primary },
+    { name: 'Idosos', value: stats.idosos, color: UI_CONFIG.categorias.idosos.primary },
+    { name: 'Hipertensos', value: stats.hipertensos, color: UI_CONFIG.categorias.hipertensos.primary },
+    { name: 'Diabéticos', value: stats.diabeticos, color: UI_CONFIG.categorias.diabeticos.primary },
+    { name: 'Adultos', value: stats.adultos, color: UI_CONFIG.categorias.adultos.primary },
+    { name: 'Saúde Mental', value: stats.saudeMental, color: UI_CONFIG.categorias.saudeMental.primary },
+    { name: 'Acamados', value: stats.acamados, color: UI_CONFIG.categorias.acamados.primary },
+    { name: 'Outros', value: stats.totalPatients - (stats.criancasTotal + stats.gestantes + stats.idosos + stats.hipertensos + stats.diabeticos + stats.adultos + stats.saudeMental + stats.acamados), color: UI_CONFIG.categorias.outros.primary },
+  ].filter(d => d.value > 0);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center gap-6">
-          <div className="w-12 h-12 border-4 border-[#14B8A6]/20 border-t-[#14B8A6] rounded-full animate-spin" />
-          <p className="text-slate-500 font-black uppercase tracking-[0.2em] text-xs">Carregando Inteligência...</p>
-        </div>
-      </div>
-    );
-  }
+  const getCategoryStyle = (category: string) => {
+    const cat = category === 'Diabetico' || category === 'Diabético' ? UI_CONFIG.categorias.diabeticos :
+                category === 'Idoso' ? UI_CONFIG.categorias.idosos :
+                category === 'Hipertenso' ? UI_CONFIG.categorias.hipertensos :
+                category === 'Criança' ? UI_CONFIG.categorias.criancas :
+                category === 'Gestante' ? UI_CONFIG.categorias.gestantes :
+                category === 'Adulto' ? UI_CONFIG.categorias.adultos :
+                category === 'Saúde Mental' ? UI_CONFIG.categorias.saudeMental :
+                category === 'AcamadoDomiciliado' || category === 'Acamado / Domiciliado' ? UI_CONFIG.categorias.acamados :
+                UI_CONFIG.categorias.outros;
+    
+    return { backgroundColor: cat.primary, color: '#fff', border: 'none' };
+  };
+
+  const getAvatarStyle = (category: string) => {
+    const cat = category === 'Diabetico' || category === 'Diabético' ? UI_CONFIG.categorias.diabeticos :
+                category === 'Idoso' ? UI_CONFIG.categorias.idosos :
+                category === 'Hipertenso' ? UI_CONFIG.categorias.hipertensos :
+                category === 'Criança' ? UI_CONFIG.categorias.criancas :
+                category === 'Gestante' ? UI_CONFIG.categorias.gestantes :
+                category === 'Adulto' ? UI_CONFIG.categorias.adultos :
+                category === 'Saúde Mental' ? UI_CONFIG.categorias.saudeMental :
+                category === 'AcamadoDomiciliado' ? UI_CONFIG.categorias.acamados :
+                UI_CONFIG.categorias.outros;
+    
+    return { backgroundColor: cat.primary, color: '#fff' };
+  };
+
+  if (loading) return null;
 
   return (
-    <div className="space-y-4 pb-10 relative">
-      {/* 1. Header Info */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
-      >
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tighter">Painel de Controle</h1>
-          <p className="text-slate-500 font-bold uppercase tracking-widest text-[11px] mt-1.5 opacity-60">Status Geral da Microárea {user.microarea}</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <Badge variant="success" className="px-4 py-2 text-[10px] font-black rounded-xl border border-[#10B981]/20">SISTEMA ONLINE</Badge>
-        </div>
-      </motion.div>
-
-      {/* 2. Stat Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+    <div className="space-y-6 relative">
+      {/* 1. Stat Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
         {statCards.map((stat, i) => (
           <motion.div
             key={stat.id}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
             onClick={() => navigate(`/pacientes?filter=${stat.filter}`)}
-            className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm shadow-slate-100/50 cursor-pointer group relative overflow-hidden flex flex-col"
+            className="bg-bg-secondary rounded-3xl p-5 border border-border shadow-sm cursor-pointer group relative overflow-hidden flex flex-col transition-all hover:shadow-md"
           >
-            <div className="absolute top-0 left-0 w-full h-[3px]" style={{ backgroundColor: stat.color }} />
+            <div className="absolute top-0 left-0 w-[4px] h-full" style={{ backgroundColor: stat.config.primary }} />
             
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: stat.color }}>
-                <stat.icon className="w-5 h-5" />
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ backgroundColor: stat.config.soft, color: stat.config.primary }}>
+                <stat.icon className="w-6 h-6" />
               </div>
               <div className="flex flex-col">
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{stat.label}</p>
-                <h4 className="text-2xl font-black text-slate-900 leading-none mt-1">{stat.value.toLocaleString()}</h4>
+                <div className="min-h-[20px] flex items-end">
+                  <p className="text-[10px] text-text-muted font-semibold uppercase tracking-widest leading-tight">{stat.label}</p>
+                </div>
+                <h4 className="text-[32px] font-bold text-text-primary leading-none mt-1">{stat.value}</h4>
               </div>
             </div>
             
             <div className="mt-auto">
-              <p className="text-[11px] text-slate-500 font-medium mb-1.5">{stat.sublabel}</p>
-              <div className={`flex items-center gap-1 text-[11px] font-bold ${
+              <p className="text-[11px] text-text-secondary font-medium mb-1.5">{stat.sublabel}</p>
+              <div className={`flex items-center gap-1 text-[11px] font-semibold ${
                 stat.trend.direction === 'up' ? 'text-teal-600' : 'text-red-500'
               }`}>
                 {stat.trend.direction === 'up' ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
@@ -339,243 +310,205 @@ export function Dashboard({ user }: { user: any }) {
         ))}
       </div>
 
-      {/* 3. Main Content Grid */}
+      {/* 2. Middle Row */}
       <div className="grid grid-cols-12 gap-6">
-        
-        {/* Left: Summary Grid */}
-        <div className="col-span-12 xl:col-span-3 space-y-4">
-           <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm">
-             <h3 className="text-base font-headline font-black text-slate-900 mb-4">Acompanhamento Prioritário</h3>
-             
-             <div className="space-y-3">
-               <div className="p-3.5 rounded-2xl border border-red-100 bg-red-50/30 flex items-center gap-3 relative overflow-hidden group">
-                 <div className="absolute top-0 left-0 w-1 h-full bg-red-500" />
-                 <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white shadow-md shadow-red-500/20">
-                   <Baby className="w-5.5 h-5.5" />
-                 </div>
-                 <div className="flex-1">
-                   <div className="flex items-center justify-between">
-                     <h5 className="text-[13px] font-bold text-slate-900">1 bebê aguardando visita</h5>
-                     <Badge variant="error" className="text-[9px] font-black uppercase">6 MESES</Badge>
-                   </div>
-                   <p className="text-[11px] text-slate-500 mt-0.5">Visita de 6 meses pendente</p>
-                 </div>
-               </div>
+        {/* Acompanhamento Prioritário */}
+        <div className="col-span-12 xl:col-span-3">
+           <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm h-full flex flex-col">
+             <h3 className="text-base font-bold text-text-primary mb-5 uppercase tracking-tight">Acompanhamento Prioritário</h3>
+             <div className="space-y-4 flex-1">
+                <div onClick={() => navigate('/pacientes?filter=pending_6m')} className="p-4 rounded-[24px] border border-red-100 bg-red-50/20 flex items-center gap-4 relative overflow-hidden group hover:bg-red-50/40 transition-colors cursor-pointer transition-all">
+                  <div className="absolute top-0 left-0 w-[4px] h-full bg-red-500" />
+                  <div className="w-11 h-11 rounded-full bg-red-500 flex items-center justify-center text-white shadow-lg shadow-red-500/20 shrink-0">
+                    <Baby className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <h5 className="text-[14px] font-semibold text-text-primary leading-none">{stats.childVisitAlerts} {stats.childVisitAlerts === 1 ? 'bebê aguardando visita' : 'bebês aguardando visita'}</h5>
+                      <Badge variant="error" className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full">6 MESES</Badge>
+                    </div>
+                    <p className="text-[12px] text-text-secondary font-medium">Visita de 6 meses pendente</p>
+                  </div>
+                </div>
 
-               <div className="p-3.5 rounded-2xl border border-orange-100 bg-orange-50/30 flex items-center gap-3 relative overflow-hidden group">
-                 <div className="absolute top-0 left-0 w-1 h-full bg-orange-500" />
-                 <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/20">
-                   <CalendarIcon className="w-5.5 h-5.5" />
-                 </div>
-                 <div className="flex-1">
-                   <div className="flex items-center justify-between">
-                     <h5 className="text-[13px] font-bold text-slate-900">{stats.pendingVisits} visitas em atraso</h5>
-                     <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center text-white text-[10px] font-black">{stats.pendingVisits}</div>
-                   </div>
-                   <p className="text-[11px] text-slate-500 mt-0.5">Pacientes sem registro nos últimos 30 dias</p>
-                 </div>
-               </div>
+                <div onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} className="p-4 rounded-[24px] border border-orange-100 bg-orange-50/20 flex items-center gap-4 relative overflow-hidden group hover:bg-orange-50/40 transition-colors cursor-pointer transition-all">
+                  <div className="absolute top-0 left-0 w-[4px] h-full bg-orange-500" />
+                  <div className="w-11 h-11 rounded-full bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20 shrink-0">
+                    <CalendarIcon className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <h5 className="text-[14px] font-semibold text-text-primary leading-none">{stats.pendingVisits} visitas em atraso</h5>
+                      <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center text-white text-[11px] font-bold shadow-sm">{stats.pendingVisits}</div>
+                    </div>
+                    <p className="text-[12px] text-text-secondary font-medium">Pacientes sem registro nos últimos 30 dias</p>
+                  </div>
+                </div>
              </div>
-
-             <button 
-               onClick={() => navigate('/pacientes?filter=visitas_atrasadas')}
-               className="w-full mt-4 py-2.5 border border-slate-100 rounded-xl text-teal-600 font-bold text-[12px] flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
-             >
-               Ver todos os pendentes
-               <ChevronRight className="w-4 h-4" />
+             <button onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} className="w-full mt-6 py-3 border border-border rounded-2xl text-teal-600 font-semibold text-[13px] flex items-center justify-center gap-2 hover:bg-bg-primary transition-colors">
+               Ver todos os pendentes <ChevronRight className="w-4 h-4" />
              </button>
            </div>
         </div>
 
-        {/* Middle: Week Stats */}
+        {/* Visitas Semanais */}
         <div className="col-span-12 xl:col-span-5">
-           <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm h-full flex flex-col">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-base font-headline font-black text-slate-900">Visitas por Semana</h3>
-                </div>
-                <select className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-[11px] font-bold text-slate-600">
+           <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm h-full flex flex-col">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-base font-bold text-text-primary uppercase tracking-tight">Visitas por Semana</h3>
+                <select className="bg-bg-primary border border-border rounded-xl px-4 py-2 text-[12px] font-semibold text-text-secondary outline-none">
                   <option>Últimos 7 dias</option>
                 </select>
               </div>
-
-              <div className="flex-1 min-h-[220px]">
+              <div className="flex-1 min-h-[200px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis 
-                      dataKey="name" 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 'bold' }} 
-                      dy={10}
-                    />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                    <RechartsTooltip 
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                      labelStyle={{ fontWeight: 'black', color: '#1e293b', marginBottom: '4px' }}
-                    />
-                    <Line type="monotone" dataKey="visitas" name="Realizadas" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
-                    <Line type="monotone" dataKey="metas" name="Pendentes" stroke="#ef4444" strokeWidth={3} dot={{ r: 4, fill: '#ef4444', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--color-text-muted)', fontSize: 11, fontWeight: 'bold' }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
+                    <RechartsTooltip contentStyle={{ borderRadius: '16px', backgroundColor: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                    <Line type="monotone" dataKey="visitas" stroke="#10b981" strokeWidth={4} dot={{ r: 6, fill: '#10b981', strokeWidth: 3, stroke: '#fff' }} />
+                    <Line type="monotone" dataKey="metas" stroke="#ef4444" strokeWidth={4} dot={{ r: 6, fill: '#ef4444', strokeWidth: 3, stroke: '#fff' }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-
-              <div className="flex justify-center gap-6 mt-6">
-                 <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-teal-500" />
-                    <span className="text-[11px] font-bold text-slate-500">Realizadas</span>
-                 </div>
-                 <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                    <span className="text-[11px] font-bold text-slate-500">Pendentes</span>
-                 </div>
-              </div>
-
-              <button className="w-full mt-4 py-2.5 border border-slate-100 rounded-xl text-teal-600 font-bold text-[12px] flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors">
-                Ver relatório completo
-                <ChevronRight className="w-4 h-4" />
-              </button>
            </div>
         </div>
 
-        {/* Right: Pie Chart */}
+        {/* Distribuição */}
         <div className="col-span-12 xl:col-span-4">
-           <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm h-full flex flex-col">
-             <h3 className="text-base font-headline font-black text-slate-900 mb-4">Distribuição por Categoria</h3>
-             
-             <div className="flex-1 flex flex-col lg:flex-row items-center gap-6">
-                <div className="relative w-48 h-48 sm:w-56 sm:h-56">
+           <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm h-full flex flex-col">
+             <h3 className="text-base font-bold text-text-primary mb-6 uppercase tracking-tight">Distribuição por Categoria</h3>
+             <div className="flex-1 flex flex-col lg:flex-row items-center gap-8">
+                <div className="relative w-44 h-44 shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie
-                        data={distribuicaoData}
-                        innerRadius={65}
-                        outerRadius={95}
-                        paddingAngle={5}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        {distribuicaoData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
+                      <Pie data={distribuicaoData} innerRadius={60} outerRadius={85} paddingAngle={5} dataKey="value" stroke="none">
+                        {distribuicaoData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
                       </Pie>
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter">{stats.totalPatients.toLocaleString()}</h2>
-                    <p className="text-[10px] font-bold text-slate-400">Total</p>
+                    <h2 className="text-2xl font-bold text-text-primary leading-none">{stats.totalPatients}</h2>
+                    <p className="text-[10px] font-semibold text-text-muted uppercase tracking-widest mt-1">Total</p>
                   </div>
                 </div>
-
-                <div className="flex-1 space-y-3 w-full">
+                <div className="flex-1 space-y-1.5 w-full">
                   {distribuicaoData.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-[11px] font-bold">
+                    <div key={idx} className="flex items-center justify-between text-[11px] font-semibold">
                       <div className="flex items-center gap-2.5">
                         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="text-slate-600">{item.name}</span>
+                        <span className="text-slate-600 truncate">{item.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-slate-900">{item.value}</span>
-                        <span className="text-slate-400">({Math.round((item.value / stats.totalPatients) * 100)}%)</span>
+                        <span className="text-text-primary">{item.value}</span>
+                        <span className="text-text-muted font-medium">({stats.totalPatients > 0 ? Math.round((item.value / stats.totalPatients) * 100) : 0}%)</span>
                       </div>
                     </div>
                   ))}
                 </div>
              </div>
-
-             <button className="w-full mt-4 py-2.5 border border-slate-100 rounded-xl text-teal-600 font-bold text-[12px] flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors">
-                Ver indicadores
-                <ChevronRight className="w-4 h-4" />
-              </button>
            </div>
         </div>
       </div>
 
-      {/* 4. Table and Calendar Grid */}
-      <div className="grid grid-cols-12 gap-4 pb-6">
+      {/* 3. Table and Calendar */}
+      <div className="grid grid-cols-12 gap-6 pb-6">
         {/* Table */}
         <div className="col-span-12 xl:col-span-8">
-           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full">
-              <div className="p-5 border-b border-slate-50">
-                <h3 className="text-base font-headline font-black text-slate-900">Últimos Pacientes Visitados</h3>
+           <div className="bg-bg-secondary rounded-[32px] border border-border shadow-sm overflow-hidden flex flex-col">
+              <div className="p-4 border-b border-slate-50 flex items-center justify-between bg-bg-secondary sticky top-0 z-10">
+                <h3 className="text-base font-bold text-text-primary tracking-tight">Últimos Pacientes Visitados</h3>
               </div>
-              <div className="flex-1 overflow-x-auto">
-                <table className="w-full text-left">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50/50">
-                      <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Paciente</th>
-                      <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Categoria</th>
-                      <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Idade</th>
-                      <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Última Visita</th>
-                      <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Situação</th>
-                      <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Ações</th>
+                    <tr className="bg-bg-primary/50">
+                      <th className="px-6 py-4 text-[11px] font-bold text-text-muted uppercase tracking-widest border-b border-border">Paciente</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-text-muted uppercase tracking-widest border-b border-border">Categoria</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-text-muted uppercase tracking-widest border-b border-border">Idade</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-text-muted uppercase tracking-widest border-b border-border">Última Visita</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-text-muted uppercase tracking-widest border-b border-border">Situação</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-text-muted uppercase tracking-widest border-b border-border text-center">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {recentPatients.map((p, i) => (
-                      <tr key={i} className="hover:bg-slate-50 transition-all group cursor-pointer" onClick={() => navigate(`/domicilio/${p.household_id || ''}`)}>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-4">
-                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-black text-[11px] shadow-sm`} style={{ backgroundColor: distribuicaoData.find(d => p.categories?.includes(d.name.slice(0, -1)))?.color || '#94A3B8' }}>
-                              {p.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                    {recentPatients.map((p, i) => {
+                      const isAtrazo = !(p.last_visit_at && new Date(p.last_visit_at) > thirtyDaysAgo);
+                      return (
+                        <tr key={i} className="hover:bg-bg-primary/80 transition-colors group">
+                          <td className="px-6 py-2">
+                            <div className="flex items-center gap-4">
+                              <div 
+                                className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-[12px] shadow-md"
+                                style={getAvatarStyle(p.categories?.[0] || 'Outros')}
+                              >
+                                {p.name?.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                 <p className="text-[13px] font-semibold text-text-primary truncate uppercase leading-tight">{p.name}</p>
+                                 <p className="text-[10px] text-text-muted font-semibold mt-0.5 uppercase tracking-wider">{p.cns || '000 0000 0000 0000'}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-[13px] font-bold text-slate-900 leading-tight group-hover:text-teal-600 transition-colors uppercase">{p.name}</p>
-                              <p className="text-[11px] text-slate-400 font-medium tracking-tight mt-0.5">{p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}</p>
+                          </td>
+                          <td className="px-6 py-2">
+                             <div className="flex flex-wrap gap-1.5">
+                               {p.categories?.slice(0, 2).map((c: string) => (
+                                 <span 
+                                   key={c} 
+                                   className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-lg shadow-sm"
+                                   style={getCategoryStyle(c)}
+                                 >
+                                   {c}
+                                 </span>
+                               ))}
+                             </div>
+                          </td>
+                          <td className="px-6 py-2 text-[12px] font-semibold text-slate-600">
+                             {p.birth_date ? calculateAge(p.birth_date) : '--'}
+                          </td>
+                          <td className="px-6 py-2 text-[12px] font-semibold text-slate-600">
+                             {p.last_visit_at ? formatDate(p.last_visit_at) : '--'}
+                          </td>
+                          <td className="px-6 py-2">
+                            <div className={`inline-flex items-center gap-2 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase ${
+                              !isAtrazo ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-orange-50 text-orange-600 border border-orange-100'
+                            }`}>
+                              {!isAtrazo ? 'Em dia' : 'Atraso'}
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                           <div className="flex flex-wrap gap-1.5">
-                             {p.categories?.slice(0, 2).map((c: string) => (
-                               <span key={c} className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md" style={{ backgroundColor: distribuicaoData.find(d => c.includes(d.name.slice(0, -1)))?.color || '#94A3B8', color: '#fff' }}>
-                                 {c}
-                               </span>
-                             ))}
-                           </div>
-                        </td>
-                        <td className="px-6 py-4 text-[12px] font-bold text-slate-600">
-                          {p.birth_date ? `${Math.floor(getAgeInMonths(p.birth_date)/12)} anos` : '--'}
-                        </td>
-                        <td className="px-6 py-4 text-[12px] font-bold text-slate-600">
-                          {p.last_visit_at ? new Date(p.last_visit_at).toLocaleDateString('pt-BR') : '--'}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${
-                            p.last_visit_at && new Date(p.last_visit_at) > thirtyDaysAgo 
-                              ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
-                              : 'bg-orange-50 text-orange-600 border-orange-100'
-                          }`}>
-                            {p.last_visit_at && new Date(p.last_visit_at) > thirtyDaysAgo ? 'Em dia' : 'Atraso'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <button className="p-2 text-slate-400 hover:text-teal-600 transition-colors">
-                            <Eye className="w-5 h-5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="px-6 py-2 text-center">
+                            <button onClick={() => navigate(`/domicilio/${p.household_id || ''}`)} className="p-1.5 rounded-full border border-border text-text-muted hover:bg-bg-primary hover:text-text-primary transition-all">
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
-              <div className="p-4 bg-slate-50/30 flex justify-center border-t border-slate-50">
-                 <button onClick={() => navigate('/pacientes')} className="text-[12px] font-bold text-teal-600 flex items-center gap-2 hover:underline">
-                   Ver todos os pacientes <ChevronRight className="w-4 h-4" />
-                 </button>
+              <div className="p-4 border-t border-slate-50 flex justify-center">
+                <button 
+                  onClick={() => navigate('/pacientes')} 
+                  className="flex items-center gap-2 text-[14px] font-semibold text-teal-600 hover:text-teal-700 transition-colors"
+                >
+                  Ver todos os pacientes <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
            </div>
         </div>
 
         {/* Calendar */}
         <div className="col-span-12 xl:col-span-4">
-           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full">
-              <div className="p-5 border-b border-slate-50">
-                 <h3 className="text-base font-headline font-black text-slate-900">Calendário de Pendências</h3>
+           <div className="bg-bg-secondary rounded-[32px] border border-border shadow-sm overflow-hidden flex flex-col">
+              <div className="p-4 border-b border-slate-50 bg-bg-secondary sticky top-0 z-10">
+                 <h3 className="text-base font-bold text-text-primary tracking-tight">Calendário de Pendências</h3>
               </div>
-              <div className="flex-1 p-4 bg-slate-50/20">
-                 <PendingCalendar patients={allPatients} />
+              <div className="p-4 flex items-center justify-center">
+                 <div className="w-full">
+                    <PendingCalendar patients={allPatients} />
+                 </div>
               </div>
            </div>
         </div>

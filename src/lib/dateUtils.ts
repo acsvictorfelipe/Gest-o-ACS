@@ -41,6 +41,36 @@ export const VACCINE_SCHEDULE = [
   ]}
 ];
 
+export const vaccineLabels: Record<string, string> = {
+  penta2m: 'Penta 2 Meses',
+  penta4m: 'Penta 4 Meses',
+  penta6m: 'Penta 6 Meses',
+  dtp15m: 'DTP 15 meses',
+  dtp4y: 'DTP 4 anos',
+  hepB: 'Hepatite B',
+  vip2m: 'VIP 2 meses',
+  vip4m: 'VIP 4 meses',
+  vip6m: 'VIP 6 meses',
+  vop15m: 'VOP 15 meses',
+  vop4y: 'VOP 4 anos',
+  scr2m: 'SCR 2 meses',
+  scr15m: 'SCR 15 meses',
+  pneumo2m: 'Pneumo10 2 meses',
+  pneumo4m: 'Pneumo10 4 meses',
+  pneumo12m: 'Pneumo10 12 meses',
+  visitaAcs1: '1ª Visita ACS',
+  visitaAcs2: '2ª Visita ACS',
+  consultaMedicaAnualData: 'Consulta Médica Anual',
+  avaliacaoPes: 'Avaliação dos Pés',
+  consultas6Meses: 'Consultas nos últimos 6 meses',
+  hemoglobinaGlicada: 'Hemoglobina Glicada',
+  vacinaInfluenza: 'Vacina Influenza',
+  exameCitopatologico: 'Exame Citopatológico',
+  saudeSexualReprodutiva: 'Saúde Sexual Reprodutiva',
+  mamografia: 'Mamografia',
+  vacinaHpv: 'Vacina HPV'
+};
+
 export const calculateAge = (birthDate: string) => {
   if (!birthDate) return '';
   const today = new Date();

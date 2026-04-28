@@ -1,365 +1,308 @@
 import * as React from 'react';
-import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
-import { useSync } from '../lib/useSync';
+import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Users, 
-  BarChart3, 
+  Baby, 
+  Calendar, 
   Settings, 
-  RefreshCw, 
-  Calendar as CalendarIcon,
   Bell, 
-  LogOut,
-  Home,
+  LogOut, 
   Menu,
-  UserCog,
-  FileUp,
-  AlertCircle,
-  Baby,
-  UserCheck,
-  ClipboardList,
-  Syringe,
-  Download,
-  Map as MapIcon,
-  Bed,
-  ChevronRight
+  X,
+  ChevronDown,
+  RefreshCw,
+  Heart,
+  Stethoscope,
+  Activity,
+  Home,
+  User,
+  ShieldCheck,
+  CalendarDays,
+  FileText,
+  PieChart,
+  Moon,
+  Sun
 } from 'lucide-react';
-import { SetupProfile } from './SetupProfile';
-import { parseDate, getAgeInMonths, VACCINE_SCHEDULE } from '../lib/dateUtils';
-import { motion, AnimatePresence } from 'motion/react';
+import { supabase } from '../lib/supabase';
+import { getAgeInMonths } from '../lib/dateUtils';
+import { motion } from 'motion/react';
 
-interface LayoutProps {
-  user: any;
-  onProfileUpdate?: () => void;
-}
-
-export function Layout({ user, onProfileUpdate }: LayoutProps) {
-  const location = useLocation();
+export function Layout({ 
+  user, 
+  onProfileUpdate, 
+  theme, 
+  toggleTheme 
+}: { 
+  user: any, 
+  onProfileUpdate?: () => void,
+  theme: 'light' | 'dark',
+  toggleTheme: () => void
+}) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [criticalAlerts, setCriticalAlerts] = React.useState<any[]>([]);
-  const { isSyncing, sync } = useSync();
-  const [showSetup, setShowSetup] = React.useState(false);
-  const [stats, setStats] = React.useState({ pendingVisits: 0, lateVaccines: 0 });
-
-  const handleSetupComplete = () => {
-    setShowSetup(false);
-    if (onProfileUpdate) onProfileUpdate();
-  };
-
-  React.useEffect(() => {
-    if (user.role === 'Agente' && (!user.microarea || !user.color)) {
-      setShowSetup(true);
-    } else if (user.role === 'Gestor' && !user.color) {
-      setShowSetup(true);
-    } else {
-      setShowSetup(false);
-    }
-  }, [user]);
+  const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
 
   React.useEffect(() => {
     const fetchAlerts = async () => {
-      try {
-        const { data: patients, error } = await supabase
-          .from('patients')
-          .select('*');
-        
-        if (error) throw error;
-
-        const alerts: any[] = [];
-        const now = new Date();
-        let pendingV = 0;
-        let lateV = 0;
-
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        patients?.forEach(p => {
-          // Calculate pending visits
-          const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
-          if (!lastVisit || lastVisit < thirtyDaysAgo) {
-            pendingV++;
-          }
-
-          // Calculate late vaccines
-          if (p.categories?.includes('Criança') && !p.categories?.includes('Adulto') && !p.categories?.includes('Idoso')) {
-            const vaccines = p.clinical_data?.crianca?.vacinas || {};
-            const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 99;
-            const dueVaccines = VACCINE_SCHEDULE
-              .filter(group => group.age <= ageInMonths)
-              .flatMap(group => group.vaccines);
-            
-            let hasLate = false;
-            dueVaccines.forEach(v => {
-              if (vaccines[v.id] !== 'Sim') {
-                hasLate = true;
-              }
-            });
-            if (hasLate) lateV++;
-          }
-
-          if (p.categories?.includes('Criança') && p.birth_date) {
-            const birth = parseDate(p.birth_date);
-            if (!birth) return;
-            
-            const diffMonths = now.getMonth() - birth.getMonth() + (12 * (now.getFullYear() - birth.getFullYear()));
-            const alreadyVisited = !!p.clinical_data?.crianca?.visita6meses;
-            
-            if (diffMonths >= 5 && diffMonths <= 9 && !alreadyVisited) {
-              const sixMonthsDate = new Date(birth);
-              sixMonthsDate.setMonth(birth.getMonth() + 6);
-              const formattedDate = `${sixMonthsDate.getDate().toString().padStart(2, '0')}/${(sixMonthsDate.getMonth() + 1).toString().padStart(2, '0')}/${sixMonthsDate.getFullYear()}`;
-              alerts.push({
-                id: p.id,
-                name: p.name,
-                type: 'Visita 6 Meses',
-                message: `Próxima da visita de 6 meses (${formattedDate})`,
-                icon: Baby,
-                color: 'text-orange-500'
-              });
-            }
-
-            const vaccines = p.clinical_data?.crianca?.vacinas || {};
-            const hasEmptyVaccine = Object.values(vaccines).some(v => !v);
-            if (hasEmptyVaccine) {
-              alerts.push({
-                id: `${p.id}-vacina`,
-                patientId: p.id,
-                name: p.name,
-                type: 'Vacina Atrasada',
-                message: 'Possui vacinas pendentes no calendário.',
-                icon: AlertCircle,
-                color: 'text-red-500'
-              });
-            }
-          }
+      if (!user) return;
+      const { data } = await supabase.from('patients').select('*').eq('agent_id', user.id);
+      if (data) {
+        const pending = data.filter(p => {
+          const age = getAgeInMonths(p.birth_date);
+          const visited6m = p.clinical_data?.crianca?.visita6meses === 'Sim';
+          return age >= 5 && age <= 6 && !visited6m;
         });
-
-        setCriticalAlerts(alerts);
-        setStats({ pendingVisits: pendingV, lateVaccines: lateV });
-      } catch (error) {
-        console.error("Error fetching alerts:", error);
+        setCriticalAlerts(pending);
       }
     };
-
     fetchAlerts();
-    const interval = setInterval(fetchAlerts, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [user]);
 
-  const handleLogout = async () => {
+  const signOut = async () => {
     await supabase.auth.signOut();
     navigate('/login');
   };
 
-  const sections = [
-    {
-      title: 'VISÃO GERAL',
-      items: [
-        { path: '/', icon: LayoutDashboard, label: 'Visão Geral' },
-      ]
-    },
-    {
-      title: 'CADASTROS',
-      items: [
-        { path: '/pacientes', icon: Users, label: 'Pacientes' },
-        { path: '/pacientes?filter=gestantes', icon: UserCheck, label: 'Gestantes' },
-        { path: '/pacientes?filter=criancas', icon: Baby, label: 'Crianças' },
-        { path: '/pacientes?filter=idosos', icon: UserCog, label: 'Idosos' },
-        { path: '/pacientes?filter=acamados', icon: Bed, label: 'Acamados' },
-        { path: '/domicilios', icon: Home, label: 'Visitas Domiciliares' },
-      ]
-    },
-    {
-      title: 'ACOMPANHAMENTO',
-      items: [
-        { path: '/pacientes?filter=visitas_atrasadas', icon: AlertCircle, label: 'Visitas Pendentes', badge: stats.pendingVisits.toString() },
-        { path: '/pacientes?filter=vaccine', icon: Syringe, label: 'Vacinas em Atraso', badge: stats.lateVaccines.toString() },
-        { path: '/relatorios?tab=indicadores', icon: ClipboardList, label: 'Condicionantes' },
-      ]
-    },
-    {
-      title: 'RELATÓRIOS',
-      items: [
-        { path: '/indicadores', icon: BarChart3, label: 'Indicadores' },
-        { path: '/relatorios', icon: FileUp, label: 'Relatórios' },
-        { path: '/exportacao', icon: Download, label: 'Exportações' },
-      ]
-    },
-    {
-      title: 'CONFIGURAÇÕES',
-      items: [
-        { path: '/usuarios', icon: Users, label: 'Usuários', adminOnly: true },
-        { path: '/microareas', icon: MapIcon, label: 'Microáreas', adminOnly: true },
-        { path: '/configuracoes', icon: Settings, label: 'Configurações' },
-      ]
-    }
+  const menuItems = [
+    { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard, path: '/' },
+    { id: 'pacientes', label: 'Pacientes', icon: Users, path: '/pacientes' },
+    { id: 'gestantes', label: 'Gestantes', icon: Heart, path: '/pacientes?filter=gestantes' },
+    { id: 'criancas', label: 'Crianças', icon: Baby, path: '/pacientes?filter=criancas' },
+    { id: 'idosos', label: 'Idosos', icon: User, path: '/pacientes?filter=idosos' },
+    { id: 'acamados', label: 'Acamados', icon: Activity, path: '/pacientes?filter=acamados' },
+    { id: 'domicilios', label: 'Domicílios', icon: Home, path: '/domicilios' },
   ];
 
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-white border-r border-slate-100 relative overflow-hidden">
+    <div className="flex flex-col h-full bg-bg-secondary border-r border-border">
       {/* Brand */}
-      <div className="px-6 h-[100px] flex items-center shrink-0 border-b border-slate-50 relative z-10">
-        <div className="flex items-center gap-3.5 group cursor-pointer" onClick={() => navigate('/')}>
-          <div className="w-11 h-11 bg-teal-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-500/20 transition-transform group-hover:rotate-3">
-            <LayoutDashboard className="w-6 h-6" />
+      <div className="p-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/30 shrink-0">
+            <Stethoscope className="w-6 h-6" />
           </div>
-          <div>
-            <h1 className="text-xl font-black text-slate-900 tracking-tighter leading-none">Gestão ACS</h1>
-            <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Prontuário Digital</p>
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-text-primary tracking-tight leading-none truncate">Gestão ACS</h1>
+            <p className="text-[10px] text-text-muted font-semibold mt-1 uppercase tracking-widest truncate">Prontuário Digital</p>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-8 space-y-8 overflow-y-auto custom-scrollbar relative z-10">
-        {sections.map((section, idx) => (
-          <div key={idx} className="space-y-2">
-            <h3 className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 opacity-80">
-              {section.title}
-            </h3>
-            <div className="space-y-0.5">
-              {section.items.map((item) => {
-                if (item.adminOnly && user.role !== 'Administrador') return null;
-                const isActive = location.pathname === item.path || (item.path !== '/' && location.search.includes(item.path.split('?')[1] || '____'));
-                
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 group relative ${
-                      isActive 
-                        ? 'bg-teal-50 text-teal-600' 
-                        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 relative z-10">
-                      <item.icon className={`w-[18px] h-[18px] transition-transform duration-200 ${isActive ? 'text-teal-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
-                      <span className="tracking-tight">{item.label}</span>
-                    </div>
-                    {item.badge && (
-                      <span className={`relative z-10 text-[10px] font-bold min-w-[20px] h-[20px] px-1.5 rounded-full flex items-center justify-center ${
-                        isActive ? 'bg-teal-600 text-white' : 'bg-red-500 text-white shadow-sm shadow-red-500/20'
-                      }`}>
-                        {item.badge}
-                      </span>
-                    )}
-                    {isActive && (
-                      <motion.div 
-                        layoutId="nav-pill"
-                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 bg-teal-600 rounded-r-full"
-                        initial={false}
-                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                      />
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+      <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
+        <div className="mb-4 px-4 text-[11px] font-bold text-text-muted uppercase tracking-widest">Visão Geral</div>
+        {menuItems.map((item) => {
+          const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+          return (
+            <button
+              key={item.id}
+              onClick={() => {
+                navigate(item.path);
+                setIsMobileMenuOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 group ${
+                isActive 
+                  ? 'bg-teal-50 dark:bg-teal-900/20 text-teal-600 shadow-sm shadow-teal-100/50 dark:shadow-none' 
+                  : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
+              }`}
+            >
+              <item.icon className={`w-5 h-5 transition-colors ${isActive ? 'text-teal-600' : 'text-text-muted group-hover:text-text-secondary'}`} />
+              <span className={`text-[14px] font-semibold truncate ${isActive ? 'text-teal-700 dark:text-teal-400' : 'text-text-secondary group-hover:text-text-primary'}`}>{item.label}</span>
+              {isActive && (
+                <motion.div 
+                  layoutId="active-pill"
+                  className="ml-auto w-1.5 h-1.5 rounded-full bg-teal-500"
+                />
+              )}
+            </button>
+          );
+        })}
+
+        <div className="mt-8 mb-4 px-4 text-[11px] font-bold text-text-muted uppercase tracking-widest">Relatórios</div>
+        <button 
+          onClick={() => navigate('/relatorios')}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
+            location.pathname === '/relatorios' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
+          }`}
+        >
+          <PieChart className={`w-5 h-5 transition-colors ${location.pathname === '/relatorios' ? 'text-primary' : 'text-text-muted group-hover:text-text-secondary'}`} />
+          <span className={`text-[14px] font-semibold ${location.pathname === '/relatorios' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Indicadores</span>
+        </button>
+        <button 
+          onClick={() => navigate('/importar')}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
+            location.pathname === '/importar' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
+          }`}
+        >
+          <FileText className={`w-5 h-5 transition-colors ${location.pathname === '/importar' ? 'text-primary' : 'text-text-muted group-hover:text-text-secondary'}`} />
+          <span className={`text-[14px] font-semibold ${location.pathname === '/importar' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Exportações</span>
+        </button>
+
+        <div className="mt-8 mb-4 px-4 text-[11px] font-bold text-text-muted uppercase tracking-widest">Configurações</div>
+        <button 
+          onClick={() => navigate('/configuracoes')}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
+            location.pathname === '/configuracoes' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
+          }`}
+        >
+          <Settings className={`w-5 h-5 transition-colors ${location.pathname === '/configuracoes' ? 'text-primary' : 'text-text-muted group-hover:text-text-secondary'}`} />
+          <span className={`text-[14px] font-semibold ${location.pathname === '/configuracoes' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Sistema</span>
+        </button>
       </nav>
 
-      {/* User Area */}
-      <div className="p-4 border-t border-slate-50 relative z-10 bg-white">
-        <div className="flex items-center gap-3 px-4 py-4 bg-slate-50 rounded-2xl border border-transparent hover:border-slate-100 transition-all group">
-          <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center text-white font-black text-xs shadow-md shadow-teal-600/20">
-            {user.name?.charAt(0).toUpperCase() || 'A'}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-bold text-slate-900 truncate leading-tight">{user.name || 'Agente'}</p>
-            <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5">ACS • Microárea {user.microarea || '02'}</p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-slate-300" />
+      {/* User Footer */}
+      <div className="p-4 mt-auto">
+        <div className="bg-bg-primary rounded-3xl p-4 flex items-center gap-3 border border-border">
+           <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center text-white font-bold shadow-lg shadow-teal-500/20 shrink-0">
+             {user?.name?.charAt(0).toUpperCase() || 'A'}
+           </div>
+           <div className="min-w-0">
+             <p className="text-[13px] font-bold text-text-primary truncate uppercase leading-none">{user?.name?.split(' ')[0] || 'Agente'}</p>
+             <p className="text-[10px] text-text-muted font-semibold mt-1">ACS • Micro {user?.microarea || '00'}</p>
+           </div>
+           <button 
+             onClick={signOut}
+             className="ml-auto p-2 text-text-muted hover:text-red-500 transition-colors"
+           >
+             <LogOut className="w-4 h-4" />
+           </button>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#F1F4F9] flex flex-col lg:flex-row selection:bg-teal-600/30">
-      {showSetup && (
-        <SetupProfile 
-          user={user} 
-          onComplete={handleSetupComplete} 
-        />
-      )}
-      
+    <div className="flex h-screen bg-bg-primary text-text-primary">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-[260px] fixed left-0 top-0 h-full z-50">
+      <aside className="hidden lg:block w-[240px] shrink-0 h-full fixed left-0 top-0 z-40 border-r border-border">
         {sidebarContent}
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-[260px] min-h-screen flex flex-col relative overflow-x-hidden">
-        {/* Header */}
-        <header className="sticky top-0 z-40 bg-white border-b border-slate-100 h-[80px] px-8 lg:px-10 flex justify-between items-center shadow-sm shadow-slate-100/50">
-          <div className="flex items-center gap-4 flex-1">
+      <main className="flex-1 lg:ml-[240px] flex flex-col h-full overflow-hidden">
+        {/* Topbar */}
+        <header className="h-[80px] bg-bg-secondary/80 backdrop-blur-md border-b border-border flex items-center justify-between px-8 sticky top-0 z-30">
+          <div className="flex items-center gap-6">
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden p-2 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
+              className="lg:hidden p-2 text-text-secondary rounded-xl hover:bg-bg-primary transition-colors"
             >
               <Menu className="w-6 h-6" />
             </button>
+            <div className="hidden sm:block">
+              <h2 className="text-2xl font-bold text-text-primary tracking-tight leading-none">
+                {(() => {
+                  const h = new Date().getHours();
+                  const greeting = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+                  return `${greeting}, ${user?.name?.split(' ')[0] || 'Victor'}! 👋`;
+                })()}
+              </h2>
+              <p className="text-[14px] text-text-muted font-semibold mt-1.5 uppercase tracking-tight">Aqui está o resumo da sua microárea hoje.</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
             <button 
-              className="p-2 text-slate-400 hover:text-teal-600 transition-all relative group"
-              onClick={() => {
-                // Here we could open a dropdown with criticalAlerts
-              }}
+              onClick={toggleTheme}
+              className="p-2.5 text-text-secondary hover:text-text-primary hover:bg-bg-primary rounded-xl transition-all border border-border shadow-sm"
+              title={theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}
             >
-              <Bell className="w-6 h-6" />
-              {criticalAlerts.length > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
-              )}
+              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
             </button>
+
+            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-bg-primary border border-border rounded-2xl text-[13px] font-semibold text-text-secondary">
+              <CalendarDays className="w-4 h-4 text-teal-600" />
+              {new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </div>
+
+            <div className="flex items-center gap-2 pl-4 border-l border-border relative">
+              <button 
+                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                className="p-2.5 text-text-muted hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-xl transition-all relative"
+              >
+                <Bell className="w-5.5 h-5.5" />
+                {criticalAlerts.length > 0 && (
+                  <span className="absolute top-2 right-2 w-3.5 h-3.5 bg-red-500 border-2 border-bg-secondary rounded-full flex items-center justify-center">
+                    <span className="text-[8px] font-bold text-white">{criticalAlerts.length}</span>
+                  </span>
+                )}
+              </button>
+
+              {isNotificationsOpen && (
+                <div className="absolute top-[120%] right-0 mt-2 w-80 bg-bg-secondary border border-border rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="p-4 border-b border-border bg-bg-primary flex items-center justify-between">
+                    <h3 className="font-semibold text-text-primary text-sm">Notificações</h3>
+                    {criticalAlerts.length > 0 && (
+                      <span className="bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">
+                        {criticalAlerts.length} Pendentes
+                      </span>
+                    )}
+                  </div>
+                  <div className="max-h-96 overflow-y-auto custom-scrollbar">
+                    {criticalAlerts.length > 0 ? (
+                      criticalAlerts.map(alert => (
+                        <div 
+                          key={alert.id} 
+                          className="p-4 border-b border-border hover:bg-bg-primary transition-colors cursor-pointer group"
+                          onClick={() => { setIsNotificationsOpen(false); navigate(`/editar-paciente/${alert.id}`); }}
+                        >
+                          <p className="text-sm font-semibold text-text-primary group-hover:text-primary transition-colors">{alert.name}</p>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded font-semibold uppercase">
+                              Visita 6º Mês
+                            </span>
+                            <span className="text-[10px] text-text-muted font-semibold uppercase">
+                              Pendente
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center">
+                        <div className="w-12 h-12 bg-bg-primary rounded-full flex items-center justify-center mx-auto mb-3">
+                          <Bell className="w-5 h-5 text-text-muted opacity-50" />
+                        </div>
+                        <p className="text-text-secondary text-sm font-medium">Tudo certo por aqui!</p>
+                        <p className="text-text-muted text-xs mt-1">Nenhuma notificação no momento.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <button className="p-2.5 text-text-muted hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-xl transition-all">
+                <RefreshCw className="w-5.5 h-5.5" />
+              </button>
+            </div>
           </div>
         </header>
 
-        {/* Content with Animation */}
-        <div className="p-8 lg:p-12 flex-1 max-w-[1800px] w-full mx-auto relative z-10">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname + location.search}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-              className="h-full"
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
+        {/* Page Container */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-8">
+          <div className="w-full">
+            <Outlet />
+          </div>
         </div>
       </main>
 
       {/* Mobile Sidebar Overlay */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/80 z-[100] lg:hidden backdrop-blur-sm" 
-              onClick={() => setIsMobileMenuOpen(false)} 
-            />
-            <motion.div 
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed left-0 top-0 bottom-0 w-[280px] z-[110] lg:hidden shadow-3xl"
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+          <div className="fixed inset-y-0 left-0 w-80 bg-bg-secondary shadow-2xl transition-transform">
+            {sidebarContent}
+            <button 
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="absolute top-4 right-4 p-2 text-text-muted hover:bg-bg-primary rounded-xl"
             >
-              {sidebarContent}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

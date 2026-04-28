@@ -149,8 +149,8 @@ export function HouseholdList({ user }: { user: any }) {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <header className="flex flex-col gap-1">
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Domicílios</h2>
-          <p className="text-sm text-slate-500 font-medium tracking-tight">Gerencie as residências e famílias da sua microárea.</p>
+          <h2 className="text-2xl font-bold tracking-tight text-text-primary dark:text-white">Domicílios</h2>
+          <p className="text-sm text-text-secondary font-medium tracking-tight">Gerencie as residências e famílias da sua microárea.</p>
         </header>
         <button 
           onClick={() => navigate('/novo-cadastro')}
@@ -163,18 +163,18 @@ export function HouseholdList({ user }: { user: any }) {
 
       {/* Search Bar */}
       <div className="relative group max-w-2xl">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" />
         <input 
           type="text" 
           placeholder="Pesquisar por endereço ou responsável..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg py-2.5 pl-11 pr-6 shadow-sm focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium text-slate-900 dark:text-white"
+          className="w-full bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-lg py-2.5 pl-11 pr-6 shadow-sm focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium text-text-primary dark:text-white"
         />
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-24 text-slate-400">
+        <div className="flex flex-col items-center justify-center py-24 text-text-muted">
           <Loader2 className="w-8 h-8 animate-spin mb-3 text-primary" />
           <p className="text-sm font-medium">Carregando dados...</p>
         </div>
@@ -185,11 +185,11 @@ export function HouseholdList({ user }: { user: any }) {
               <div 
                 key={h.id}
                 onClick={() => navigate(`/domicilio/${h.id}`)}
-                className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                className="bg-bg-secondary dark:bg-slate-900 p-5 rounded-xl border border-border dark:border-slate-800 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
               >
                 <div className="space-y-4">
                   <div className="flex justify-between items-start">
-                    <div className="p-2.5 bg-slate-50 dark:bg-slate-800 rounded-lg text-slate-400 dark:text-slate-500 group-hover:bg-primary/5 group-hover:text-primary transition-colors">
+                    <div className="p-2.5 bg-bg-primary dark:bg-slate-800 rounded-lg text-text-muted dark:text-text-secondary group-hover:bg-primary/5 group-hover:text-primary transition-colors">
                       <Home className="w-5 h-5" />
                     </div>
                     {(user.role === 'Administrador' || (user.role === 'Agente' && h.agent_id === user.id)) && (
@@ -198,7 +198,7 @@ export function HouseholdList({ user }: { user: any }) {
                           e.stopPropagation();
                           setDeleteConfirm(h.id);
                         }}
-                        className="p-2 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-2 text-text-muted hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                         title="Excluir Domicílio"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -207,38 +207,38 @@ export function HouseholdList({ user }: { user: any }) {
                   </div>
 
                   <div>
-                    <h4 className="text-base font-bold text-slate-900 dark:text-white line-clamp-1 leading-tight group-hover:text-primary transition-colors">{h.responsible_name}</h4>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Responsável</p>
+                    <h4 className="text-base font-bold text-text-primary dark:text-white line-clamp-1 leading-tight group-hover:text-primary transition-colors">{h.responsible_name}</h4>
+                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-0.5">Responsável</p>
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center gap-2 text-text-secondary dark:text-text-muted">
                       <MapPin className="w-3.5 h-3.5 shrink-0" />
                       <span className="text-[11px] font-medium leading-relaxed truncate">
                         {h.address}, {h.number}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center gap-2 text-text-secondary dark:text-text-muted">
                       <User className="w-3.5 h-3.5 shrink-0" />
                       <span className="text-[11px] font-medium truncate font-mono">CNS: {h.responsible_cns}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div className="mt-6 pt-4 border-t border-border dark:border-slate-800 flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-primary/40"></div>
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Microárea {h.microarea}</span>
+                    <span className="text-[10px] font-bold text-text-muted dark:text-text-secondary uppercase tracking-tighter">Microárea {h.microarea}</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                  <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                 </div>
               </div>
             ))
           ) : (
-            <div className="col-span-full py-24 text-center bg-slate-50/50 dark:bg-slate-800/20 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+            <div className="col-span-full py-24 text-center bg-bg-primary/50 dark:bg-slate-800/20 rounded-xl border border-dashed border-border dark:border-slate-800">
               <div className="max-w-[240px] mx-auto space-y-2">
-                <Home className="w-8 h-8 text-slate-200 dark:text-slate-700 mx-auto" />
-                <p className="text-sm font-medium text-slate-400">Nenhum domicílio encontrado na busca.</p>
+                <Home className="w-8 h-8 text-text-muted dark:text-slate-700 mx-auto" />
+                <p className="text-sm font-medium text-text-muted">Nenhum domicílio encontrado na busca.</p>
               </div>
             </div>
           )}
@@ -247,16 +247,16 @@ export function HouseholdList({ user }: { user: any }) {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-sm w-full shadow-xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-[2px] animate-in fade-in duration-200">
+          <div className="bg-bg-secondary dark:bg-slate-900 rounded-xl p-6 max-w-sm w-full shadow-xl border border-border dark:border-slate-800 animate-in zoom-in-95 duration-200">
             <div className="space-y-4">
-              <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-600">
+              <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-600">
                 <AlertTriangle className="w-6 h-6" />
               </div>
               
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">Excluir Domicílio?</h3>
-                <p className="text-sm text-slate-500 font-medium">
+                <h3 className="text-lg font-bold text-text-primary dark:text-white leading-tight">Excluir Domicílio?</h3>
+                <p className="text-sm text-text-secondary font-medium">
                   Todos os pacientes vinculados e seus históricos serão removidos permanentemente.
                 </p>
               </div>
@@ -272,7 +272,7 @@ export function HouseholdList({ user }: { user: any }) {
                 <button 
                   onClick={() => setDeleteConfirm(null)}
                   disabled={deleting}
-                  className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-sm"
+                  className="w-full py-2.5 bg-bg-primary text-text-secondary rounded-lg font-bold hover:bg-border transition-colors text-sm"
                 >
                   Cancelar
                 </button>

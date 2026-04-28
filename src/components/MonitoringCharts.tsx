@@ -49,8 +49,8 @@ export const MonitoringCharts: React.FC<MonitoringChartsProps> = ({ patients, st
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-      <div className="bg-white dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-        <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Fluxo de Visitas (7 Dias)</h5>
+      <div className="bg-bg-secondary dark:bg-slate-900/50 p-4 rounded-2xl border border-border dark:border-slate-800 shadow-sm overflow-hidden">
+        <h5 className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-4">Fluxo de Visitas (7 Dias)</h5>
         <div className="h-[200px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={lineData}>
@@ -88,8 +88,8 @@ export const MonitoringCharts: React.FC<MonitoringChartsProps> = ({ patients, st
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-        <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Distribuição por Grupo</h5>
+      <div className="bg-bg-secondary dark:bg-slate-900/50 p-4 rounded-2xl border border-border dark:border-slate-800 shadow-sm overflow-hidden">
+        <h5 className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-4">Distribuição por Grupo</h5>
         <div className="h-[200px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
