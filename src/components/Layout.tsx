@@ -142,6 +142,17 @@ export function Layout({
         </button>
 
         <div className="mt-8 mb-4 px-4 text-[11px] font-bold text-text-muted uppercase tracking-widest">Configurações</div>
+        {user?.role === 'Administrador' && (
+          <button 
+            onClick={() => navigate('/usuarios')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group mb-1 ${
+              location.pathname === '/usuarios' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
+            }`}
+          >
+            <ShieldCheck className={`w-5 h-5 transition-colors ${location.pathname === '/usuarios' ? 'text-primary' : 'text-text-muted group-hover:text-text-secondary'}`} />
+            <span className={`text-[14px] font-semibold ${location.pathname === '/usuarios' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Gerenciar Usuários</span>
+          </button>
+        )}
         <button 
           onClick={() => navigate('/configuracoes')}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
