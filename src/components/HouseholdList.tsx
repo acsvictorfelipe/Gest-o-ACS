@@ -152,13 +152,15 @@ export function HouseholdList({ user }: { user: any }) {
           <h2 className="text-2xl font-bold tracking-tight text-text-primary dark:text-white">Domicílios</h2>
           <p className="text-sm text-text-secondary font-medium tracking-tight">Gerencie as residências e famílias da sua microárea.</p>
         </header>
-        <button 
-          onClick={() => navigate('/novo-cadastro')}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-bold shadow-sm hover:opacity-90 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          Novo Domicílio
-        </button>
+        {user.role !== 'Gestor' && (
+          <button 
+            onClick={() => navigate('/novo-cadastro')}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-bold shadow-sm hover:opacity-90 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Novo Domicílio
+          </button>
+        )}
       </div>
 
       {/* Search Bar */}

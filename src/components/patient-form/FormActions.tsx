@@ -9,13 +9,14 @@ interface FormActionsProps {
   setDeleteConfirm: React.Dispatch<React.SetStateAction<boolean>>;
   handleDelete: () => void;
   onCancel: () => void;
+  isReadOnly?: boolean;
 }
 
-export function FormActions({ id, loading, deleting, deleteConfirm, setDeleteConfirm, handleDelete, onCancel }: FormActionsProps) {
+export function FormActions({ id, loading, deleting, deleteConfirm, setDeleteConfirm, handleDelete, onCancel, isReadOnly }: FormActionsProps) {
   return (
     <>
       <div className="flex items-center justify-end gap-4 pt-6 border-t border-border dark:border-slate-800">
-        {id && (
+        {!isReadOnly && id && (
           <button 
             type="button"
             onClick={() => setDeleteConfirm(true)}
@@ -30,25 +31,27 @@ export function FormActions({ id, loading, deleting, deleteConfirm, setDeleteCon
           onClick={onCancel}
           className="px-6 py-2.5 text-text-secondary dark:text-text-muted font-bold hover:text-text-primary dark:hover:text-white transition-colors text-xs uppercase tracking-widest"
         >
-          Cancelar
+          {isReadOnly ? 'Voltar' : 'Cancelar'}
         </button>
-        <button 
-          type="submit"
-          disabled={loading}
-          className="px-8 py-2.5 bg-primary text-white rounded-lg font-bold shadow-sm hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 min-w-[160px] uppercase text-xs tracking-widest"
-        >
-          {loading ? (
-            <>
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              Salvando...
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4" />
-              {id ? 'Salvar Alterações' : 'Concluir Cadastro'}
-            </>
-          )}
-        </button>
+        {!isReadOnly && (
+          <button 
+            type="submit"
+            disabled={loading}
+            className="px-8 py-2.5 bg-primary text-white rounded-lg font-bold shadow-sm hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 min-w-[160px] uppercase text-xs tracking-widest"
+          >
+            {loading ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                {id ? 'Salvar Alterações' : 'Concluir Cadastro'}
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}

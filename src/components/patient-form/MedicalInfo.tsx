@@ -16,9 +16,10 @@ interface MedicalInfoProps {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
   id: string | undefined;
+  isReadOnly?: boolean;
 }
 
-export function MedicalInfo({ formData, setFormData, id }: MedicalInfoProps) {
+export function MedicalInfo({ formData, setFormData, id, isReadOnly }: MedicalInfoProps) {
   useEffect(() => {
     if (formData.categories.includes('Criança') && formData.birthDate) {
       const birth = new Date(formData.birthDate);
@@ -159,9 +160,10 @@ export function MedicalInfo({ formData, setFormData, id }: MedicalInfoProps) {
         addDateToList={addDateToList} 
         removeDateFromList={removeDateFromList} 
         updateDateInList={updateDateInList} 
+        isReadOnly={isReadOnly}
       />
 
-      <RastreamentoSection formData={formData} setFormData={setFormData} />
+      <RastreamentoSection formData={formData} setFormData={setFormData} isReadOnly={isReadOnly} />
 
       <section className="bg-bg-primary dark:bg-slate-800/50 rounded-xl p-6 border border-border dark:border-slate-800 space-y-4">
         <div className="flex items-center gap-2 text-primary">
@@ -175,12 +177,13 @@ export function MedicalInfo({ formData, setFormData, id }: MedicalInfoProps) {
               <button
                 key={cat.id}
                 type="button"
+                disabled={isReadOnly}
                 onClick={() => toggleCategory(cat.id)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
                   isSelected 
                     ? `${cat.color} bg-bg-secondary dark:bg-slate-900 shadow-sm font-semibold border-current scale-[1.02]` 
                     : 'border-border dark:border-slate-700 bg-bg-secondary dark:bg-slate-800 text-text-muted hover:border-slate-300'
-                }`}
+                } ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <cat.icon className="w-4 h-4" />
                 <span className="text-[11px] font-semibold uppercase tracking-tight">{cat.label || cat.id}</span>
@@ -190,11 +193,11 @@ export function MedicalInfo({ formData, setFormData, id }: MedicalInfoProps) {
         </div>
       </section>
 
-      <SaudeMentalSection formData={formData} setFormData={setFormData} />
+      <SaudeMentalSection formData={formData} setFormData={setFormData} isReadOnly={isReadOnly} />
       
-      <ChronicSection formData={formData} setFormData={setFormData} />
+      <ChronicSection formData={formData} setFormData={setFormData} isReadOnly={isReadOnly} />
 
-      <AcamadoSection formData={formData} setFormData={setFormData} />
+      <AcamadoSection formData={formData} setFormData={setFormData} isReadOnly={isReadOnly} />
 
       <GestanteSection 
         formData={formData} 
@@ -202,6 +205,7 @@ export function MedicalInfo({ formData, setFormData, id }: MedicalInfoProps) {
         addDateToList={addDateToList} 
         removeDateFromList={removeDateFromList} 
         updateDateInList={updateDateInList} 
+        isReadOnly={isReadOnly}
       />
 
       <CriancaSection 
@@ -211,9 +215,10 @@ export function MedicalInfo({ formData, setFormData, id }: MedicalInfoProps) {
         addDateToList={addDateToList} 
         removeDateFromList={removeDateFromList} 
         updateDateInList={updateDateInList} 
+        isReadOnly={isReadOnly}
       />
 
-      <CommonSections formData={formData} setFormData={setFormData} />
+      <CommonSections formData={formData} setFormData={setFormData} isReadOnly={isReadOnly} />
     </div>
   );
 }

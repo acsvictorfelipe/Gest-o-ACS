@@ -25,6 +25,9 @@ export function PatientForm({ user }: { user: any }) {
   const [loading, setLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const isReadOnly = user.role === 'Gestor';
+
   const [formData, setFormData] = useState({
     name: '',
     cns: '',
@@ -837,9 +840,12 @@ export function PatientForm({ user }: { user: any }) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6 pb-20">
-        <PersonalInfo formData={formData} setFormData={setFormData} />
-        <AddressInfo formData={formData} setFormData={setFormData} />
-        <MedicalInfo formData={formData} setFormData={setFormData} id={id} />
+        <fieldset disabled={isReadOnly} className="space-y-8 contents">
+          <PersonalInfo formData={formData} setFormData={setFormData} />
+          <AddressInfo formData={formData} setFormData={setFormData} />
+          <MedicalInfo formData={formData} setFormData={setFormData} id={id} />
+        </fieldset>
+
         <FormActions 
           id={id} 
           loading={loading} 
@@ -847,10 +853,10 @@ export function PatientForm({ user }: { user: any }) {
           deleteConfirm={deleteConfirm} 
           setDeleteConfirm={setDeleteConfirm} 
           handleDelete={handleDelete} 
-          onCancel={() => navigate('/pacientes')} 
+          onCancel={() => navigate('/pacientes')}
+          isReadOnly={isReadOnly}
         />
       </form>
     </div>
   );
 }
-

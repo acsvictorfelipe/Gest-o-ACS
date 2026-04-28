@@ -17,7 +17,8 @@ import {
   Trash2,
   AlertTriangle,
   Loader2,
-  X
+  X,
+  Eye
 } from 'lucide-react';
 
 export function HouseholdView({ user }: { user: any }) {
@@ -186,21 +187,23 @@ export function HouseholdView({ user }: { user: any }) {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setDeleteConfirm(true)}
-              className="p-3 text-white/60 hover:text-white hover:bg-bg-secondary/10 rounded-xl transition-all"
-              title="Excluir Domicílio"
-            >
-              <Trash2 className="w-6 h-6" />
-            </button>
-            <button 
-              onClick={() => setIsEditing(true)}
-              className="bg-bg-secondary text-primary px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-slate-50 transition-all active:scale-95 flex items-center gap-2"
-            >
-              Atualizar Domicílio
-            </button>
-          </div>
+          {user.role !== 'Gestor' && (
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setDeleteConfirm(true)}
+                className="p-3 text-white/60 hover:text-white hover:bg-bg-secondary/10 rounded-xl transition-all"
+                title="Excluir Domicílio"
+              >
+                <Trash2 className="w-6 h-6" />
+              </button>
+              <button 
+                onClick={() => setIsEditing(true)}
+                className="bg-bg-secondary text-primary px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-slate-50 transition-all active:scale-95 flex items-center gap-2"
+              >
+                Atualizar Domicílio
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -210,21 +213,23 @@ export function HouseholdView({ user }: { user: any }) {
           <div className="bg-green-50 dark:bg-green-900/20 p-8 rounded-[2rem] text-green-800 dark:text-green-400 border border-green-100 dark:border-green-900/30">
             <div className="flex items-start justify-between">
               <div>
-                <h4 className="text-lg font-bold font-headline mb-2">Próxima Visita Agendada</h4>
-                <p className="text-sm opacity-80 mb-6">O protocolo recomenda retorno em 30 dias para acompanhamento de rotina.</p>
-                <button 
-                  onClick={() => {
-                    if (residents.length === 1) {
-                      navigate(`/editar-paciente/${residents[0].id}?nova-visita=true`);
-                    } else {
-                      setShowVisitModal(true);
-                    }
-                  }}
-                  className="bg-green-600 dark:bg-green-700 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-md hover:bg-green-700 dark:hover:bg-green-600 transition-all flex items-center gap-2"
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  Registrar Nova Visita
-                </button>
+                <h4 className="text-lg font-bold font-headline mb-2">Acompanhamento do Domicílio</h4>
+                <p className="text-sm opacity-80 mb-6">O protocolo recomenda retorno periódico para acompanhamento de rotina de todos os moradores.</p>
+                {user.role !== 'Gestor' && (
+                  <button 
+                    onClick={() => {
+                      if (residents.length === 1) {
+                        navigate(`/editar-paciente/${residents[0].id}?nova-visita=true`);
+                      } else {
+                        setShowVisitModal(true);
+                      }
+                    }}
+                    className="bg-green-600 dark:bg-green-700 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-md hover:bg-green-700 dark:hover:bg-green-600 transition-all flex items-center gap-2"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    Registrar Nova Visita
+                  </button>
+                )}
               </div>
               <Home className="w-12 h-12 opacity-10" />
             </div>
@@ -270,7 +275,7 @@ export function HouseholdView({ user }: { user: any }) {
                       className="p-2 text-text-muted hover:text-primary transition-colors"
                       title="Editar Paciente"
                     >
-                      <Pencil className="w-4 h-4" />
+                      {user.role === 'Gestor' ? <Eye className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
                     </button>
                     <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-primary transition-colors" />
                   </div>

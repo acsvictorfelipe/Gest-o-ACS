@@ -26,7 +26,8 @@ import {
   ArrowLeft,
   CheckCircle,
   ShieldAlert,
-  Heart
+  Heart,
+  Eye
 } from 'lucide-react';
 import { UI_CONFIG } from '../constants';
 
@@ -464,8 +465,14 @@ export function PatientList({ user }: { user: any }) {
                         </td>
                         <td className="px-8 py-5 text-right">
                           <div className="flex items-center justify-end gap-2">
-                             <button className="p-2 text-text-muted hover:text-teal-600 transition-colors">
-                               <Pencil className="w-4.5 h-4.5" />
+                             <button 
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 navigate(`/editar-paciente/${p.id}`);
+                               }}
+                               className="p-2 text-text-muted hover:text-teal-600 transition-colors"
+                             >
+                               {user.role === 'Gestor' ? <Eye className="w-4.5 h-4.5" /> : <Pencil className="w-4.5 h-4.5" />}
                              </button>
                              <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 group-hover:text-teal-600 transition-colors">
                                <ChevronRight className="w-5 h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />

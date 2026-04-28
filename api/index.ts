@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
-import { VercelRequest, VercelResponse } from '@vercel/node';
 import dotenv from 'dotenv';
+
+// Tipos flexíveis para evitar erros no IDE local quando @vercel/node não está instalado
+type VercelRequest = any;
+type VercelResponse = any;
 
 dotenv.config();
 
@@ -19,8 +22,11 @@ const supabaseAdmin = createClient(
 );
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { method, url } = req;
-  console.log(`${new Date().toISOString()} - ${method} ${url}`);
+  const { method } = req;
+  // No Vercel, o path pode vir de diferentes formas dependendo do rewrite
+  const url = req.url || '';
+  
+  console.log(`[API] ${method} ${url}`);
 
   // CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -32,16 +38,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   );
 
   if (method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
 
   try {
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('ERRO: Variáveis de ambiente do Supabase não configuradas no Vercel.');
+      return res.status(500).json({ 
+        error: 'Configuração do servidor incompleta (URL ou Service Key ausentes).' 
+      });
+    }
+
     // 1. CREATE USER
-    if (method === 'POST' && url?.includes('/api/admin/create-user')) {
+    if (method === 'POST' && url.includes('create-user')) {
       const { email, password, name, role, color, microarea } = req.body;
+      console.log(`[API] Tentando criar usuário: ${email}`);
+
       if (!email || !password || !name || !role) {
-        return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
+        return res.status(400).json({ error: 'Campos obrigatórios ausentes: e-mail, senha, nome e cargo são necessários.' });
       }
 
       const { data, error } = await supabaseAdmin.auth.admin.createUser({
@@ -51,7 +65,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         user_metadata: { name, role, color, microarea }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[API] Erro Supabase Auth:', error.message);
+        return res.status(400).json({ error: `Erro no Supabase: ${error.message}` });
+      }
 
       if (data.user) {
         const { error: profileError } = await supabaseAdmin
@@ -64,52 +81,60 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             microarea,
             email
           });
-        if (profileError) console.error('Erro ao criar perfil:', profileError);
+        if (profileError) console.error('[API] Erro ao criar perfil:', profileError);
       }
 
       return res.status(200).json({ user: data.user });
     }
 
     // 2. DELETE USER
-    if (method === 'DELETE' && url?.includes('/api/admin/delete-user/')) {
+    if (method === 'DELETE' && url.includes('delete-user')) {
       const id = url.split('/').pop();
-      if (!id) return res.status(400).json({ error: 'ID não fornecido' });
+      console.log(`[API] Tentando excluir usuário ID: ${id}`);
 
-      // Deletar dados dependentes
+      if (!id || id === 'delete-user') {
+        return res.status(400).json({ error: 'ID do usuário não fornecido ou inválido na URL.' });
+      }
+
+      // Deletar dados dependentes primeiro
       await supabaseAdmin.from('visits').delete().eq('agent_id', id);
       await supabaseAdmin.from('patients').delete().eq('agent_id', id);
       await supabaseAdmin.from('households').delete().eq('agent_id', id);
       await supabaseAdmin.from('profiles').delete().eq('id', id);
       
       const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
-      if (authError) throw authError;
+      if (authError) {
+        console.error('[API] Erro ao excluir Auth:', authError.message);
+        return res.status(400).json({ error: authError.message });
+      }
 
-      return res.status(200).json({ message: 'Usuário excluído com sucesso' });
+      return res.status(200).json({ message: 'Usuário e dados vinculados excluídos com sucesso.' });
     }
 
-    // 3. FORCE PROFILE UPDATE
-    if (method === 'POST' && url?.includes('/api/admin/force-profile-update')) {
+    // 3. FORCE PROFILE UPDATE (Apenas para o administrador principal)
+    if (method === 'POST' && url.includes('force-profile-update')) {
       const { email } = req.body;
-      if (email !== 'acsvictorfelipe@gmail.com') {
-        return res.status(403).json({ error: 'Acesso negado' });
+      const adminEmail = 'victorfelipe2012@gmail.com';
+      
+      if (email !== adminEmail) {
+        return res.status(403).json({ error: 'Acesso negado: apenas o administrador principal pode forçar atualizações.' });
       }
 
       const { data: profiles } = await supabaseAdmin.from('profiles').select('id').eq('email', email);
-      if (!profiles || profiles.length === 0) throw new Error('Perfil não encontrado');
+      if (!profiles || profiles.length === 0) {
+        return res.status(404).json({ error: 'Perfil não encontrado para o e-mail fornecido.' });
+      }
 
       const userId = profiles[0].id;
-      await supabaseAdmin.from('profiles').update({ role: 'Agente', color: '#64748b', microarea: '3' }).eq('id', userId);
-      await supabaseAdmin.auth.admin.updateUserById(userId, {
-        user_metadata: { role: 'Agente', color: '#64748b', microarea: '3' }
-      });
-
-      return res.status(200).json({ success: true });
+      await supabaseAdmin.from('profiles').update({ role: 'Administrador' }).eq('id', userId);
+      
+      return res.status(200).json({ success: true, message: 'Perfil promovido a Administrador com sucesso.' });
     }
 
-    return res.status(404).json({ error: 'Rota não encontrada' });
+    return res.status(404).json({ error: `Rota não encontrada: ${method} ${url}` });
 
   } catch (error: any) {
-    console.error('API Error:', error);
-    return res.status(500).json({ error: error.message || 'Erro interno no servidor' });
+    console.error('[API] Erro Crítico:', error);
+    return res.status(500).json({ error: error.message || 'Erro interno no servidor.' });
   }
 }
