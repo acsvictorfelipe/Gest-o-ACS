@@ -311,7 +311,7 @@ export function Dashboard({ user }: { user: any }) {
   return (
     <div className="space-y-6 relative">
       {/* 1. Stat Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 min-[1500px]:grid-cols-8 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
         {statCards.map((stat, i) => (
           <motion.div
             key={stat.id}
