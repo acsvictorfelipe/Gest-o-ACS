@@ -815,6 +815,43 @@ export function PatientForm({ user }: { user: any }) {
   }, [formData.clinicalData?.gestante?.dum, formData.categories]);
 
 
+
+  // Sync address and contact from CNS
+  useEffect(() => {
+    const syncDataFromCns = async () => {
+      const targetCns = formData.isFamilyResponsible ? formData.cns : formData.responsibleCns;
+      
+      if (targetCns && targetCns.length === 15) {
+        try {
+          const { data: householdData } = await supabase
+            .from('households')
+            .select('address, number, complement')
+            .eq('responsible_cns', targetCns)
+            .maybeSingle();
+
+          const { data: patientData } = await supabase
+            .from('patients')
+            .select('clinical_data')
+            .eq('cns', targetCns)
+            .maybeSingle();
+
+          if (householdData || patientData) {
+            setFormData(prev => ({
+              ...prev,
+              address: prev.address || householdData?.address || '',
+              number: prev.number || householdData?.number || '',
+              complement: prev.complement || householdData?.complement || '',
+              contact: prev.contact || patientData?.clinical_data?.contact || ''
+            }));
+          }
+        } catch (error) {
+          console.error("Error syncing data from CNS:", error);
+        }
+      }
+    };
+    syncDataFromCns();
+  }, [formData.cns, formData.responsibleCns, formData.isFamilyResponsible]);
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom-2 duration-300">
       <div className="flex justify-between items-center bg-white dark:bg-slate-900 px-6 py-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
