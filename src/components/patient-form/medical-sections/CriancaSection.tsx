@@ -105,10 +105,10 @@ export function CriancaSection({
             {visibleSchedule?.map((group, groupIdx) => (
               <div key={groupIdx} className="p-4 space-y-3">
                 <span className="text-[10px] font-semibold uppercase text-primary tracking-widest">{group.label}</span>
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
                   {group.vaccines.map((v: any) => (
-                    <div key={v.id} className="flex items-center justify-between gap-4 p-2 hover:bg-bg-secondary dark:hover:bg-slate-900/50 rounded-lg transition-colors">
-                      <label className="text-[11px] font-semibold text-text-secondary dark:text-slate-300 cursor-pointer flex-1 py-1">
+                    <div key={v.id} className="flex items-center justify-between gap-3 p-1.5 px-3 hover:bg-bg-secondary dark:hover:bg-slate-900/50 rounded-lg transition-colors border border-transparent hover:border-border dark:hover:border-slate-800">
+                      <label className="text-[10px] font-bold text-text-secondary dark:text-slate-300 cursor-pointer flex-1 py-0.5 truncate uppercase tracking-tight">
                         {v.label}
                       </label>
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -128,7 +128,7 @@ export function CriancaSection({
                               }
                             }
                           }))}
-                          className="w-5 h-5 rounded border-border dark:border-slate-700 text-primary focus:ring-primary/20 transition-all cursor-pointer"
+                          className="w-4 h-4 rounded border-border dark:border-slate-700 text-primary focus:ring-primary/20 transition-all cursor-pointer"
                         />
                       </label>
                     </div>
