@@ -122,7 +122,7 @@ export function GestanteSection({
           </div>
         </div>
 
-        <div className="col-span-full grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="col-span-full grid grid-cols-1 md:grid-cols-4 gap-6">
           <div>
             <label className="block text-[10px] font-semibold uppercase text-text-muted mb-2">Vacina dTpa?</label>
             <select 
@@ -132,6 +132,23 @@ export function GestanteSection({
                 clinicalData: { 
                   ...prev.clinicalData, 
                   gestante: { ...(prev.clinicalData?.gestante || {}), dtpa: e.target.value } 
+                }
+              }))}
+              className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-700 rounded-xl p-3 text-sm"
+            >
+              <option>Não</option>
+              <option>Sim</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-semibold uppercase text-text-muted mb-2">Avaliação Bucal?</label>
+            <select 
+              value={data.avaliacaoBucal || 'Não'}
+              onChange={e => setFormData((prev: any) => ({
+                ...prev, 
+                clinicalData: { 
+                  ...prev.clinicalData, 
+                  gestante: { ...(prev.clinicalData?.gestante || {}), avaliacaoBucal: e.target.value } 
                 }
               }))}
               className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-700 rounded-xl p-3 text-sm"
