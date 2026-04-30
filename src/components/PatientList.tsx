@@ -27,7 +27,9 @@ import {
   CheckCircle,
   ShieldAlert,
   Heart,
-  Eye
+  Eye,
+  MessageCircle,
+  Phone
 } from 'lucide-react';
 import { UI_CONFIG } from '../constants';
 
@@ -286,6 +288,15 @@ export function PatientList({ user }: { user: any }) {
     // Optional: show a temporary toast or change icon
   };
 
+  const handleWhatsApp = (e: React.MouseEvent, phone: string) => {
+    e.stopPropagation();
+    if (!phone) return;
+    const cleanNumber = phone.replace(/\D/g, '');
+    if (cleanNumber.length < 10) return;
+    const finalNumber = cleanNumber.startsWith('55') ? cleanNumber : `55${cleanNumber}`;
+    window.open(`https://wa.me/${finalNumber}`, '_blank');
+  };
+
   const getCategoryIcon = (categories: string[]) => {
     if (categories?.includes('Gestante')) return <UI_CONFIG.categorias.gestantes.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.gestantes.primary }} />;
     if (categories?.includes('Criança')) return <UI_CONFIG.categorias.criancas.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.criancas.primary }} />;
@@ -399,8 +410,17 @@ export function PatientList({ user }: { user: any }) {
                             </div>
                             <div>
                                <p className="text-[14px] font-semibold text-text-primary leading-tight group-hover:text-teal-600 transition-colors uppercase">{p.name}</p>
-                               <div className="flex items-center gap-2 mt-0.5">
+                               <div className="flex items-center gap-3 mt-1">
                                  <p className="text-[11px] text-text-muted font-medium">{p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}</p>
+                                 {p.clinical_data?.contact && (
+                                   <button 
+                                     onClick={(e) => handleWhatsApp(e, p.clinical_data.contact)}
+                                     className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors border border-emerald-100"
+                                   >
+                                     <MessageCircle className="w-3 h-3" />
+                                     <span className="text-[9px] font-bold uppercase">WhatsApp</span>
+                                   </button>
+                                 )}
                                </div>
                             </div>
                           </div>
@@ -540,9 +560,18 @@ export function PatientList({ user }: { user: any }) {
                               </button>
                             </div>
                           )}
+                          </div>
+                          {p.clinical_data?.contact && (
+                            <button 
+                              onClick={(e) => handleWhatsApp(e, p.clinical_data.contact)}
+                              className="mt-2 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500 text-white shadow-sm shadow-emerald-500/20 active:scale-95 transition-all w-fit"
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                              <span className="text-[11px] font-bold uppercase">WhatsApp</span>
+                            </button>
+                          )}
                         </div>
                       </div>
-                    </div>
                     <ChevronRight className="w-4 h-4 text-slate-300" />
                   </div>
 
