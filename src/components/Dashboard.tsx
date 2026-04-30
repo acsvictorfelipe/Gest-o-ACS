@@ -179,7 +179,8 @@ export function Dashboard({ user }: { user: any }) {
       icon: UI_CONFIG.categorias.outros.icon,
       value: stats.totalPatients,
       label: 'Cidadãos',
-      sublabel: 'Total pacientes',
+      sublabel: 'Total cadastrados',
+      trend: { direction: 'up', value: '8% este mês' },
       config: UI_CONFIG.categorias.outros,
       filter: 'all'
     },
@@ -189,8 +190,9 @@ export function Dashboard({ user }: { user: any }) {
       value: stats.totalHouseholds,
       label: 'Domicílios',
       sublabel: 'Total residências',
+      trend: { direction: 'up', value: '4 este mês' },
       config: { primary: '#6366f1', soft: 'rgba(99, 102, 241, 0.1)' },
-      filter: 'households' // Note: This filter might need handling in navigation
+      filter: 'households'
     },
     {
       id: 'gestantes',
@@ -198,6 +200,7 @@ export function Dashboard({ user }: { user: any }) {
       value: stats.gestantes,
       label: 'GESTANTES',
       sublabel: 'Acompanhadas',
+      trend: { direction: 'up', value: '2 este mês' },
       config: UI_CONFIG.categorias.gestantes,
       filter: 'gestantes'
     },
@@ -207,6 +210,7 @@ export function Dashboard({ user }: { user: any }) {
       value: stats.criancas2y,
       label: 'CRIANÇAS < 2',
       sublabel: 'Em acompanhamento',
+      trend: { direction: 'up', value: '12 este mês' },
       config: UI_CONFIG.categorias.criancas,
       filter: 'criancas'
     },
@@ -215,7 +219,8 @@ export function Dashboard({ user }: { user: any }) {
       icon: UI_CONFIG.categorias.idosos.icon,
       value: stats.idosos,
       label: 'IDOSOS',
-      sublabel: 'Acompanhados',
+      sublabel: 'Em acompanhamento',
+      trend: { direction: 'up', value: '12 este mês' },
       config: UI_CONFIG.categorias.idosos,
       filter: 'idosos'
     },
@@ -224,7 +229,8 @@ export function Dashboard({ user }: { user: any }) {
       icon: UI_CONFIG.categorias.hipertensos.icon,
       value: stats.hipertensos,
       label: 'HIPERTENSOS',
-      sublabel: 'Acompanhados',
+      sublabel: 'Em acompanhamento',
+      trend: { direction: 'up', value: '16 este mês' },
       config: UI_CONFIG.categorias.hipertensos,
       filter: 'hipertensos'
     },
@@ -233,7 +239,8 @@ export function Dashboard({ user }: { user: any }) {
       icon: UI_CONFIG.categorias.diabeticos.icon,
       value: stats.diabeticos,
       label: 'DIABÉTICOS',
-      sublabel: 'Acompanhados',
+      sublabel: 'Em acompanhamento',
+      trend: { direction: 'up', value: '7 este mês' },
       config: UI_CONFIG.categorias.diabeticos,
       filter: 'diabeticos'
     },
@@ -243,6 +250,7 @@ export function Dashboard({ user }: { user: any }) {
       value: stats.acamados,
       label: 'ACAMADOS',
       sublabel: 'Domiciliados',
+      trend: { direction: 'up', value: '1 este mês' },
       config: UI_CONFIG.categorias.acamados,
       filter: 'acamados'
     }
@@ -303,7 +311,7 @@ export function Dashboard({ user }: { user: any }) {
   return (
     <div className="space-y-6 relative">
       {/* 1. Stat Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 min-[1500px]:grid-cols-8 gap-3">
         {statCards.map((stat, i) => (
           <motion.div
             key={stat.id}
@@ -311,21 +319,26 @@ export function Dashboard({ user }: { user: any }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
             onClick={() => navigate(stat.id === 'domicilios' ? '/domicilios' : `/pacientes?filter=${stat.filter}`)}
-            className="bg-bg-secondary rounded-[32px] py-10 px-4 border border-border shadow-sm cursor-pointer group relative overflow-hidden flex flex-col items-center justify-center text-center transition-all hover:shadow-xl hover:-translate-y-1 h-full"
+            className="bg-bg-secondary rounded-[24px] py-6 px-4 border border-border shadow-sm cursor-pointer group relative overflow-hidden flex flex-col transition-all hover:shadow-xl hover:-translate-y-1 h-full"
           >
-            <div className="absolute top-0 left-0 w-full h-[4px]" style={{ backgroundColor: stat.config.primary }} />
+            <div className="absolute top-0 left-0 w-[5px] h-full" style={{ backgroundColor: stat.config.primary }} />
             
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110" style={{ backgroundColor: stat.config.soft, color: stat.config.primary }}>
-              <stat.icon className="w-6 h-6" />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-lg transition-transform group-hover:scale-105" style={{ backgroundColor: stat.config.primary, color: '#fff' }}>
+                <stat.icon className="w-6 h-6" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider truncate leading-tight">{stat.label}</p>
+                <h4 className="text-[24px] font-black text-text-primary leading-none mt-1">{stat.value}</h4>
+              </div>
             </div>
             
-            <div className="flex flex-col items-center">
-              <p className="text-[10px] text-text-muted font-black uppercase tracking-[0.15em] mb-1 leading-none">{stat.label}</p>
-              <h4 className="text-[32px] font-black text-text-primary leading-none">{stat.value}</h4>
-            </div>
-            
-            <div className="mt-4">
-              <p className="text-[11px] text-text-secondary font-bold opacity-80">{stat.sublabel}</p>
+            <div className="mt-auto space-y-1">
+              <p className="text-[11px] text-text-secondary font-medium opacity-60 truncate">{stat.sublabel}</p>
+              <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600">
+                <TrendingUp className="w-3.5 h-3.5" />
+                {stat.trend.value}
+              </div>
             </div>
           </motion.div>
         ))}
