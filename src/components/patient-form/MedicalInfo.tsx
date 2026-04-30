@@ -87,11 +87,9 @@ export function MedicalInfo({ formData, setFormData, id, isReadOnly }: MedicalIn
 
   const visibleSchedule = VACCINE_SCHEDULE
     ? VACCINE_SCHEDULE.filter(group => {
-        // Show group if it matches the current age in months
-        // If age doesn't exactly match a group (e.g. 1 month), we show the previous most relevant group?
-        // User said: "2 meses só aparece as vacinas de 2 meses".
-        // I will show all groups that are equal to the current age in months.
-        return group.age === ageInMonths;
+        // Show all groups up to the current age in months
+        // This allows checking vaccines from birth up to the present stage
+        return group.age <= ageInMonths;
       })
     : [];
 
