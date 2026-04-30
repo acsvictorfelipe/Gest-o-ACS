@@ -541,7 +541,8 @@ export function PatientForm({ user }: { user: any }) {
 
       if (!navigator.onLine) {
         const existingHouseholdId = formData.householdId;
-        if (targetCns && !existingHouseholdId) {
+        // Only generate a new household ID if both CNS and Address are present
+        if (targetCns && formData.address && !existingHouseholdId) {
           householdId = crypto.randomUUID();
           const householdData = {
             id: householdId,
@@ -637,9 +638,8 @@ export function PatientForm({ user }: { user: any }) {
             if (updateHError) throw updateHError;
           }
         } else {
-          // If not responsible and household doesn't exist, don't create it automatically
-          // But allow the patient to be registered (householdId will be null)
-          if (formData.isFamilyResponsible) {
+          // Create new Household only if they are the responsible AND have an address
+          if (formData.isFamilyResponsible && formData.address) {
             // Create new Household only if they are the responsible
             const { data: newH, error: createHError } = await supabase
               .from('households')
