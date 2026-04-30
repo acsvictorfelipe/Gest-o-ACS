@@ -107,26 +107,30 @@ export function CriancaSection({
                 <span className="text-[10px] font-semibold uppercase text-primary tracking-widest">{group.label}</span>
                 <div className="grid grid-cols-1 gap-3">
                   {group.vaccines.map((v: any) => (
-                    <div key={v.id} className="flex items-center justify-between gap-4">
-                      <label className="text-[11px] font-medium text-text-secondary dark:text-slate-300">{v.label}</label>
-                      <input 
-                        type="date" 
-                        value={data.vacinas?.[v.id] || ''}
-                        onChange={e => setFormData((prev: any) => ({
-                          ...prev,
-                          clinicalData: {
-                            ...prev.clinicalData,
-                            crianca: {
-                              ...(prev.clinicalData?.crianca || {}),
-                              vacinas: {
-                                ...(prev.clinicalData?.crianca?.vacinas || {}),
-                                [v.id]: e.target.value
+                    <div key={v.id} className="flex items-center justify-between gap-4 p-2 hover:bg-bg-secondary dark:hover:bg-slate-900/50 rounded-lg transition-colors">
+                      <label className="text-[11px] font-semibold text-text-secondary dark:text-slate-300 cursor-pointer flex-1 py-1">
+                        {v.label}
+                      </label>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={data.vacinas?.[v.id] === 'Sim'}
+                          onChange={e => setFormData((prev: any) => ({
+                            ...prev,
+                            clinicalData: {
+                              ...prev.clinicalData,
+                              crianca: {
+                                ...(prev.clinicalData?.crianca || {}),
+                                vacinas: {
+                                  ...(prev.clinicalData?.crianca?.vacinas || {}),
+                                  [v.id]: e.target.checked ? 'Sim' : 'Não'
+                                }
                               }
                             }
-                          }
-                        }))}
-                        className="bg-bg-secondary dark:bg-slate-900 border-none rounded-lg py-1.5 px-3 text-[10px] font-semibold w-32 focus:ring-1 focus:ring-primary/30 transition-all"
-                      />
+                          }))}
+                          className="w-5 h-5 rounded border-border dark:border-slate-700 text-primary focus:ring-primary/20 transition-all cursor-pointer"
+                        />
+                      </label>
                     </div>
                   ))}
                 </div>

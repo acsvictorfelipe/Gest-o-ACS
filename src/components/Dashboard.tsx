@@ -107,9 +107,25 @@ export function Dashboard({ user }: { user: any }) {
 
           if (categories.includes('Criança') && !categories.includes('Adulto') && !categories.includes('Idoso')) {
             newStats.criancasTotal++;
-            const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 99;
-            if (ageInMonths < 144) {
+            const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 999;
+            
+            // Focus on children under 2 years (24 months)
+            if (ageInMonths <= 24) {
               newStats.criancas2y++;
+              
+              // Check for late vaccines for children 0-2 years
+              const vacinas = clinical.crianca?.vacinas || {};
+              const isLate = VACCINE_SCHEDULE.some(group => {
+                // If the child is older than or equal to the vaccine group age, they should have taken it
+                if (group.age <= ageInMonths) {
+                  return group.vaccines.some(v => vacinas[v.id] !== 'Sim');
+                }
+                return false;
+              });
+              
+              if (isLate) {
+                newStats.lateVaccines++;
+              }
             }
             
             if (p.birth_date && ageInMonths === 6) {
@@ -342,6 +358,20 @@ export function Dashboard({ user }: { user: any }) {
                       <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center text-white text-[11px] font-bold shadow-sm">{stats.pendingVisits}</div>
                     </div>
                     <p className="text-[12px] text-text-secondary font-medium">Pacientes sem registro nos últimos 30 dias</p>
+                  </div>
+                </div>
+
+                <div onClick={() => navigate('/pacientes?filter=vacinas_atrasadas')} className="p-4 rounded-[24px] border border-emerald-100 bg-emerald-50/20 flex items-center gap-4 relative overflow-hidden group hover:bg-emerald-50/40 transition-colors cursor-pointer transition-all">
+                  <div className="absolute top-0 left-0 w-[4px] h-full bg-emerald-500" />
+                  <div className="w-11 h-11 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 shrink-0">
+                    <Baby className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <h5 className="text-[14px] font-semibold text-text-primary leading-none">{stats.lateVaccines} vacinas atrasadas</h5>
+                      <Badge variant="success" className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full">0-2 ANOS</Badge>
+                    </div>
+                    <p className="text-[12px] text-text-secondary font-medium">Crianças com pendência vacinal</p>
                   </div>
                 </div>
              </div>

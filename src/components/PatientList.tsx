@@ -134,20 +134,25 @@ export function PatientList({ user }: { user: any }) {
       return matchesSearch && isChild && ageInMonths >= 5 && ageInMonths <= 6 && !visited6m;
     }
 
-    if (activeFilter === 'vaccine') {
+    if (activeFilter === 'vaccine' || activeFilter === 'vacinas_atrasadas') {
       const isChild = p.categories?.includes('Criança');
       if (!isChild) return false;
       
       const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
+      
+      // Strict 0-2 years check as requested
+      if (ageInMonths > 24) return false;
+
       const clinical = p.clinical_data || {};
       const vaccines = clinical.crianca?.vacinas || {};
       
-      // Get vaccines that should have been taken by now
-      const dueVaccines = VACCINE_SCHEDULE
-        .filter(group => group.age <= ageInMonths)
-        .flatMap(group => group.vaccines);
-        
-      const hasPendingVaccine = dueVaccines.some(v => vaccines[v.id] !== 'Sim');
+      // Get vaccines that should have been taken by now (strictly older than or equal to group age)
+      const hasPendingVaccine = VACCINE_SCHEDULE.some(group => {
+        if (group.age <= ageInMonths) {
+          return group.vaccines.some(v => vaccines[v.id] !== 'Sim');
+        }
+        return false;
+      });
       
       return matchesSearch && hasPendingVaccine;
     }
