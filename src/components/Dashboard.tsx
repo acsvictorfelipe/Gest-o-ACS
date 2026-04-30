@@ -311,7 +311,7 @@ export function Dashboard({ user }: { user: any }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
             onClick={() => navigate(stat.id === 'domicilios' ? '/domicilios' : `/pacientes?filter=${stat.filter}`)}
-            className="bg-bg-secondary rounded-xl p-3 border border-border shadow-sm cursor-pointer group relative overflow-hidden flex flex-col transition-all hover:shadow-md h-full"
+            className="bg-bg-secondary rounded-2xl py-5 px-3 border border-border shadow-sm cursor-pointer group relative overflow-hidden flex flex-col transition-all hover:shadow-md h-full"
           >
             <div className="absolute top-0 left-0 w-[2px] h-full" style={{ backgroundColor: stat.config.primary }} />
             
