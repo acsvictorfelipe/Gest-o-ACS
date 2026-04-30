@@ -7,7 +7,8 @@ import {
   TrendingUp,
   TrendingDown,
   Eye,
-  Bed
+  Bed,
+  MapPin
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAgeInMonths, VACCINE_SCHEDULE, formatDate, calculateAge } from '../lib/dateUtils';
@@ -24,6 +25,7 @@ export function Dashboard({ user }: { user: any }) {
   const navigate = useNavigate();
   const [stats, setStats] = React.useState({
     totalPatients: 0,
+    totalHouseholds: 0,
     gestantes: 0,
     criancas2y: 0,
     criancasTotal: 0,
@@ -47,6 +49,15 @@ export function Dashboard({ user }: { user: any }) {
       if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
       
       try {
+        // Fetch Households Count
+        let householdQuery = supabase.from('households').select('*', { count: 'exact', head: true });
+        if (user.role === 'Gestor') {
+          householdQuery = householdQuery.eq('area_color', user.color);
+        } else if (user.role !== 'Administrador') {
+          householdQuery = householdQuery.eq('agent_id', user.id);
+        }
+        const { count: hCount } = await householdQuery;
+
         let patientsData: any[] = [];
         let from = 0;
         let to = 999;
@@ -82,6 +93,7 @@ export function Dashboard({ user }: { user: any }) {
         
         const newStats = { 
           totalPatients: patientsData.length, 
+          totalHouseholds: hCount || 0,
           gestantes: 0, 
           criancas2y: 0, 
           criancasTotal: 0, 
@@ -167,10 +179,18 @@ export function Dashboard({ user }: { user: any }) {
       icon: UI_CONFIG.categorias.outros.icon,
       value: stats.totalPatients,
       label: 'Cidadãos',
-      sublabel: 'Total cadastrados',
-      trend: { direction: 'up', value: '8% este mês' },
+      sublabel: 'Total pacientes',
       config: UI_CONFIG.categorias.outros,
       filter: 'all'
+    },
+    {
+      id: 'domicilios',
+      icon: MapPin,
+      value: stats.totalHouseholds,
+      label: 'Domicílios',
+      sublabel: 'Total residências',
+      config: { primary: '#6366f1', soft: 'rgba(99, 102, 241, 0.1)' },
+      filter: 'households' // Note: This filter might need handling in navigation
     },
     {
       id: 'gestantes',
@@ -178,7 +198,6 @@ export function Dashboard({ user }: { user: any }) {
       value: stats.gestantes,
       label: 'GESTANTES',
       sublabel: 'Acompanhadas',
-      trend: { direction: 'up', value: '2 este mês' },
       config: UI_CONFIG.categorias.gestantes,
       filter: 'gestantes'
     },
@@ -186,9 +205,8 @@ export function Dashboard({ user }: { user: any }) {
       id: 'criancas',
       icon: UI_CONFIG.categorias.criancas.icon,
       value: stats.criancas2y,
-      label: 'CRIANÇAS < 2 ANOS',
+      label: 'CRIANÇAS < 2',
       sublabel: 'Em acompanhamento',
-      trend: { direction: 'up', value: '12 este mês' },
       config: UI_CONFIG.categorias.criancas,
       filter: 'criancas'
     },
@@ -197,8 +215,7 @@ export function Dashboard({ user }: { user: any }) {
       icon: UI_CONFIG.categorias.idosos.icon,
       value: stats.idosos,
       label: 'IDOSOS',
-      sublabel: 'Em acompanhamento',
-      trend: { direction: 'up', value: '12 este mês' },
+      sublabel: 'Acompanhados',
       config: UI_CONFIG.categorias.idosos,
       filter: 'idosos'
     },
@@ -207,8 +224,7 @@ export function Dashboard({ user }: { user: any }) {
       icon: UI_CONFIG.categorias.hipertensos.icon,
       value: stats.hipertensos,
       label: 'HIPERTENSOS',
-      sublabel: 'Em acompanhamento',
-      trend: { direction: 'up', value: '16 este mês' },
+      sublabel: 'Acompanhados',
       config: UI_CONFIG.categorias.hipertensos,
       filter: 'hipertensos'
     },
@@ -217,8 +233,7 @@ export function Dashboard({ user }: { user: any }) {
       icon: UI_CONFIG.categorias.diabeticos.icon,
       value: stats.diabeticos,
       label: 'DIABÉTICOS',
-      sublabel: 'Em acompanhamento',
-      trend: { direction: 'up', value: '7 este mês' },
+      sublabel: 'Acompanhados',
       config: UI_CONFIG.categorias.diabeticos,
       filter: 'diabeticos'
     },
@@ -228,7 +243,6 @@ export function Dashboard({ user }: { user: any }) {
       value: stats.acamados,
       label: 'ACAMADOS',
       sublabel: 'Domiciliados',
-      trend: { direction: 'up', value: '1 este mês' },
       config: UI_CONFIG.categorias.acamados,
       filter: 'acamados'
     }
@@ -289,38 +303,32 @@ export function Dashboard({ user }: { user: any }) {
   return (
     <div className="space-y-6 relative">
       {/* 1. Stat Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 min-[1400px]:grid-cols-8 gap-3">
         {statCards.map((stat, i) => (
           <motion.div
             key={stat.id}
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            onClick={() => navigate(`/pacientes?filter=${stat.filter}`)}
-            className="bg-bg-secondary rounded-3xl p-5 border border-border shadow-sm cursor-pointer group relative overflow-hidden flex flex-col transition-all hover:shadow-md"
+            onClick={() => navigate(stat.id === 'domicilios' ? '/domicilios' : `/pacientes?filter=${stat.filter}`)}
+            className="bg-bg-secondary rounded-2xl p-4 border border-border shadow-sm cursor-pointer group relative overflow-hidden flex flex-col transition-all hover:shadow-md h-full"
           >
-            <div className="absolute top-0 left-0 w-[4px] h-full" style={{ backgroundColor: stat.config.primary }} />
+            <div className="absolute top-0 left-0 w-[3px] h-full" style={{ backgroundColor: stat.config.primary }} />
             
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ backgroundColor: stat.config.soft, color: stat.config.primary }}>
-                <stat.icon className="w-6 h-6" />
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: stat.config.soft, color: stat.config.primary }}>
+                <stat.icon className="w-5 h-5" />
               </div>
-              <div className="flex flex-col">
-                <div className="min-h-[20px] flex items-end">
-                  <p className="text-[10px] text-text-muted font-semibold uppercase tracking-widest leading-tight">{stat.label}</p>
+              <div className="flex flex-col min-w-0">
+                <div className="min-h-[16px] flex items-end">
+                  <p className="text-[9px] text-text-muted font-bold uppercase tracking-widest leading-tight truncate">{stat.label}</p>
                 </div>
-                <h4 className="text-[32px] font-bold text-text-primary leading-none mt-1">{stat.value}</h4>
+                <h4 className="text-[26px] font-black text-text-primary leading-none mt-1">{stat.value}</h4>
               </div>
             </div>
             
             <div className="mt-auto">
-              <p className="text-[11px] text-text-secondary font-medium mb-1.5">{stat.sublabel}</p>
-              <div className={`flex items-center gap-1 text-[11px] font-semibold ${
-                stat.trend.direction === 'up' ? 'text-teal-600' : 'text-red-500'
-              }`}>
-                {stat.trend.direction === 'up' ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                {stat.trend.value}
-              </div>
+              <p className="text-[10px] text-text-secondary font-semibold">{stat.sublabel}</p>
             </div>
           </motion.div>
         ))}

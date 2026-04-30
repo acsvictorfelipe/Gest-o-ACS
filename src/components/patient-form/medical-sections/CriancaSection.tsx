@@ -1,5 +1,6 @@
 import React from 'react';
 import { Smile, Plus, Trash2, CheckCircle2, Stethoscope, MapPin } from 'lucide-react';
+import { calculateAge } from '../../../lib/dateUtils';
 
 interface CriancaSectionProps {
   formData: any;
