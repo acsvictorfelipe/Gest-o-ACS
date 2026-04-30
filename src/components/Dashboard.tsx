@@ -303,7 +303,7 @@ export function Dashboard({ user }: { user: any }) {
   return (
     <div className="space-y-6 relative">
       {/* 1. Stat Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 min-[1400px]:grid-cols-8 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
         {statCards.map((stat, i) => (
           <motion.div
             key={stat.id}
@@ -311,24 +311,24 @@ export function Dashboard({ user }: { user: any }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
             onClick={() => navigate(stat.id === 'domicilios' ? '/domicilios' : `/pacientes?filter=${stat.filter}`)}
-            className="bg-bg-secondary rounded-2xl p-4 border border-border shadow-sm cursor-pointer group relative overflow-hidden flex flex-col transition-all hover:shadow-md h-full"
+            className="bg-bg-secondary rounded-xl p-3 border border-border shadow-sm cursor-pointer group relative overflow-hidden flex flex-col transition-all hover:shadow-md h-full"
           >
-            <div className="absolute top-0 left-0 w-[3px] h-full" style={{ backgroundColor: stat.config.primary }} />
+            <div className="absolute top-0 left-0 w-[2px] h-full" style={{ backgroundColor: stat.config.primary }} />
             
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: stat.config.soft, color: stat.config.primary }}>
-                <stat.icon className="w-5 h-5" />
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: stat.config.soft, color: stat.config.primary }}>
+                <stat.icon className="w-4 h-4" />
               </div>
               <div className="flex flex-col min-w-0">
-                <div className="min-h-[16px] flex items-end">
-                  <p className="text-[9px] text-text-muted font-bold uppercase tracking-widest leading-tight truncate">{stat.label}</p>
+                <div className="min-h-[12px] flex items-end">
+                  <p className="text-[8px] text-text-muted font-bold uppercase tracking-tighter leading-tight truncate">{stat.label}</p>
                 </div>
-                <h4 className="text-[26px] font-black text-text-primary leading-none mt-1">{stat.value}</h4>
+                <h4 className="text-[20px] font-black text-text-primary leading-none mt-0.5">{stat.value}</h4>
               </div>
             </div>
             
             <div className="mt-auto">
-              <p className="text-[10px] text-text-secondary font-semibold">{stat.sublabel}</p>
+              <p className="text-[9px] text-text-secondary font-bold truncate leading-none">{stat.sublabel}</p>
             </div>
           </motion.div>
         ))}
