@@ -140,10 +140,7 @@ export function CriancaSection({
                 </div>
                 <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2">
                   {group.vaccines.map((v: any) => (
-                    <div key={v.id} className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-white dark:hover:bg-slate-900 transition-all group/v">
-                      <label className="text-[10px] font-bold text-text-secondary dark:text-slate-400 group-hover/v:text-primary transition-colors cursor-pointer flex-1 truncate uppercase">
-                        {v.label}
-                      </label>
+                    <div key={v.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white dark:hover:bg-slate-900 transition-all group/v">
                       <input 
                         type="checkbox" 
                         disabled={isReadOnly}
@@ -163,6 +160,9 @@ export function CriancaSection({
                         }))}
                         className="w-4.5 h-4.5 rounded border-slate-300 dark:border-slate-600 text-primary focus:ring-primary/20 transition-all cursor-pointer disabled:opacity-50"
                       />
+                      <label className="text-[10px] font-bold text-text-secondary dark:text-slate-400 group-hover/v:text-primary transition-colors cursor-pointer flex-1 truncate uppercase">
+                        {v.label}
+                      </label>
                     </div>
                   ))}
                 </div>
