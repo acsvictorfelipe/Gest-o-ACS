@@ -154,6 +154,7 @@ export function GestanteSection({
               className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-700 rounded-xl p-3 text-sm"
             >
               <option>NÃO REALIZADO</option>
+              <option>REALIZADO</option>
               <option>REAGENTE</option>
               <option>NÃO REAGENTE</option>
             </select>
@@ -172,6 +173,7 @@ export function GestanteSection({
               className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-700 rounded-xl p-3 text-sm"
             >
               <option>NÃO REALIZADO</option>
+              <option>REALIZADO</option>
               <option>REAGENTE</option>
               <option>NÃO REAGENTE</option>
             </select>
