@@ -27,7 +27,7 @@ import {
   CheckCircle,
   ShieldAlert,
   Heart,
-  Eye,
+  Home,
   MessageCircle,
   Phone
 } from 'lucide-react';
@@ -165,10 +165,10 @@ export function PatientList({ user }: { user: any }) {
       
       const ageInMonths = getAgeInMonths(p.birth_date);
       
-      // We only want patients who are in the 5 to 9 months window
-      const inWindow = ageInMonths >= 5 && ageInMonths <= 9;
+      // Show children up to 6 months who haven't had the visit
+      const inWindow = ageInMonths <= 6;
       
-      const alreadyVisited = !!p.clinical_data?.crianca?.visita6meses && p.clinical_data.crianca.visita6meses !== 'Não';
+      const alreadyVisited = !!p.clinical_data?.crianca?.visita6meses && p.clinical_data.crianca.visita6meses === 'Sim';
       
       return matchesSearch && inWindow && !alreadyVisited;
     }
@@ -405,7 +405,7 @@ export function PatientList({ user }: { user: any }) {
                       <tr 
                         key={p.id} 
                         className="hover:bg-slate-50 transition-all cursor-pointer group"
-                        onClick={() => p.household_id ? navigate(`/domicilio/${p.household_id}`) : navigate(`/editar-paciente/${p.id}`)}
+                        onClick={() => navigate(`/editar-paciente/${p.id}`)}
                       >
                         <td className="px-8 py-5">
                           <div className="flex items-center gap-4">
@@ -506,11 +506,14 @@ export function PatientList({ user }: { user: any }) {
                              <button 
                                onClick={(e) => {
                                  e.stopPropagation();
-                                 navigate(`/editar-paciente/${p.id}`);
+                                 if (p.household_id) {
+                                   navigate(`/domicilio/${p.household_id}`);
+                                 }
                                }}
-                               className="p-2 text-text-muted hover:text-teal-600 transition-colors"
+                               className={`p-2 transition-colors ${p.household_id ? 'text-text-muted hover:text-teal-600' : 'text-slate-200 cursor-not-allowed'}`}
+                               title={p.household_id ? "Ver Domicílio" : "Domicílio não cadastrado"}
                              >
-                               {user.role === 'Gestor' ? <Eye className="w-4.5 h-4.5" /> : <Pencil className="w-4.5 h-4.5" />}
+                               <Home className="w-4.5 h-4.5" />
                              </button>
                              <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 group-hover:text-teal-600 transition-colors">
                                <ChevronRight className="w-5 h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
@@ -541,7 +544,7 @@ export function PatientList({ user }: { user: any }) {
                 <div 
                   key={p.id} 
                   className="p-4 space-y-3 active:bg-slate-50 transition-colors"
-                  onClick={() => p.household_id ? navigate(`/domicilio/${p.household_id}`) : navigate(`/editar-paciente/${p.id}`)}
+                  onClick={() => navigate(`/editar-paciente/${p.id}`)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -585,7 +588,21 @@ export function PatientList({ user }: { user: any }) {
                           )}
                         </div>
                       </div>
-                    <ChevronRight className="w-4 h-4 text-slate-300" />
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (p.household_id) {
+                            navigate(`/domicilio/${p.household_id}`);
+                          }
+                        }}
+                        className={`p-2 rounded-lg transition-colors ${p.household_id ? 'text-teal-600 bg-teal-50' : 'text-slate-200 bg-slate-50'}`}
+                        title={p.household_id ? "Ver Domicílio" : "Domicílio não cadastrado"}
+                      >
+                        <Home className="w-4 h-4" />
+                      </button>
+                      <ChevronRight className="w-4 h-4 text-slate-300" />
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">

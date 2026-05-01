@@ -106,6 +106,7 @@ export function HouseholdView({ user }: { user: any }) {
         setHousehold({ ...household, ...editForm });
         setIsEditing(false);
         alert('Alterações salvas localmente.');
+        navigate('/domicilios');
         return;
       }
 
@@ -117,6 +118,7 @@ export function HouseholdView({ user }: { user: any }) {
       if (error) throw error;
       setHousehold({ ...household, ...editForm });
       setIsEditing(false);
+      navigate('/domicilios');
     } catch (error) {
       console.error("Error updating household:", error);
       alert("Erro ao atualizar domicílio.");

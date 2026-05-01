@@ -142,7 +142,7 @@ export function Dashboard({ user }: { user: any }) {
               }
             }
             
-            if (p.birth_date && ageInMonths === 6) {
+            if (p.birth_date && ageInMonths <= 6) {
               const visited6m = clinical.crianca?.visita6meses === 'Sim';
               if (!visited6m) {
                 newStats.childVisitAlerts++;

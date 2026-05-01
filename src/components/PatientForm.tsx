@@ -650,8 +650,18 @@ export function PatientForm({ user }: { user: any }) {
           });
         }
 
+        const getRedirectFilter = (categories: string[]) => {
+          if (categories.includes('Gestante')) return 'gestantes';
+          if (categories.includes('Criança')) return 'criancas';
+          if (categories.includes('Idoso')) return 'idosos';
+          if (categories.includes('Hipertenso')) return 'hipertensos';
+          if (categories.includes('Diabético')) return 'diabéticos';
+          if (categories.includes('AcamadoDomiciliado')) return 'acamados';
+          return 'all';
+        };
+
         alert('Dados salvos localmente. Serão sincronizados quando houver internet.');
-        navigate('/');
+        navigate(`/pacientes?filter=${getRedirectFilter(finalCategories)}`);
         return;
       }
 
@@ -775,7 +785,17 @@ export function PatientForm({ user }: { user: any }) {
         if (vError) throw vError;
       }
 
-      navigate('/');
+      const getRedirectFilter = (categories: string[]) => {
+        if (categories.includes('Gestante')) return 'gestantes';
+        if (categories.includes('Criança')) return 'criancas';
+        if (categories.includes('Idoso')) return 'idosos';
+        if (categories.includes('Hipertenso')) return 'hipertensos';
+        if (categories.includes('Diabético')) return 'diabéticos';
+        if (categories.includes('AcamadoDomiciliado')) return 'acamados';
+        return 'all';
+      };
+
+      navigate(`/pacientes?filter=${getRedirectFilter(formData.categories)}`);
     } catch (error: any) {
       console.error("Error saving patient:", error);
       alert(error.message || "Erro ao salvar paciente.");
