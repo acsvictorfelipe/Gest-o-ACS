@@ -185,7 +185,11 @@ export function PatientList({ user }: { user: any }) {
     }
     if (activeFilter === 'gestantes') return matchesSearch && p.categories?.includes('Gestante');
     if (activeFilter === 'acamados') return matchesSearch && p.categories?.includes('AcamadoDomiciliado');
-    if (activeFilter === 'idosos') return matchesSearch && p.categories?.includes('Idoso');
+    if (activeFilter === 'idosos') {
+      const age = p.birth_date ? calculateAge(p.birth_date) : 0;
+      const ageNum = typeof age === 'number' ? age : parseInt(String(age));
+      return matchesSearch && (ageNum >= 60 || p.categories?.includes('Idoso'));
+    }
     if (activeFilter === 'adultos') return matchesSearch && p.categories?.includes('Adulto');
     if (activeFilter === 'saudemental' || activeFilter === 'saude-mental') return matchesSearch && p.categories?.includes('SaudeMental');
     if (activeFilter === 'hipertensos') {

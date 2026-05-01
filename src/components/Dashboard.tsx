@@ -158,7 +158,10 @@ export function Dashboard({ user }: { user: any }) {
 
           if (categories.includes('Gestante')) newStats.gestantes++;
           if (categories.includes('AcamadoDomiciliado')) newStats.acamados++;
-          if (categories.includes('Idoso')) newStats.idosos++;
+          const patientAge = p.birth_date ? calculateAge(p.birth_date) : 0;
+          const patientAgeNum = typeof patientAge === 'number' ? patientAge : parseInt(String(patientAge));
+
+          if (categories.includes('Idoso') || patientAgeNum >= 60) newStats.idosos++;
           if (categories.includes('Adulto')) newStats.adultos++;
           if (categories.includes('SaudeMental') || categories.includes('Saúde Mental')) newStats.saudeMental++;
         });
