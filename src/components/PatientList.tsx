@@ -431,27 +431,36 @@ export function PatientList({ user }: { user: any }) {
                         </td>
                         <td className="px-8 py-5">
                           <div className="flex flex-wrap gap-1.5">
-                            {p.categories?.slice(0, 3).map((cat: string) => {
-                              const catMap: Record<string, { primary: string; label: string }> = {
-                                'Gestante':            { primary: '#EC4899', label: 'Gestante' },
-                                'Criança':             { primary: '#3B82F6', label: 'Criança' },
-                                'Idoso':               { primary: '#F97316', label: 'Idoso' },
-                                'Adulto':              { primary: '#10B981', label: 'Adulto' },
-                                'AcamadoDomiciliado':  { primary: '#64748B', label: 'Acamado' },
-                                'SaudeMental':         { primary: '#6366F1', label: 'S. Mental' },
-                              };
-                              const matched = catMap[cat];
-                              if (!matched) return null;
-                              return (
-                                <span 
-                                  key={cat} 
-                                  className="px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-tight text-white" 
-                                  style={{ backgroundColor: matched.primary }}
-                                >
-                                  {matched.label}
-                                </span>
-                              );
-                            })}
+                            {(() => {
+                              const age = p.birth_date ? calculateAge(p.birth_date) : 0;
+                              const ageNum = typeof age === 'number' ? age : parseInt(String(age));
+                              const displayCategories = [...(p.categories || [])];
+                              if (ageNum >= 60 && !displayCategories.includes('Idoso')) {
+                                displayCategories.push('Idoso');
+                              }
+
+                              return displayCategories.slice(0, 4).map((cat: string) => {
+                                const catMap: Record<string, { primary: string; label: string }> = {
+                                  'Gestante':            { primary: '#EC4899', label: 'Gestante' },
+                                  'Criança':             { primary: '#3B82F6', label: 'Criança' },
+                                  'Idoso':               { primary: '#F97316', label: 'Idoso' },
+                                  'Adulto':              { primary: '#10B981', label: 'Adulto' },
+                                  'AcamadoDomiciliado':  { primary: '#64748B', label: 'Acamado' },
+                                  'SaudeMental':         { primary: '#6366F1', label: 'S. Mental' },
+                                };
+                                const matched = catMap[cat];
+                                if (!matched) return null;
+                                return (
+                                  <span 
+                                    key={cat} 
+                                    className="px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-tight text-white" 
+                                    style={{ backgroundColor: matched.primary }}
+                                  >
+                                    {matched.label}
+                                  </span>
+                                );
+                              });
+                            })()}
                             
                             {/* Clinical Indicators */}
                             {(p.clinical_data?.chronic?.hipertensao === 'Sim' || p.clinical_data?.adulto?.hipertensao === 'Sim' || p.clinical_data?.idoso?.hipertensao === 'Sim') && (
@@ -580,26 +589,35 @@ export function PatientList({ user }: { user: any }) {
                   </div>
 
                   <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-                    {p.categories?.map((cat: string) => {
-                      const catMap: Record<string, { primary: string; label: string }> = {
-                        'Gestante':            { primary: '#EC4899', label: 'Gestante' },
-                        'Criança':             { primary: '#3B82F6', label: 'Criança' },
-                        'Idoso':               { primary: '#F97316', label: 'Idoso' },
-                        'Adulto':              { primary: '#10B981', label: 'Adulto' },
-                        'AcamadoDomiciliado':  { primary: '#64748B', label: 'Acamado' },
-                        'SaudeMental':         { primary: '#6366F1', label: 'S. Mental' },
-                      };
-                      const matched = catMap[cat];
-                      if (!matched) return null;
-                      return (
-                        <span key={cat}
-                          className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase whitespace-nowrap text-white"
-                          style={{ backgroundColor: matched.primary }}
-                        >
-                          {matched.label}
-                        </span>
-                      );
-                    })}
+                    {(() => {
+                      const age = p.birth_date ? calculateAge(p.birth_date) : 0;
+                      const ageNum = typeof age === 'number' ? age : parseInt(String(age));
+                      const displayCategories = [...(p.categories || [])];
+                      if (ageNum >= 60 && !displayCategories.includes('Idoso')) {
+                        displayCategories.push('Idoso');
+                      }
+
+                      return displayCategories.map((cat: string) => {
+                        const catMap: Record<string, { primary: string; label: string }> = {
+                          'Gestante':            { primary: '#EC4899', label: 'Gestante' },
+                          'Criança':             { primary: '#3B82F6', label: 'Criança' },
+                          'Idoso':               { primary: '#F97316', label: 'Idoso' },
+                          'Adulto':              { primary: '#10B981', label: 'Adulto' },
+                          'AcamadoDomiciliado':  { primary: '#64748B', label: 'Acamado' },
+                          'SaudeMental':         { primary: '#6366F1', label: 'S. Mental' },
+                        };
+                        const matched = catMap[cat];
+                        if (!matched) return null;
+                        return (
+                          <span key={cat}
+                            className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase whitespace-nowrap text-white"
+                            style={{ backgroundColor: matched.primary }}
+                          >
+                            {matched.label}
+                          </span>
+                        );
+                      });
+                    })()}
                     
                     {/* clinical indicators */}
                     {(p.clinical_data?.chronic?.hipertensao === 'Sim' || p.clinical_data?.adulto?.hipertensao === 'Sim' || p.clinical_data?.idoso?.hipertensao === 'Sim') && (

@@ -10,7 +10,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { calculateAge, vaccineLabels, formatDate, parseDate } from '../lib/dateUtils';
+import { calculateAge, getAgeInMonths, vaccineLabels, formatDate, parseDate } from '../lib/dateUtils';
 import { PersonalInfo } from './patient-form/PersonalInfo';
 import { AddressInfo } from './patient-form/AddressInfo';
 import { MedicalInfo } from './patient-form/MedicalInfo';
@@ -531,6 +531,41 @@ export function PatientForm({ user }: { user: any }) {
   };
 
 
+  // Automate category selection based on birth date
+  React.useEffect(() => {
+    if (!formData.birthDate) return;
+    
+    const age = calculateAge(formData.birthDate);
+    const ageNum = typeof age === 'number' ? age : parseInt(String(age));
+    const ageInMonths = getAgeInMonths(formData.birthDate);
+    
+    setFormData(prev => {
+      const currentCategories = [...prev.categories];
+      let changed = false;
+
+      // Rule for Idoso (60+ years)
+      if (ageNum >= 60) {
+        if (!currentCategories.includes('Idoso')) {
+          currentCategories.push('Idoso');
+          changed = true;
+        }
+      }
+
+      // Rule for Criança (0-24 months)
+      if (ageInMonths <= 24) {
+        if (!currentCategories.includes('Criança')) {
+          currentCategories.push('Criança');
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        return { ...prev, categories: currentCategories };
+      }
+      return prev;
+    });
+  }, [formData.birthDate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -570,15 +605,23 @@ export function PatientForm({ user }: { user: any }) {
           }
         }
 
+        const patientAge = calculateAge(formData.birthDate);
+        const patientAgeNum = typeof patientAge === 'number' ? patientAge : parseInt(String(patientAge));
+        
+        let finalCategories = [...(formData.categories || [])];
+        if (patientAgeNum >= 60 && !finalCategories.includes('Idoso')) {
+          finalCategories.push('Idoso');
+        }
+
         const patientData = {
           id: id || crypto.randomUUID(),
           name: formData.name,
           cns: formData.cns,
           is_family_responsible: formData.isFamilyResponsible,
-          birth_date: formData.birthDate,
+          birth_date: formData.birth_date || formData.birthDate,
           gender: formData.gender,
           household_id: householdId,
-          categories: formData.categories,
+          categories: finalCategories,
           microarea: user.microarea,
           area_color: user.color || '#00488d',
           agent_id: user.id,
