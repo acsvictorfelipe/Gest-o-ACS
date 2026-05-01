@@ -50,7 +50,9 @@ export function Dashboard({ user }: { user: any }) {
       
       try {
         // Fetch Households Count
-        let householdQuery = supabase.from('households').select('*', { count: 'exact', head: true });
+        let householdQuery = supabase.from('households').select('*', { count: 'exact', head: true })
+          .neq('responsible_name', 'Responsável não cadastrado');
+        
         if (user.role === 'Gestor') {
           householdQuery = householdQuery.eq('area_color', user.color);
         } else if (user.role !== 'Administrador') {
