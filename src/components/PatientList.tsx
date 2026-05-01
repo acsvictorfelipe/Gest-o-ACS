@@ -34,7 +34,7 @@ import {
 import { UI_CONFIG } from '../constants';
 
 import { format, isSameDay } from 'date-fns';
-import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE, formatDate, parseDate } from '../lib/dateUtils';
+import { calculateAge, getAgeInMonths, getAgeNumber, VACCINE_SCHEDULE, formatDate, parseDate } from '../lib/dateUtils';
 
 export function PatientList({ user }: { user: any }) {
   const navigate = useNavigate();
@@ -186,9 +186,8 @@ export function PatientList({ user }: { user: any }) {
     if (activeFilter === 'gestantes') return matchesSearch && p.categories?.includes('Gestante');
     if (activeFilter === 'acamados') return matchesSearch && p.categories?.includes('AcamadoDomiciliado');
     if (activeFilter === 'idosos') {
-      const age = p.birth_date ? calculateAge(p.birth_date) : 0;
-      const ageNum = typeof age === 'number' ? age : parseInt(String(age));
-      return matchesSearch && (ageNum >= 60 || p.categories?.includes('Idoso'));
+      const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
+      return matchesSearch && (ageNum >= 60 || p.categories?.includes('Idoso') || p.categories?.includes('Idosos'));
     }
     if (activeFilter === 'adultos') return matchesSearch && p.categories?.includes('Adulto');
     if (activeFilter === 'saudemental' || activeFilter === 'saude-mental') return matchesSearch && p.categories?.includes('SaudeMental');

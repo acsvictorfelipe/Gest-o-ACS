@@ -11,7 +11,7 @@ import {
   MapPin
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getAgeInMonths, VACCINE_SCHEDULE, formatDate, calculateAge } from '../lib/dateUtils';
+import { getAgeInMonths, VACCINE_SCHEDULE, formatDate, calculateAge, getAgeNumber } from '../lib/dateUtils';
 import { Badge } from './Badge';
 import { PendingCalendar } from './PendingCalendar';
 import { motion } from 'motion/react';
@@ -158,10 +158,8 @@ export function Dashboard({ user }: { user: any }) {
 
           if (categories.includes('Gestante')) newStats.gestantes++;
           if (categories.includes('AcamadoDomiciliado')) newStats.acamados++;
-          const patientAge = p.birth_date ? calculateAge(p.birth_date) : 0;
-          const patientAgeNum = typeof patientAge === 'number' ? patientAge : parseInt(String(patientAge));
-
-          if (categories.includes('Idoso') || patientAgeNum >= 60) newStats.idosos++;
+          const patientAgeNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
+          if (categories.includes('Idoso') || categories.includes('Idosos') || patientAgeNum >= 60) newStats.idosos++;
           if (categories.includes('Adulto')) newStats.adultos++;
           if (categories.includes('SaudeMental') || categories.includes('Saúde Mental')) newStats.saudeMental++;
         });
