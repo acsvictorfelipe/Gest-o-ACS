@@ -8,10 +8,10 @@ interface AddressInfoProps {
 }
 
 export function AddressInfo({ formData, setFormData, isReadOnly }: AddressInfoProps) {
-  const handleWhatsApp = () => {
-    if (!formData.contact) return;
+  const handleWhatsApp = (phone: string) => {
+    if (!phone) return;
     // Remove all non-numeric characters
-    const cleanNumber = formData.contact.replace(/\D/g, '');
+    const cleanNumber = phone.replace(/\D/g, '');
     if (cleanNumber.length < 10) {
       alert("Número de telefone incompleto.");
       return;
@@ -59,17 +59,18 @@ export function AddressInfo({ formData, setFormData, isReadOnly }: AddressInfoPr
             className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
           />
         </div>
-        <div className="md:col-span-6 space-y-1.5">
+        
+        <div className="md:col-span-4 space-y-1.5">
           <div className="flex items-center justify-between">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Telefone / WhatsApp</label>
+            <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Contato / WhatsApp</label>
             {formData.contact && (
               <button 
                 type="button"
-                onClick={handleWhatsApp}
+                onClick={() => handleWhatsApp(formData.contact)}
                 className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors uppercase tracking-wider"
               >
                 <MessageCircle className="w-3 h-3" />
-                Abrir Conversa
+                Abrir
               </button>
             )}
           </div>
@@ -85,7 +86,35 @@ export function AddressInfo({ formData, setFormData, isReadOnly }: AddressInfoPr
             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted opacity-50" />
           </div>
         </div>
-        <div className="md:col-span-6 space-y-1.5">
+
+        <div className="md:col-span-4 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Telefone Recado / WhatsApp</label>
+            {formData.contact2 && (
+              <button 
+                type="button"
+                onClick={() => handleWhatsApp(formData.contact2)}
+                className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors uppercase tracking-wider"
+              >
+                <MessageCircle className="w-3 h-3" />
+                Abrir
+              </button>
+            )}
+          </div>
+          <div className="relative">
+            <input 
+              type="text" 
+              disabled={isReadOnly}
+              value={formData.contact2 || ''}
+              onChange={e => setFormData({ ...formData, contact2: e.target.value })}
+              className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 pl-9 pr-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
+              placeholder="(00) 00000-0000"
+            />
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted opacity-50" />
+          </div>
+        </div>
+
+        <div className="md:col-span-4 space-y-1.5">
           <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Nome para Recado</label>
           <input 
             type="text" 
@@ -93,10 +122,10 @@ export function AddressInfo({ formData, setFormData, isReadOnly }: AddressInfoPr
             value={formData.messageContact || ''}
             onChange={e => setFormData({ ...formData, messageContact: e.target.value })}
             className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
+            placeholder="Ex: Esposo, Mãe..."
           />
         </div>
       </div>
     </section>
   );
 }
-

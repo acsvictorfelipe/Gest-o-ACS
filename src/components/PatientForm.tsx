@@ -240,6 +240,7 @@ export function PatientForm({ user }: { user: any }) {
             number: hData.number || '',
             complement: hData.complement || '',
             contact: data.clinical_data?.contact || '',
+            contact2: data.clinical_data?.contact2 || '',
             messageContact: data.clinical_data?.message_contact || '',
             householdId: data.household_id || '',
             categories: data.categories || [],
@@ -584,6 +585,7 @@ export function PatientForm({ user }: { user: any }) {
           clinical_data: {
             ...formData.clinicalData,
             contact: formData.contact,
+            contact2: formData.contact2,
             message_contact: formData.messageContact,
             responsible_cns: targetCns
           },
