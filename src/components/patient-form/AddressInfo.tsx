@@ -5,9 +5,10 @@ interface AddressInfoProps {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
   isReadOnly?: boolean;
+  streets?: string[];
 }
 
-export function AddressInfo({ formData, setFormData, isReadOnly }: AddressInfoProps) {
+export function AddressInfo({ formData, setFormData, isReadOnly, streets = [] }: AddressInfoProps) {
   const handleWhatsApp = (phone: string) => {
     if (!phone) return;
     // Remove all non-numeric characters
@@ -32,12 +33,18 @@ export function AddressInfo({ formData, setFormData, isReadOnly }: AddressInfoPr
           <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Logradouro / Rua</label>
           <input 
             type="text" 
+            list="streets-list"
             disabled={isReadOnly}
             value={formData.address || ''}
             onChange={e => setFormData({ ...formData, address: e.target.value })}
             className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
-            placeholder="Ex: Rua das Flores, 123"
+            placeholder="Ex: Rua das Flores"
           />
+          <datalist id="streets-list">
+            {streets.map((street, index) => (
+              <option key={index} value={street} />
+            ))}
+          </datalist>
         </div>
         <div className="md:col-span-2 space-y-1.5">
           <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Número</label>

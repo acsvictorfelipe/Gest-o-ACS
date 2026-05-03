@@ -958,7 +958,7 @@ export function PatientForm({ user }: { user: any }) {
       <form onSubmit={handleSubmit} className="space-y-6 pb-20">
         <fieldset disabled={isReadOnly} className="space-y-8 contents">
           <PersonalInfo formData={formData} setFormData={setFormData} />
-          <AddressInfo formData={formData} setFormData={setFormData} />
+          <AddressInfo formData={formData} setFormData={setFormData} streets={user.streets} />
           <MedicalInfo formData={formData} setFormData={setFormData} id={id} />
         </fieldset>
 

@@ -10,7 +10,11 @@ import {
   Save, 
   AlertCircle,
   CheckCircle2,
-  Loader2
+  Loader2,
+  Plus,
+  Trash2,
+  Pencil,
+  X
 } from 'lucide-react';
 
 export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate?: () => void }) {
@@ -24,8 +28,13 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
     role: user.role || 'Agente',
     email: user.email || '',
     newPassword: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    streets: user.streets || [] as string[]
   });
+
+  const [newStreet, setNewStreet] = useState('');
+  const [editingStreetIndex, setEditingStreetIndex] = useState<number | null>(null);
+  const [editStreetValue, setEditStreetValue] = useState('');
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +50,8 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
           name: formData.name,
           microarea: isSystemAdmin ? '' : formData.microarea,
           color: isSystemAdmin ? '#64748b' : formData.color,
-          role: formData.role
+          role: formData.role,
+          streets: formData.streets
         })
         .eq('id', user.id);
 
@@ -78,6 +88,26 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddStreet = () => {
+    if (!newStreet.trim()) return;
+    const street = newStreet.trim();
+    if (formData.streets.includes(street)) return;
+    setFormData(prev => ({ ...prev, streets: [...prev.streets, street] }));
+    setNewStreet('');
+  };
+
+  const handleRemoveStreet = (index: number) => {
+    setFormData(prev => ({ ...prev, streets: prev.streets.filter((_, i) => i !== index) }));
+  };
+
+  const handleSaveStreetEdit = (index: number) => {
+    if (!editStreetValue.trim()) return;
+    const newStreets = [...formData.streets];
+    newStreets[index] = editStreetValue.trim();
+    setFormData(prev => ({ ...prev, streets: newStreets }));
+    setEditingStreetIndex(null);
   };
 
   const colors = [
@@ -176,6 +206,88 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
             )}
           </div>
         </section>
+
+        {/* Gestão de Ruas */}
+        {user.role === 'Agente' && (
+          <section className="bg-bg-secondary dark:bg-slate-900 rounded-xl border border-border dark:border-slate-800 p-6 shadow-sm space-y-6">
+            <div className="flex items-center gap-2 text-text-primary dark:text-white">
+              <MapPin className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-semibold uppercase tracking-tight">Gestão de Ruas</h3>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs text-text-muted font-medium">Cadastre as ruas da sua microárea para facilitar o preenchimento dos endereços.</p>
+              
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={newStreet}
+                  onChange={e => setNewStreet(e.target.value)}
+                  onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddStreet())}
+                  className="flex-1 bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all text-text-primary dark:text-white"
+                  placeholder="Nome da rua (Ex: Rua Principal)"
+                />
+                <button 
+                  type="button"
+                  onClick={handleAddStreet}
+                  className="px-4 py-2 bg-primary/10 text-primary rounded-lg font-bold hover:bg-primary/20 transition-all flex items-center gap-2 text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Adicionar
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                {formData.streets.map((street: string, index: number) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-bg-primary dark:bg-slate-800 rounded-lg border border-border/50 group">
+                    {editingStreetIndex === index ? (
+                      <div className="flex-1 flex gap-2">
+                        <input 
+                          type="text"
+                          autoFocus
+                          value={editStreetValue}
+                          onChange={e => setEditStreetValue(e.target.value)}
+                          onKeyPress={e => e.key === 'Enter' && handleSaveStreetEdit(index)}
+                          className="flex-1 bg-bg-secondary dark:bg-slate-900 border border-primary rounded px-2 py-1 text-sm outline-none"
+                        />
+                        <button type="button" onClick={() => handleSaveStreetEdit(index)} className="text-primary font-bold text-xs uppercase">Ok</button>
+                        <button type="button" onClick={() => setEditingStreetIndex(null)} className="text-text-muted font-bold text-xs uppercase">Sair</button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-sm font-medium text-text-primary dark:text-white truncate pr-4">{street}</span>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setEditingStreetIndex(index);
+                              setEditStreetValue(street);
+                            }}
+                            className="p-1.5 text-text-muted hover:text-primary transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => handleRemoveStreet(index)}
+                            className="p-1.5 text-text-muted hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+                {formData.streets.length === 0 && (
+                  <div className="col-span-full py-8 text-center border-2 border-dashed border-border dark:border-slate-800 rounded-xl">
+                    <p className="text-xs text-text-muted font-medium">Nenhuma rua cadastrada ainda.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Segurança */}
         <section className="bg-bg-secondary dark:bg-slate-900 rounded-xl border border-border dark:border-slate-800 p-6 shadow-sm space-y-6">

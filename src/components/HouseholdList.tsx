@@ -136,11 +136,6 @@ export function HouseholdList({ user }: { user: any }) {
     }
   };
 
-  const filteredHouseholds = households.filter(h => {
-    const matchesSearch = h.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      h.responsible_cns?.includes(searchTerm) ||
-      h.address?.toLowerCase().includes(searchTerm.toLowerCase());
-    
   const streetStats = React.useMemo(() => {
     const stats: Record<string, number> = {};
     households.forEach(h => {
