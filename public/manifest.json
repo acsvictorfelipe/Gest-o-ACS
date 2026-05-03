@@ -1,0 +1,18 @@
+{
+  "name": "Gestão ACS",
+  "short_name": "Gestão ACS",
+  "description": "Sistema de Gestão para Agentes Comunitários de Saúde",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#00488d",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

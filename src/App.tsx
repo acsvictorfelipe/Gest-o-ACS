@@ -13,6 +13,7 @@ import { Reports } from './components/Reports';
 import { UserManagement } from './components/UserManagement';
 import { VisitHistory } from './components/VisitHistory';
 import { ImportTool } from './components/ImportTool';
+import { syncService } from './lib/syncService';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
@@ -54,6 +55,22 @@ export default function App() {
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('App is online. Triggering sync...');
+      syncService.sync();
+    };
+
+    window.addEventListener('online', handleOnline);
+    
+    // Initial sync check
+    if (navigator.onLine) {
+      syncService.sync();
+    }
+
+    return () => window.removeEventListener('online', handleOnline);
   }, []);
 
   const fetchProfile = async (supabaseUser: any) => {

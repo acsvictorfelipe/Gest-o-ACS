@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getAgeInMonths } from '../lib/dateUtils';
+import { syncService } from '../lib/syncService';
 import { motion } from 'motion/react';
 
 export function Layout({ 
@@ -44,6 +45,14 @@ export function Layout({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [criticalAlerts, setCriticalAlerts] = React.useState<any[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
+  const [syncQueueLength, setSyncQueueLength] = React.useState(0);
+
+  React.useEffect(() => {
+    const updateQueue = () => setSyncQueueLength(syncService.getQueueLength());
+    updateQueue();
+    const interval = setInterval(updateQueue, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   React.useEffect(() => {
     const fetchAlerts = async () => {
@@ -284,8 +293,17 @@ export function Layout({
                 </div>
               )}
 
-              <button className="p-2.5 text-text-muted hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-xl transition-all">
-                <RefreshCw className="w-5.5 h-5.5" />
+              <button 
+                onClick={() => syncService.sync()}
+                className={`p-2.5 rounded-xl transition-all relative ${syncQueueLength > 0 ? 'text-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'text-text-muted hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20'}`}
+                title={syncQueueLength > 0 ? `${syncQueueLength} itens pendentes para sincronização` : 'Sincronizado'}
+              >
+                <RefreshCw className={`w-5.5 h-5.5 ${syncQueueLength > 0 ? 'animate-spin-slow' : ''}`} />
+                {syncQueueLength > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 border-2 border-bg-secondary rounded-full flex items-center justify-center">
+                    <span className="text-[9px] font-bold text-white">{syncQueueLength}</span>
+                  </span>
+                )}
               </button>
             </div>
           </div>
