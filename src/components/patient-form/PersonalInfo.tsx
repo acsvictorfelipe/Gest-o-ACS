@@ -65,11 +65,13 @@ export function PersonalInfo({ formData, setFormData, isReadOnly }: PersonalInfo
         <div className="md:col-span-2 space-y-1.5">
           <label className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Gênero</label>
           <select 
+            required
             disabled={isReadOnly}
-            value={formData.gender || 'Feminino'}
+            value={formData.gender || ''}
             onChange={e => setFormData({ ...formData, gender: e.target.value })}
             className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
           >
+            <option value="" disabled>Selecione</option>
             <option>Feminino</option>
             <option>Masculino</option>
             <option>Outro</option>

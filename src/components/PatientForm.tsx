@@ -34,7 +34,7 @@ export function PatientForm({ user }: { user: any }) {
     responsibleCns: '',
     isFamilyResponsible: false,
     birthDate: '',
-    gender: 'Feminino',
+    gender: '',
     visitDate: '',
     visitType: 'Rotina',
     visitSummary: '',
