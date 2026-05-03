@@ -21,6 +21,7 @@ export function HouseholdList({ user }: { user: any }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedStreet, setSelectedStreet] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchHouseholds = async () => {
@@ -142,8 +143,21 @@ export function HouseholdList({ user }: { user: any }) {
     
     const isPlaceholder = h.responsible_name === 'Responsável Importado' || h.responsible_name === 'Responsável não cadastrado';
     
-    return matchesSearch && !isPlaceholder;
+    const matchesStreet = !selectedStreet || h.address === selectedStreet;
+    
+    return matchesSearch && !isPlaceholder && matchesStreet;
   });
+
+  const streetStats = React.useMemo(() => {
+    const stats: Record<string, number> = {};
+    households.forEach(h => {
+      const isPlaceholder = h.responsible_name === 'Responsável Importado' || h.responsible_name === 'Responsável não cadastrado';
+      if (h.responsible_cns && !isPlaceholder && h.address) {
+        stats[h.address] = (stats[h.address] || 0) + 1;
+      }
+    });
+    return Object.entries(stats).sort((a, b) => b[1] - a[1]);
+  }, [households]);
 
   return (
     <div className="space-y-6">
@@ -181,69 +195,100 @@ export function HouseholdList({ user }: { user: any }) {
           <p className="text-sm font-medium">Carregando dados...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredHouseholds.length > 0 ? (
-            filteredHouseholds.map((h) => (
-              <div 
-                key={h.id}
-                onClick={() => navigate(`/domicilio/${h.id}`)}
-                className="bg-bg-secondary dark:bg-slate-900 p-5 rounded-xl border border-border dark:border-slate-800 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
-              >
-                <div className="space-y-4">
-                  <div className="flex justify-between items-start">
-                    <div className="p-2.5 bg-bg-primary dark:bg-slate-800 rounded-lg text-text-muted dark:text-text-secondary group-hover:bg-primary/5 group-hover:text-primary transition-colors">
-                      <Home className="w-5 h-5" />
-                    </div>
-                    {(user.role === 'Administrador' || (user.role === 'Agente' && h.agent_id === user.id)) && (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteConfirm(h.id);
-                        }}
-                        className="p-2 text-text-muted hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                        title="Excluir Domicílio"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-
-                  <div>
-                    <h4 className="text-base font-bold text-text-primary dark:text-white line-clamp-1 leading-tight group-hover:text-primary transition-colors">{h.responsible_name}</h4>
-                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-0.5">Responsável</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-text-secondary dark:text-text-muted">
-                      <MapPin className="w-3.5 h-3.5 shrink-0" />
-                      <span className="text-[11px] font-medium leading-relaxed truncate">
-                        {h.address}, {h.number}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-text-secondary dark:text-text-muted">
-                      <User className="w-3.5 h-3.5 shrink-0" />
-                      <span className="text-[11px] font-medium truncate font-mono">CNS: {h.responsible_cns}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-border dark:border-slate-800 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary/40"></div>
-                    <span className="text-[10px] font-bold text-text-muted dark:text-text-secondary uppercase tracking-tighter">Microárea {h.microarea}</span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                </div>
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Street Filter Sidebar */}
+          <aside className="w-full lg:w-64 shrink-0 space-y-4">
+            <div className="bg-bg-secondary dark:bg-slate-900 rounded-xl border border-border dark:border-slate-800 overflow-hidden">
+              <div className="p-4 border-b border-border dark:border-slate-800 bg-bg-primary/50">
+                <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-widest flex items-center gap-2">
+                  <MapPin className="w-3 h-3" />
+                  Ruas ({streetStats.length})
+                </h3>
               </div>
-            ))
-          ) : (
-            <div className="col-span-full py-24 text-center bg-bg-primary/50 dark:bg-slate-800/20 rounded-xl border border-dashed border-border dark:border-slate-800">
-              <div className="max-w-[240px] mx-auto space-y-2">
-                <Home className="w-8 h-8 text-text-muted dark:text-slate-700 mx-auto" />
-                <p className="text-sm font-medium text-text-muted">Nenhum domicílio encontrado na busca.</p>
+              <div className="max-h-[300px] lg:max-h-[600px] overflow-y-auto custom-scrollbar">
+                <button
+                  onClick={() => setSelectedStreet(null)}
+                  className={`w-full flex items-center justify-between px-4 py-3 text-xs font-semibold transition-colors border-b border-border/50 last:border-0 ${
+                    !selectedStreet ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-bg-primary'
+                  }`}
+                >
+                  <span>Todas as Ruas</span>
+                  <span className="bg-bg-primary dark:bg-slate-800 px-2 py-0.5 rounded-full text-[10px] text-text-muted">{households.length}</span>
+                </button>
+                {streetStats.map(([street, count]) => (
+                  <button
+                    key={street}
+                    onClick={() => setSelectedStreet(street === selectedStreet ? null : street)}
+                    className={`w-full flex items-center justify-between px-4 py-3 text-xs font-semibold transition-colors border-b border-border/50 last:border-0 text-left ${
+                      selectedStreet === street ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-bg-primary'
+                    }`}
+                  >
+                    <span className="truncate pr-2">{street}</span>
+                    <span className="bg-bg-primary dark:bg-slate-800 px-2 py-0.5 rounded-full text-[10px] text-text-muted">{count}</span>
+                  </button>
+                ))}
               </div>
             </div>
-          )}
+          </aside>
+
+          {/* Household Cards */}
+          <div className="flex-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {filteredHouseholds.length > 0 ? (
+                filteredHouseholds.map((h) => (
+                  <div 
+                    key={h.id}
+                    onClick={() => navigate(`/domicilio/${h.id}`)}
+                    className="bg-bg-secondary dark:bg-slate-900 p-4 rounded-xl border border-border dark:border-slate-800 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between min-h-[160px]"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div className="p-2 bg-bg-primary dark:bg-slate-800 rounded-lg text-text-muted dark:text-text-secondary group-hover:bg-primary/5 group-hover:text-primary transition-colors">
+                          <Home className="w-4 h-4" />
+                        </div>
+                        {(user.role === 'Administrador' || (user.role === 'Agente' && h.agent_id === user.id)) && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirm(h.id);
+                            }}
+                            className="p-1.5 text-text-muted hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                            title="Excluir Domicílio"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div>
+                        <h4 className="text-sm font-bold text-text-primary dark:text-white line-clamp-1 leading-tight group-hover:text-primary transition-colors">{h.responsible_name}</h4>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <MapPin className="w-3 h-3 text-text-muted" />
+                          <span className="text-[10px] text-text-muted font-medium truncate">
+                            {h.address}, {h.number}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-border dark:border-slate-800 flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-text-muted font-bold uppercase tracking-tight truncate max-w-[120px]">CNS: {h.responsible_cns}</span>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-text-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-full py-16 text-center bg-bg-primary/50 dark:bg-slate-800/20 rounded-xl border border-dashed border-border dark:border-slate-800">
+                  <div className="max-w-[240px] mx-auto space-y-2">
+                    <Home className="w-6 h-6 text-text-muted dark:text-slate-700 mx-auto" />
+                    <p className="text-xs font-medium text-text-muted">Nenhum domicílio encontrado.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
