@@ -510,7 +510,7 @@ export function PatientList({ user }: { user: any }) {
                                  }
                                }}
                                className={`p-2 rounded-lg transition-all ${
-                                 !p.household_id || (p.cns === p.responsible_cns && !p.is_family_responsible)
+                                 !p.household_id || (p.cns === p.clinical_data?.responsible_cns && !p.is_family_responsible)
                                    ? 'text-red-600 bg-red-50 hover:bg-red-100 ring-2 ring-red-600/30' 
                                    : p.is_family_responsible
                                      ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100 ring-2 ring-emerald-600/30'
@@ -518,7 +518,7 @@ export function PatientList({ user }: { user: any }) {
                                }`}
                                title={!p.household_id ? "Sem Domicílio" : p.is_family_responsible ? "Responsável Familiar" : "Membro da Família"}
                              >
-                               <Home className={`w-4.5 h-4.5 ${(!p.household_id || (p.cns === p.responsible_cns && !p.is_family_responsible)) ? 'animate-pulse' : ''}`} />
+                               <Home className={`w-4.5 h-4.5 ${(!p.household_id || (p.cns === p.clinical_data?.responsible_cns && !p.is_family_responsible)) ? 'animate-pulse' : ''}`} />
                              </button>
                              <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 group-hover:text-teal-600 transition-colors">
                                <ChevronRight className="w-5 h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
@@ -602,7 +602,7 @@ export function PatientList({ user }: { user: any }) {
                           }
                         }}
                         className={`p-2 rounded-lg transition-all ${
-                          !p.household_id || (p.cns === p.responsible_cns && !p.is_family_responsible)
+                          !p.household_id || (p.cns === p.clinical_data?.responsible_cns && !p.is_family_responsible)
                             ? 'text-red-600 bg-red-50 ring-2 ring-red-500/30' 
                             : p.is_family_responsible
                               ? 'text-emerald-600 bg-emerald-50 ring-2 ring-emerald-500/30'
@@ -610,7 +610,7 @@ export function PatientList({ user }: { user: any }) {
                         }`}
                         title={!p.household_id ? "Sem Domicílio" : p.is_family_responsible ? "Responsável" : "Membro"}
                       >
-                        <Home className={`w-4 h-4 ${(!p.household_id || (p.cns === p.responsible_cns && !p.is_family_responsible)) ? 'animate-pulse' : ''}`} />
+                        <Home className={`w-4 h-4 ${(!p.household_id || (p.cns === p.clinical_data?.responsible_cns && !p.is_family_responsible)) ? 'animate-pulse' : ''}`} />
                       </button>
                       <ChevronRight className="w-4 h-4 text-slate-300" />
                     </div>
