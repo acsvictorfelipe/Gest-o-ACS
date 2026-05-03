@@ -509,10 +509,14 @@ export function PatientList({ user }: { user: any }) {
                                    navigate(`/domicilio/${p.household_id}`);
                                  }
                                }}
-                               className={`p-2 transition-colors ${p.household_id ? 'text-text-muted hover:text-teal-600' : 'text-slate-200 cursor-not-allowed'}`}
-                               title={p.household_id ? "Ver Domicílio" : "Domicílio não cadastrado"}
+                               className={`p-2 rounded-lg transition-all ${
+                                 p.household_id 
+                                   ? 'text-text-muted hover:text-teal-600 bg-slate-50 hover:bg-teal-50' 
+                                   : 'text-red-500 bg-red-50 hover:bg-red-100 ring-2 ring-red-500/20'
+                               }`}
+                               title={p.household_id ? "Ver Domicílio" : "ALERTA: Domicílio não vinculado"}
                              >
-                               <Home className="w-4.5 h-4.5" />
+                               <Home className={`w-4.5 h-4.5 ${!p.household_id ? 'animate-pulse' : ''}`} />
                              </button>
                              <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 group-hover:text-teal-600 transition-colors">
                                <ChevronRight className="w-5 h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
@@ -595,10 +599,14 @@ export function PatientList({ user }: { user: any }) {
                             navigate(`/domicilio/${p.household_id}`);
                           }
                         }}
-                        className={`p-2 rounded-lg transition-colors ${p.household_id ? 'text-teal-600 bg-teal-50' : 'text-slate-200 bg-slate-50'}`}
-                        title={p.household_id ? "Ver Domicílio" : "Domicílio não cadastrado"}
+                        className={`p-2 rounded-lg transition-all ${
+                          p.household_id 
+                            ? 'text-teal-600 bg-teal-50' 
+                            : 'text-red-600 bg-red-50 ring-1 ring-red-500/30'
+                        }`}
+                        title={p.household_id ? "Ver Domicílio" : "ALERTA: Sem Domicílio"}
                       >
-                        <Home className="w-4 h-4" />
+                        <Home className={`w-4 h-4 ${!p.household_id ? 'animate-pulse' : ''}`} />
                       </button>
                       <ChevronRight className="w-4 h-4 text-slate-300" />
                     </div>
