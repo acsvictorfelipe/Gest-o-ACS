@@ -10,7 +10,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { calculateAge, getAgeInMonths, vaccineLabels, formatDate, parseDate } from '../lib/dateUtils';
+import { calculateAge, getAgeNumber, getAgeInMonths, vaccineLabels, formatDate, parseDate } from '../lib/dateUtils';
 import { PersonalInfo } from './patient-form/PersonalInfo';
 import { AddressInfo } from './patient-form/AddressInfo';
 import { MedicalInfo } from './patient-form/MedicalInfo';
@@ -535,8 +535,7 @@ export function PatientForm({ user }: { user: any }) {
   React.useEffect(() => {
     if (!formData.birthDate) return;
     
-    const age = calculateAge(formData.birthDate);
-    const ageNum = typeof age === 'number' ? age : parseInt(String(age));
+    const ageNum = getAgeNumber(formData.birthDate);
     const ageInMonths = getAgeInMonths(formData.birthDate);
     
     setFormData(prev => {
@@ -549,6 +548,14 @@ export function PatientForm({ user }: { user: any }) {
           currentCategories.push('Idoso');
           changed = true;
         }
+      } else {
+        if (currentCategories.includes('Idoso')) {
+          const index = currentCategories.indexOf('Idoso');
+          if (index > -1) {
+            currentCategories.splice(index, 1);
+            changed = true;
+          }
+        }
       }
 
       // Rule for Criança (0-24 months)
@@ -556,6 +563,14 @@ export function PatientForm({ user }: { user: any }) {
         if (!currentCategories.includes('Criança')) {
           currentCategories.push('Criança');
           changed = true;
+        }
+      } else {
+        if (currentCategories.includes('Criança')) {
+          const index = currentCategories.indexOf('Criança');
+          if (index > -1) {
+            currentCategories.splice(index, 1);
+            changed = true;
+          }
         }
       }
 
@@ -605,8 +620,7 @@ export function PatientForm({ user }: { user: any }) {
           }
         }
 
-        const patientAge = calculateAge(formData.birthDate);
-        const patientAgeNum = typeof patientAge === 'number' ? patientAge : parseInt(String(patientAge));
+        const patientAgeNum = getAgeNumber(formData.birthDate);
         
         let finalCategories = [...(formData.categories || [])];
         if (patientAgeNum >= 60 && !finalCategories.includes('Idoso')) {
