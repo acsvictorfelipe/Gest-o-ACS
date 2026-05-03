@@ -141,23 +141,30 @@ export function HouseholdList({ user }: { user: any }) {
       h.responsible_cns?.includes(searchTerm) ||
       h.address?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const isPlaceholder = h.responsible_name === 'Responsável Importado' || h.responsible_name === 'Responsável não cadastrado';
-    
-    const matchesStreet = !selectedStreet || h.address === selectedStreet;
-    
-    return matchesSearch && !isPlaceholder && matchesStreet;
-  });
-
   const streetStats = React.useMemo(() => {
     const stats: Record<string, number> = {};
     households.forEach(h => {
       const isPlaceholder = h.responsible_name === 'Responsável Importado' || h.responsible_name === 'Responsável não cadastrado';
       if (h.responsible_cns && !isPlaceholder && h.address) {
-        stats[h.address] = (stats[h.address] || 0) + 1;
+        const normalizedStreet = h.address.trim().toUpperCase();
+        stats[normalizedStreet] = (stats[normalizedStreet] || 0) + 1;
       }
     });
     return Object.entries(stats).sort((a, b) => b[1] - a[1]);
   }, [households]);
+
+  const filteredHouseholds = households.filter(h => {
+    const matchesSearch = h.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      h.responsible_cns?.includes(searchTerm) ||
+      h.address?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const isPlaceholder = h.responsible_name === 'Responsável Importado' || h.responsible_name === 'Responsável não cadastrado';
+    
+    const hStreet = h.address?.trim().toUpperCase();
+    const matchesStreet = !selectedStreet || hStreet === selectedStreet;
+    
+    return matchesSearch && !isPlaceholder && matchesStreet;
+  });
 
   return (
     <div className="space-y-6">
@@ -223,7 +230,9 @@ export function HouseholdList({ user }: { user: any }) {
                       selectedStreet === street ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-bg-primary'
                     }`}
                   >
-                    <span className="truncate pr-2">{street}</span>
+                    <span className="truncate pr-2">
+                      {street.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                    </span>
                     <span className="bg-bg-primary dark:bg-slate-800 px-2 py-0.5 rounded-full text-[10px] text-text-muted">{count}</span>
                   </button>
                 ))}
