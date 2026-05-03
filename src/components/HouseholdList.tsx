@@ -137,16 +137,28 @@ export function HouseholdList({ user }: { user: any }) {
   };
 
   const streetStats = React.useMemo(() => {
+    const configStreets = (user.streets || []).slice().sort((a: string, b: string) => a.localeCompare(b));
+    
     const stats: Record<string, number> = {};
+    // Initialize stats with config streets
+    configStreets.forEach((street: string) => {
+      stats[street] = 0;
+    });
+
     households.forEach(h => {
       const isPlaceholder = h.responsible_name === 'Responsável Importado' || h.responsible_name === 'Responsável não cadastrado';
       if (h.responsible_cns && !isPlaceholder && h.address) {
-        const normalizedStreet = h.address.trim().toUpperCase();
-        stats[normalizedStreet] = (stats[normalizedStreet] || 0) + 1;
+        const hStreetNormalized = h.address.trim().toUpperCase();
+        // Find matching street from config (using normalized comparison)
+        const matchedConfigStreet = configStreets.find((s: string) => s.trim().toUpperCase() === hStreetNormalized);
+        if (matchedConfigStreet) {
+          stats[matchedConfigStreet] += 1;
+        }
       }
     });
-    return Object.entries(stats).sort((a, b) => b[1] - a[1]);
-  }, [households]);
+    
+    return Object.entries(stats);
+  }, [households, user.streets]);
 
   const filteredHouseholds = households.filter(h => {
     const matchesSearch = h.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -155,10 +167,16 @@ export function HouseholdList({ user }: { user: any }) {
     
     const isPlaceholder = h.responsible_name === 'Responsável Importado' || h.responsible_name === 'Responsável não cadastrado';
     
+    // Normalize household address
     const hStreet = h.address?.trim().toUpperCase();
-    const matchesStreet = !selectedStreet || hStreet === selectedStreet;
     
-    return matchesSearch && !isPlaceholder && matchesStreet;
+    // Check if the street is in the configuration list
+    const configStreets = (user.streets || []).map((s: string) => s.trim().toUpperCase());
+    const isInConfig = configStreets.includes(hStreet || '');
+    
+    const matchesStreet = !selectedStreet || hStreet === selectedStreet.trim().toUpperCase();
+    
+    return matchesSearch && !isPlaceholder && matchesStreet && isInConfig;
   });
 
   return (
@@ -226,7 +244,7 @@ export function HouseholdList({ user }: { user: any }) {
                     }`}
                   >
                     <span className="truncate pr-2">
-                      {street.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                      {street}
                     </span>
                     <span className="bg-bg-primary dark:bg-slate-800 px-2 py-0.5 rounded-full text-[10px] text-text-muted">{count}</span>
                   </button>

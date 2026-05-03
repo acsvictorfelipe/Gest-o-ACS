@@ -9,18 +9,41 @@ interface AddressInfoProps {
 }
 
 export function AddressInfo({ formData, setFormData, isReadOnly, streets = [] }: AddressInfoProps) {
+  const [showStreets, setShowStreets] = React.useState(false);
+  const [filteredStreets, setFilteredStreets] = React.useState<string[]>([]);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
   const handleWhatsApp = (phone: string) => {
     if (!phone) return;
-    // Remove all non-numeric characters
     const cleanNumber = phone.replace(/\D/g, '');
     if (cleanNumber.length < 10) {
       alert("Número de telefone incompleto.");
       return;
     }
-    // Add country code 55 if not present
     const finalNumber = cleanNumber.startsWith('55') ? cleanNumber : `55${cleanNumber}`;
     window.open(`https://wa.me/${finalNumber}`, '_blank');
   };
+
+  React.useEffect(() => {
+    if (formData.address) {
+      const filtered = streets.filter(s => 
+        s.toLowerCase().includes(formData.address.toLowerCase())
+      );
+      setFilteredStreets(filtered);
+    } else {
+      setFilteredStreets(streets);
+    }
+  }, [formData.address, streets]);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowStreets(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <section className="bg-bg-secondary dark:bg-slate-900 rounded-xl p-6 border border-border dark:border-slate-800 shadow-sm space-y-6">
@@ -29,22 +52,39 @@ export function AddressInfo({ formData, setFormData, isReadOnly, streets = [] }:
         <h3 className="text-sm font-bold uppercase tracking-tight">Endereço e Contato</h3>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-4">
-        <div className="md:col-span-8 space-y-1.5">
+        <div className="md:col-span-8 space-y-1.5 relative" ref={dropdownRef}>
           <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Logradouro / Rua</label>
-          <input 
-            type="text" 
-            list="streets-list"
-            disabled={isReadOnly}
-            value={formData.address || ''}
-            onChange={e => setFormData({ ...formData, address: e.target.value })}
-            className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
-            placeholder="Ex: Rua das Flores"
-          />
-          <datalist id="streets-list">
-            {streets.map((street, index) => (
-              <option key={index} value={street} />
-            ))}
-          </datalist>
+          <div className="relative">
+            <input 
+              type="text" 
+              disabled={isReadOnly}
+              value={formData.address || ''}
+              onFocus={() => !isReadOnly && setShowStreets(true)}
+              onChange={e => {
+                setFormData({ ...formData, address: e.target.value });
+                setShowStreets(true);
+              }}
+              className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
+              placeholder="Ex: Rua das Flores"
+            />
+            {showStreets && filteredStreets.length > 0 && !isReadOnly && (
+              <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-border dark:border-slate-700 rounded-xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-200">
+                {filteredStreets.map((street, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => {
+                      setFormData({ ...formData, address: street });
+                      setShowStreets(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-primary/10 hover:text-primary transition-colors border-b border-border/50 last:border-0 font-medium dark:text-white"
+                  >
+                    {street}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <div className="md:col-span-2 space-y-1.5">
           <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Número</label>
