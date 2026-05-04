@@ -433,9 +433,17 @@ export function PatientList({ user }: { user: any }) {
                             {(() => {
                               const age = p.birth_date ? calculateAge(p.birth_date) : 0;
                               const ageNum = typeof age === 'number' ? age : parseInt(String(age));
+                              const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
                               const displayCategories = [...(p.categories || [])];
+                              
                               if (ageNum >= 60 && !displayCategories.includes('Idoso')) {
                                 displayCategories.push('Idoso');
+                              }
+                              if (ageInMonths > 24 && ageNum < 60 && !displayCategories.includes('Adulto')) {
+                                displayCategories.push('Adulto');
+                              }
+                              if (ageInMonths <= 24 && !displayCategories.includes('Criança')) {
+                                displayCategories.push('Criança');
                               }
 
                               return displayCategories.slice(0, 4).map((cat: string) => {
@@ -620,9 +628,17 @@ export function PatientList({ user }: { user: any }) {
                     {(() => {
                       const age = p.birth_date ? calculateAge(p.birth_date) : 0;
                       const ageNum = typeof age === 'number' ? age : parseInt(String(age));
+                      const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
                       const displayCategories = [...(p.categories || [])];
+                      
                       if (ageNum >= 60 && !displayCategories.includes('Idoso')) {
                         displayCategories.push('Idoso');
+                      }
+                      if (ageInMonths > 24 && ageNum < 60 && !displayCategories.includes('Adulto')) {
+                        displayCategories.push('Adulto');
+                      }
+                      if (ageInMonths <= 24 && !displayCategories.includes('Criança')) {
+                        displayCategories.push('Criança');
                       }
 
                       return displayCategories.map((cat: string) => {

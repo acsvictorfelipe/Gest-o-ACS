@@ -119,34 +119,31 @@ export function Dashboard({ user }: { user: any }) {
             newStats.pendingVisits++;
           }
 
-          if (categories.includes('Criança') && !categories.includes('Adulto') && !categories.includes('Idoso')) {
+          const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 999;
+          const patientAgeNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
+
+          if (categories.includes('Criança') && ageInMonths <= 24) {
             newStats.criancasTotal++;
-            const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 999;
+            newStats.criancas2y++;
             
-            // Focus on children under 2 years (24 months)
-            if (ageInMonths <= 24) {
-              newStats.criancas2y++;
-              
-              // Check for late vaccines for children 0-2 years
-              const vacinas = clinical.crianca?.vacinas || {};
-              const isLate = VACCINE_SCHEDULE.some(group => {
-                // If the child is older than or equal to the vaccine group age, they should have taken it
-                if (group.age <= ageInMonths) {
-                  return group.vaccines.some(v => vacinas[v.id] !== 'Sim');
-                }
-                return false;
-              });
-              
-              if (isLate) {
-                newStats.lateVaccines++;
+            // Check for late vaccines for children 0-2 years
+            const vacinas = clinical.crianca?.vacinas || {};
+            const isLate = VACCINE_SCHEDULE.some(group => {
+              if (group.age <= ageInMonths) {
+                return group.vaccines.some(v => vacinas[v.id] !== 'Sim');
               }
+              return false;
+            });
+            
+            if (isLate) {
+              newStats.lateVaccines++;
             }
-            
-            if (p.birth_date && ageInMonths <= 6) {
-              const visited6m = clinical.crianca?.visita6meses === 'Sim';
-              if (!visited6m) {
-                newStats.childVisitAlerts++;
-              }
+          }
+
+          if (p.birth_date && ageInMonths <= 6 && categories.includes('Criança')) {
+            const visited6m = clinical.crianca?.visita6meses === 'Sim';
+            if (!visited6m) {
+              newStats.childVisitAlerts++;
             }
           }
 
@@ -158,9 +155,8 @@ export function Dashboard({ user }: { user: any }) {
 
           if (categories.includes('Gestante')) newStats.gestantes++;
           if (categories.includes('AcamadoDomiciliado')) newStats.acamados++;
-          const patientAgeNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
           if (categories.includes('Idoso') || categories.includes('Idosos') || patientAgeNum >= 60) newStats.idosos++;
-          if (categories.includes('Adulto')) newStats.adultos++;
+          if (categories.includes('Adulto') || (ageInMonths > 24 && patientAgeNum < 60)) newStats.adultos++;
           if (categories.includes('SaudeMental') || categories.includes('Saúde Mental')) newStats.saudeMental++;
         });
 

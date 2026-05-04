@@ -564,13 +564,20 @@ export function PatientForm({ user }: { user: any }) {
           currentCategories.push('Criança');
           changed = true;
         }
-      } else {
+        if (currentCategories.includes('Adulto')) {
+          currentCategories.splice(currentCategories.indexOf('Adulto'), 1);
+          changed = true;
+        }
+      } 
+      // Rule for Adulto (24 months to 60 years)
+      else if (ageNum < 60) {
+        if (!currentCategories.includes('Adulto')) {
+          currentCategories.push('Adulto');
+          changed = true;
+        }
         if (currentCategories.includes('Criança')) {
-          const index = currentCategories.indexOf('Criança');
-          if (index > -1) {
-            currentCategories.splice(index, 1);
-            changed = true;
-          }
+          currentCategories.splice(currentCategories.indexOf('Criança'), 1);
+          changed = true;
         }
       }
 
@@ -668,6 +675,7 @@ export function PatientForm({ user }: { user: any }) {
           if (categories.includes('Gestante')) return 'gestantes';
           if (categories.includes('Criança')) return 'criancas';
           if (categories.includes('Idoso')) return 'idosos';
+          if (categories.includes('Adulto')) return 'adultos';
           if (categories.includes('Hipertenso')) return 'hipertensos';
           if (categories.includes('Diabético')) return 'diabéticos';
           if (categories.includes('AcamadoDomiciliado')) return 'acamados';
