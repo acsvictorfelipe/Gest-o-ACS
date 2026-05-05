@@ -175,19 +175,50 @@ export function ImportTool({ user }: { user: any }) {
         }
         // Se não for responsável e não existe domicílio, householdId permanece null
 
-        // Categories
+        // Categories — categorização automática por idade + campo categoria
         const rawCat = String(getVal(row, 'categoria')).toLowerCase();
         const dn = formatDate(String(getVal(row, 'dn')));
-        let age = 0;
-        if (dn) { const y = new Date().getFullYear() - parseInt(dn.split('-')[0]); age = y; }
+
+        // Calcular idade em anos e meses a partir da data de nascimento
+        let ageInYears = 0;
+        let ageInMonths = 0;
+        if (dn) {
+          const birthDate = new Date(dn + 'T00:00:00');
+          const now = new Date();
+          ageInYears = now.getFullYear() - birthDate.getFullYear();
+          ageInMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + (now.getMonth() - birthDate.getMonth());
+          // Ajuste se ainda não fez o aniversário esse mês
+          if (now.getDate() < birthDate.getDate()) ageInMonths--;
+          if (ageInMonths < 0) ageInMonths = 0;
+          ageInYears = Math.floor(ageInMonths / 12);
+        }
+
         const categories: string[] = [];
+
+        // Categorias manuais (do campo categoria do CSV)
         if (rawCat.includes('gestante')) categories.push('Gestante');
-        if (rawCat.includes('criança') || rawCat.includes('crianca')) categories.push('Criança');
         if (rawCat.includes('acamado')) categories.push('AcamadoDomiciliado');
-        if (rawCat.includes('adulto')) categories.push('Adulto');
         if (rawCat.includes('saúde mental') || rawCat.includes('saude mental')) categories.push('SaudeMental');
-        if (age >= 60 || rawCat.includes('idoso')) categories.push('Idoso');
-        else if (age > 0 && age < 60 && categories.length === 0) categories.push('Adulto');
+
+        // Categorização automática por idade (mesma regra do PatientForm)
+        if (dn) {
+          if (ageInMonths <= 24) {
+            // Criança com até 24 meses
+            if (!categories.includes('Criança')) categories.push('Criança');
+          } else if (ageInYears >= 60) {
+            // Idoso com 60 anos ou mais
+            if (!categories.includes('Idoso')) categories.push('Idoso');
+          } else {
+            // Adulto entre 24 meses e 60 anos
+            if (!categories.includes('Adulto')) categories.push('Adulto');
+          }
+        } else {
+          // Sem data de nascimento: respeita o campo categoria do CSV
+          if (rawCat.includes('criança') || rawCat.includes('crianca')) categories.push('Criança');
+          else if (rawCat.includes('idoso')) categories.push('Idoso');
+          else if (rawCat.includes('adulto')) categories.push('Adulto');
+          else categories.push('Adulto'); // fallback
+        }
 
         const hasDiabetes = normalizeSimNao(getVal(row, 'diabetes'));
         const hasHipertensao = normalizeSimNao(getVal(row, 'hipertensao'));
