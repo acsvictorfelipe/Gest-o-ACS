@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { 
-  History, 
-  Search, 
-  Filter, 
-  Calendar, 
-  User, 
+import {
+  History,
+  Search,
+  Filter,
+  Calendar,
+  User,
   ChevronRight,
   CheckCircle2,
   Loader2,
@@ -34,6 +34,7 @@ export function VisitHistory({ user }: { user: any }) {
             patients (
               name,
               cns,
+              birth_date,
               categories
             )
           `)
@@ -50,7 +51,7 @@ export function VisitHistory({ user }: { user: any }) {
         const { data, error } = await query;
         if (error) throw error;
         setVisits(data || []);
-        
+
         // Handle search from state
         const locationState = window.history.state?.usr;
         if (locationState?.search) {
@@ -67,8 +68,8 @@ export function VisitHistory({ user }: { user: any }) {
 
   const filteredVisits = visits.filter(v => {
     const patientName = v.patients?.name || '';
-    const matchesSearch = patientName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         v.patients?.cns?.includes(searchTerm);
+    const matchesSearch = patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.patients?.cns?.includes(searchTerm);
     const matchesType = filterType === 'Todas' || v.type === filterType;
     return matchesSearch && matchesType;
   });
@@ -87,11 +88,10 @@ export function VisitHistory({ user }: { user: any }) {
             <button
               key={type}
               onClick={() => setFilterType(type)}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all tracking-tight whitespace-nowrap ${
-                filterType === type 
-                  ? 'bg-primary text-white shadow-sm' 
-                  : 'bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 text-text-secondary dark:text-text-muted hover:bg-bg-primary'
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all tracking-tight whitespace-nowrap ${filterType === type
+                ? 'bg-primary text-white shadow-sm'
+                : 'bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 text-text-secondary dark:text-text-muted hover:bg-bg-primary'
+                }`}
             >
               {type}
             </button>
@@ -102,8 +102,8 @@ export function VisitHistory({ user }: { user: any }) {
       {/* Search Bar */}
       <div className="relative group max-w-2xl">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" />
-        <input 
-          type="text" 
+        <input
+          type="text"
           placeholder="Pesquisar por paciente ou CNS..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -124,7 +124,8 @@ export function VisitHistory({ user }: { user: any }) {
                 <tr className="bg-bg-primary dark:bg-slate-800/30 border-b border-border dark:border-slate-800">
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-text-muted">Data / Tipo</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-text-muted">Paciente</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-text-muted">Resumo</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-text-muted">Categoria</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-text-muted">Observações</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-text-muted text-right">Ação</th>
                 </tr>
               </thead>
@@ -134,14 +135,18 @@ export function VisitHistory({ user }: { user: any }) {
                     <tr key={v.id} className="hover:bg-bg-primary/50 dark:hover:bg-slate-800/30 transition-colors group cursor-pointer" onClick={() => navigate(`/editar-paciente/${v.patient_id}`)}>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-text-muted dark:text-text-secondary shrink-0">
+                          <div className="w-9 h-9 rounded-full bg-teal-50 flex items-center justify-center text-teal-600 shrink-0">
                             <Calendar className="w-4 h-4" />
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-text-primary dark:text-white leading-tight">
                               {formatDate(v.date)}
                             </p>
-                            <span className="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
+                            <span className={`text-[10px] font-bold uppercase tracking-tighter px-1.5 py-0.5 rounded ${
+                              v.type === 'Urgência' ? 'bg-red-100 text-red-600' :
+                              v.type === 'Rotina' ? 'bg-teal-100 text-teal-700' :
+                              'bg-slate-100 text-slate-500'
+                            }`}>
                               {v.type}
                             </span>
                           </div>
@@ -149,13 +154,34 @@ export function VisitHistory({ user }: { user: any }) {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px] shrink-0 uppercase">
+                          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[11px] shrink-0 uppercase">
                             {v.patients?.name?.substring(0, 2)}
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-text-primary dark:text-white leading-tight">{v.patients?.name}</p>
-                            <p className="text-[10px] text-text-secondary font-medium">CNS: {v.patients?.cns}</p>
+                            <p className="text-sm font-semibold text-text-primary dark:text-white leading-tight uppercase">{v.patients?.name}</p>
+                            <p className="text-[10px] text-text-muted font-medium">
+                              {v.patients?.birth_date ? `Nasc: ${formatDate(v.patients.birth_date)}` : `CNS: ${v.patients?.cns}`}
+                            </p>
                           </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-1">
+                          {(v.patients?.categories || []).slice(0, 3).map((cat: string) => {
+                            const colors: Record<string, string> = {
+                              'Gestante': 'bg-pink-100 text-pink-700',
+                              'Criança': 'bg-blue-100 text-blue-700',
+                              'Idoso': 'bg-orange-100 text-orange-700',
+                              'Adulto': 'bg-emerald-100 text-emerald-700',
+                              'AcamadoDomiciliado': 'bg-slate-100 text-slate-600',
+                              'SaudeMental': 'bg-purple-100 text-purple-700',
+                            };
+                            return (
+                              <span key={cat} className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${colors[cat] || 'bg-slate-100 text-slate-500'}`}>
+                                {cat === 'AcamadoDomiciliado' ? 'Acamado' : cat}
+                              </span>
+                            );
+                          })}
                         </div>
                       </td>
                       <td className="px-6 py-4 max-w-xs">
@@ -164,7 +190,7 @@ export function VisitHistory({ user }: { user: any }) {
                         </p>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end text-primary gap-1 group-hover:translate-x-1 transition-transform">
+                        <div className="flex items-center justify-end text-teal-600 gap-1 group-hover:translate-x-1 transition-transform">
                           <span className="text-[10px] font-bold uppercase tracking-tight">Ver Perfil</span>
                           <ChevronRight className="w-4 h-4" />
                         </div>

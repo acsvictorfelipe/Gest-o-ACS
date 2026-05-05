@@ -142,8 +142,8 @@ export function ImportTool({ user }: { user: any }) {
 
         const isResp = normalizeSimNao(getVal(row, 'responsavel')) === 'Sim';
         const rawRespCns = String(getVal(row, 'cns_responsavel')).trim().replace(/\D/g, '');
-        const respCns = rawRespCns || cns;
-        const address = String(getVal(row, 'endereco')).trim() || 'Endereço não informado';
+        const respCns = rawRespCns || (isResp ? cns : ''); // Só usa CNS próprio como respCns se for responsável
+        const address = String(getVal(row, 'endereco')).trim(); // Sem fallback — endereço vazio impede criação de domicílio
         const number = String(getVal(row, 'numero')).trim();
         const complement = String(getVal(row, 'complemento')).trim();
 
@@ -234,8 +234,8 @@ export function ImportTool({ user }: { user: any }) {
   };
 
   const downloadTemplate = () => {
-    const headers = ['Nome do Paciente','CNS','É Responsável Familiar? (Sim/Não)','CNS do Responsável','Endereço','Número','Complemento','Data de Nascimento','Gênero','Categoria','Tem Diabetes?','Tem Hipertensão?','Telefone / Contato','Data da Última Visita','Benefícios Sociais'];
-    const example = ['MARIA DA SILVA','706123456789000','Sim','706123456789000','RUA DAS FLORES','123','CASA','15/05/1980','Feminino','Adulto','Não','Sim','(11) 99999-9999','09/04/2026','Bolsa Família'];
+    const headers = ['Nome do Paciente', 'CNS', 'É Responsável Familiar? (Sim/Não)', 'CNS do Responsável', 'Endereço', 'Número', 'Complemento', 'Data de Nascimento', 'Gênero', 'Categoria', 'Tem Diabetes?', 'Tem Hipertensão?', 'Telefone / Contato', 'Data da Última Visita', 'Benefícios Sociais'];
+    const example = ['MARIA DA SILVA', '706123456789000', 'Sim', '706123456789000', 'RUA DAS FLORES', '123', 'CASA', '15/05/1980', 'Feminino', 'Adulto', 'Não', 'Sim', '(11) 99999-9999', '09/04/2026', 'Bolsa Família'];
     const csv = [headers.join(','), example.join(',')].join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
@@ -266,14 +266,14 @@ export function ImportTool({ user }: { user: any }) {
 
       {/* Steps indicator */}
       <div className="flex items-center gap-2 text-xs font-semibold">
-        {(['upload','preview','importing','done'] as ImportStep[]).map((s, i) => {
-          const labels = ['Upload','Pré-visualização','Importando','Concluído'];
+        {(['upload', 'preview', 'importing', 'done'] as ImportStep[]).map((s, i) => {
+          const labels = ['Upload', 'Pré-visualização', 'Importando', 'Concluído'];
           const active = step === s;
-          const past = ['upload','preview','importing','done'].indexOf(step) > i;
+          const past = ['upload', 'preview', 'importing', 'done'].indexOf(step) > i;
           return (
             <React.Fragment key={s}>
               <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${active ? 'bg-teal-600 text-white' : past ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
-                {past ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span className="w-4 h-4 flex items-center justify-center text-[10px] font-bold">{i+1}</span>}
+                {past ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span className="w-4 h-4 flex items-center justify-center text-[10px] font-bold">{i + 1}</span>}
                 {labels[i]}
               </div>
               {i < 3 && <ChevronRight className="w-3 h-3 text-slate-300" />}
