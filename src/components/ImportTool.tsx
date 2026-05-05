@@ -147,26 +147,33 @@ export function ImportTool({ user }: { user: any }) {
         const number = String(getVal(row, 'numero')).trim();
         const complement = String(getVal(row, 'complemento')).trim();
 
-        // Household
+        // Household — só cria domicílio se o paciente for o responsável familiar
         let householdId: string | null = null;
         const { data: existingH } = await supabase.from('households')
           .select('id').eq('responsible_cns', respCns).maybeSingle();
 
         if (existingH) {
+          // Domicílio já existe — vincula e atualiza se for o responsável
           householdId = existingH.id;
-          if (isResp) await supabase.from('households').update({ responsible_name: name, address, number, complement }).eq('id', householdId);
-        } else {
+          if (isResp) {
+            await supabase.from('households')
+              .update({ responsible_name: name, address, number, complement })
+              .eq('id', householdId);
+          }
+        } else if (isResp && address) {
+          // Só cria o domicílio se este paciente for o responsável E tiver endereço
           const { data: newH, error: hErr } = await supabase.from('households').insert([{
             address, number, complement,
             microarea: user.microarea || '000',
             area_color: user.color || '#00488d',
             agent_id: user.id,
             responsible_cns: respCns,
-            responsible_name: isResp ? name : 'Responsável Importado',
+            responsible_name: name,
           }]).select().single();
           if (hErr) throw hErr;
           householdId = newH.id;
         }
+        // Se não for responsável e não existe domicílio, householdId permanece null
 
         // Categories
         const rawCat = String(getVal(row, 'categoria')).toLowerCase();
