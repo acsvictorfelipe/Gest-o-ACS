@@ -65,33 +65,40 @@ export function ImportTool({ user }: { user: any }) {
     return row[mapped] ?? '';
   };
 
+  // Normaliza string removendo acentos e convertendo para minúsculas
+  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
   // Auto-detect column mapping from CSV headers
   const autoDetect = (hdrs: string[]) => {
     const map: Record<string, string> = {};
-    const lower = hdrs.map(h => h.toLowerCase().trim());
+    const normed = hdrs.map(h => norm(h));
 
     const matchers: Record<string, string[]> = {
-      nome: ['nome do paciente', 'nome', 'paciente', 'nome completo'],
-      cns: ['cns', 'sus', 'c.n.s.', 'cartão sus', 'cartao sus'],
-      dn: ['dn', 'data de nascimento', 'nascimento', 'data nascimento', 'dt nascimento'],
-      genero: ['gênero', 'genero', 'sexo'],
-      responsavel: ['respfamiliar?', 'responsável?', 'responsavel?', 'é responsável?', 'responsavel familiar', 'resp familiar'],
-      cns_responsavel: ['respfamiliar_cns', 'cns responsável', 'cns responsavel', 'cns do responsável', 'cns_responsavel'],
-      endereco: ['endereço', 'endereco', 'logradouro', 'rua', 'endereço/logradouro', 'logradouro/tipo de logradouro', 'end', 'endereco residencial', 'logradouro residencial'],
-      numero: ['numerocasa', 'número', 'numero', 'nº', 'num', 'n°', 'nr', 'no', 'n.', 'número da residência', 'numero casa'],
-      complemento: ['complemento', 'apto', 'casa', 'bloco', 'comp', 'compl'],
-      categoria: ['categoria', 'categorias', 'grupo'],
-      diabetes: ['tem diabete?', 'diabetes', 'diabético', 'diabetico', 'tem diabetes?'],
-      hipertensao: ['tem hipertensão?', 'tem pressão alta?', 'hipertensão', 'hipertensao', 'pressão alta', 'pressao alta', 'ha'],
-      contato: ['contato', 'telefone', 'fone', 'celular', 'tel'],
-      data_visita: ['data da visita', 'visita', 'última visita', 'ultima visita'],
-      beneficios: ['benefícios sociais', 'benefícios', 'beneficios', 'beneficio'],
+      nome:           ['nome do paciente', 'nome completo', 'nome', 'paciente'],
+      cns:            ['cns', 'sus', 'c.n.s.', 'cartao sus', 'cartao do sus', 'numero sus'],
+      dn:             ['data de nascimento', 'dt nascimento', 'dt. nascimento', 'nascimento', 'data nasc', 'dn'],
+      genero:         ['genero', 'sexo', 'gender'],
+      responsavel:    ['responsavel familiar', 'resp familiar', 'e responsavel', 'responsavel?', 'resp?', 'responsavel'],
+      cns_responsavel:['cns responsavel', 'cns do responsavel', 'respfamiliar_cns', 'cns_responsavel', 'cns resp'],
+      endereco:       ['logradouro residencial', 'endereco residencial', 'logradouro/tipo de logradouro', 'logradouro', 'endereco', 'end.', 'rua', 'end'],
+      numero:         ['numero da residencia', 'numero casa', 'numerocasa', 'numero', 'num', 'nr', 'no'],
+      complemento:    ['complemento', 'compl.', 'compl', 'comp', 'apto', 'bloco'],
+      categoria:      ['categoria', 'categorias', 'grupo'],
+      diabetes:       ['tem diabetes', 'tem diabete', 'diabetes', 'diabetico'],
+      hipertensao:    ['tem hipertensao', 'tem pressao alta', 'hipertensao', 'pressao alta', 'ha'],
+      contato:        ['telefone', 'contato', 'celular', 'fone', 'tel'],
+      data_visita:    ['data da visita', 'ultima visita', 'data visita', 'visita'],
+      beneficios:     ['beneficios sociais', 'beneficios', 'beneficio'],
     };
 
     for (const [field, variants] of Object.entries(matchers)) {
       for (const variant of variants) {
-        const idx = lower.indexOf(variant);
-        if (idx !== -1) { map[field] = hdrs[idx]; break; }
+        // Primeiro tenta match exato normalizado
+        const exactIdx = normed.indexOf(variant);
+        if (exactIdx !== -1) { map[field] = hdrs[exactIdx]; break; }
+        // Depois tenta match por includes (o header contém a variante)
+        const partialIdx = normed.findIndex(h => h.includes(variant));
+        if (partialIdx !== -1) { map[field] = hdrs[partialIdx]; break; }
       }
     }
     return map;
@@ -397,6 +404,16 @@ export function ImportTool({ user }: { user: any }) {
               </table>
             </div>
           </div>
+
+          {(!columnMap['endereco'] || columnMap['endereco'] === '__none__') && (
+            <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-700">
+                <p className="font-bold">Campo "Endereço / Logradouro" não foi detectado automaticamente.</p>
+                <p className="mt-0.5">Faça o mapeamento manual acima — selecione a coluna do seu CSV que contém o endereço. Sem isso, o endereço não será importado.</p>
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-3">
             <button onClick={reset} className="flex-1 py-3 border border-border rounded-xl font-semibold text-sm text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
