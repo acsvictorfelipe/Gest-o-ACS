@@ -6,6 +6,7 @@ import {
   User, 
   Search, 
   ChevronRight, 
+  ChevronDown,
   MapPin, 
   Plus,
   Loader2,
@@ -45,6 +46,8 @@ export function PatientList({ user }: { user: any }) {
   const [activeFilter, setActiveFilter] = useState(searchParams.get('filter') || 'all');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [householdsMap, setHouseholdsMap] = useState<Record<string, { address: string; number: string; complement: string }>>({});
+  const [selectedStreet, setSelectedStreet] = useState('');
 
   useEffect(() => {
     const filter = searchParams.get('filter');
@@ -62,6 +65,23 @@ export function PatientList({ user }: { user: any }) {
       if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
       setLoading(true);
       try {
+        // Fetch Households first for address mapping
+        const { data: hData } = await supabase
+          .from('households')
+          .select('id, address, number, complement');
+        
+        if (hData) {
+          const map: Record<string, any> = {};
+          hData.forEach(h => {
+            map[h.id] = {
+              address: h.address || '',
+              number: h.number || '',
+              complement: h.complement || ''
+            };
+          });
+          setHouseholdsMap(map);
+        }
+
         let allData: any[] = [];
         let from = 0;
         let to = 999;
@@ -108,9 +128,47 @@ export function PatientList({ user }: { user: any }) {
     fetchPatients();
   }, [user.microarea, user.id, user.role, user.color]);
 
+  const getPatientAddress = (p: any) => {
+    if (p.household_id && householdsMap[p.household_id]) {
+      return householdsMap[p.household_id];
+    }
+    const clinical = p.clinical_data || {};
+    return {
+      address: clinical.address || '',
+      number: clinical.number || '',
+      complement: clinical.complement || ''
+    };
+  };
+
+  const availableStreets = Array.from(new Set(patients.map(p => {
+    const addr = getPatientAddress(p);
+    return addr.address ? addr.address.trim() : '';
+  }).filter(Boolean))).sort();
+
+  const sortPatientsByAddressNumber = (a: any, b: any) => {
+    const addrA = getPatientAddress(a);
+    const addrB = getPatientAddress(b);
+    
+    if (!selectedStreet) {
+      const streetComp = (addrA.address || '').localeCompare(addrB.address || '');
+      if (streetComp !== 0) return streetComp;
+    }
+    
+    const numA = parseInt((addrA.number || '').replace(/\D/g, ''), 10) || 0;
+    const numB = parseInt((addrB.number || '').replace(/\D/g, ''), 10) || 0;
+    
+    if (numA !== numB) return numA - numB;
+    return (addrA.number || '').localeCompare(addrB.number || '');
+  };
+
   const filteredPatients = patients.filter(p => {
     const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          p.cns?.includes(searchTerm);
+    
+    if (selectedStreet) {
+      const addr = getPatientAddress(p);
+      if (addr.address !== selectedStreet) return false;
+    }
     
     if (activeFilter === 'date' && searchParams.get('date')) {
       const targetDate = new Date(searchParams.get('date')!);
@@ -340,16 +398,34 @@ export function PatientList({ user }: { user: any }) {
       {/* Search Bar & Filters */}
       <div className="space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-           <div className="relative group flex-1 max-w-xl">
-             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-600 transition-colors" />
-             <input 
-               type="text" 
-               placeholder="Pesquisar por nome ou CNS..."
-               value={searchTerm}
-               onChange={(e) => setSearchTerm(e.target.value)}
-               className="w-full bg-bg-secondary border border-border rounded-xl py-3 pl-11 pr-6 shadow-sm focus:ring-2 focus:ring-teal-600/10 focus:border-teal-600/30 transition-all text-[13px] font-medium text-slate-900"
-             />
-           </div>
+          <div className="flex flex-col sm:flex-row gap-3 flex-1 max-w-2xl">
+            <div className="relative group flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-600 transition-colors" />
+              <input 
+                type="text" 
+                placeholder="Pesquisar por nome ou CNS..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-bg-secondary border border-border rounded-xl py-3 pl-11 pr-6 shadow-sm focus:ring-2 focus:ring-teal-600/10 focus:border-teal-600/30 transition-all text-[13px] font-medium text-slate-900 dark:text-white"
+              />
+            </div>
+
+            {/* Roteiro por Rua Dropdown Select */}
+            <div className="relative min-w-[220px]">
+              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-600 shrink-0" />
+              <select
+                value={selectedStreet}
+                onChange={(e) => setSelectedStreet(e.target.value)}
+                className="w-full bg-bg-secondary border border-border rounded-xl py-3 pl-11 pr-10 shadow-sm focus:ring-2 focus:ring-teal-600/10 focus:border-teal-600/30 transition-all text-[13px] font-bold text-slate-800 dark:text-white appearance-none cursor-pointer"
+              >
+                <option value="">🗺️ Roteiro por Rua (Todos)</option>
+                {availableStreets.map(street => (
+                  <option key={street} value={street}>{street}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
 
            <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1">
              {[
@@ -398,36 +474,45 @@ export function PatientList({ user }: { user: any }) {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filteredPatients.length > 0 ? (
-                  filteredPatients.map((p) => {
-                    const isAtraso = !p.last_visit_at || new Date(p.last_visit_at) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-                    return (
-                      <tr 
-                        key={p.id} 
-                        className="hover:bg-slate-50 transition-all cursor-pointer group"
-                        onClick={() => navigate(`/editar-paciente/${p.id}`)}
-                      >
-                        <td className="px-8 py-5">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs group-hover:bg-teal-600 group-hover:text-white transition-all uppercase shadow-sm">
-                              {p.name?.substring(0, 2)}
+                  [...filteredPatients]
+                    .sort(sortPatientsByAddressNumber)
+                    .map((p) => {
+                      const isAtraso = !p.last_visit_at || new Date(p.last_visit_at) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                      return (
+                        <tr 
+                          key={p.id} 
+                          className="hover:bg-slate-50 transition-all cursor-pointer group"
+                          onClick={() => navigate(`/editar-paciente/${p.id}`)}
+                        >
+                          <td className="px-8 py-5">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs group-hover:bg-teal-600 group-hover:text-white transition-all uppercase shadow-sm">
+                                {p.name?.substring(0, 2)}
+                              </div>
+                              <div>
+                                 <p className="text-[14px] font-semibold text-text-primary leading-tight group-hover:text-teal-600 transition-colors uppercase">{p.name}</p>
+                                 <div className="flex items-center gap-3 mt-1">
+                                   <p className="text-[11px] text-text-muted font-medium">{p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}</p>
+                                   {p.clinical_data?.contact && (
+                                     <button 
+                                       onClick={(e) => handleWhatsApp(e, p.clinical_data.contact)}
+                                       className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors border border-emerald-100"
+                                     >
+                                       <MessageCircle className="w-3 h-3" />
+                                       <span className="text-[9px] font-bold uppercase">WhatsApp</span>
+                                     </button>
+                                   )}
+                                 </div>
+                                 <p className="text-[11px] text-teal-600 dark:text-teal-400 font-bold mt-1.5 uppercase flex items-center gap-1 bg-teal-50/50 dark:bg-teal-950/20 px-2 py-0.5 rounded-md w-fit border border-teal-100/50 dark:border-teal-900/30">
+                                   <MapPin className="w-3.5 h-3.5 shrink-0 text-teal-500" />
+                                   {(() => {
+                                     const addr = getPatientAddress(p);
+                                     return addr.address ? `${addr.address}, ${addr.number}${addr.complement ? ` - ${addr.complement}` : ''}` : 'Sem endereço';
+                                   })()}
+                                 </p>
+                              </div>
                             </div>
-                            <div>
-                               <p className="text-[14px] font-semibold text-text-primary leading-tight group-hover:text-teal-600 transition-colors uppercase">{p.name}</p>
-                               <div className="flex items-center gap-3 mt-1">
-                                 <p className="text-[11px] text-text-muted font-medium">{p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}</p>
-                                 {p.clinical_data?.contact && (
-                                   <button 
-                                     onClick={(e) => handleWhatsApp(e, p.clinical_data.contact)}
-                                     className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors border border-emerald-100"
-                                   >
-                                     <MessageCircle className="w-3 h-3" />
-                                     <span className="text-[9px] font-bold uppercase">WhatsApp</span>
-                                   </button>
-                                 )}
-                               </div>
-                            </div>
-                          </div>
-                        </td>
+                          </td>
                         <td className="px-8 py-5">
                           <div className="flex flex-wrap gap-1.5">
                             {(() => {
@@ -553,7 +638,9 @@ export function PatientList({ user }: { user: any }) {
           {/* Mobile Card View */}
           <div className="lg:hidden divide-y divide-slate-100 dark:divide-slate-800">
             {filteredPatients.length > 0 ? (
-              filteredPatients.map((p) => (
+              [...filteredPatients]
+                .sort(sortPatientsByAddressNumber)
+                .map((p) => (
                 <div 
                   key={p.id} 
                   className="p-4 space-y-3 active:bg-slate-50 transition-colors"
@@ -589,6 +676,13 @@ export function PatientList({ user }: { user: any }) {
                               </button>
                             </div>
                           )}
+                          <p className="text-[10px] text-teal-600 dark:text-teal-400 font-bold mt-1.5 uppercase flex items-center gap-1 bg-teal-50/50 dark:bg-teal-950/20 px-2 py-0.5 rounded-md w-fit border border-teal-100/50 dark:border-teal-900/30">
+                            <MapPin className="w-3.5 h-3.5 shrink-0 text-teal-500" />
+                            {(() => {
+                              const addr = getPatientAddress(p);
+                              return addr.address ? `${addr.address}, ${addr.number}${addr.complement ? ` - ${addr.complement}` : ''}` : 'Sem endereço';
+                            })()}
+                          </p>
                           </div>
                           {p.clinical_data?.contact && (
                             <button 
