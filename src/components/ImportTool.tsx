@@ -133,91 +133,69 @@ export function ImportTool({ user }: { user: any }) {
     let errorCount = 0;
     const messages: string[] = [];
 
+    const buildCategories = (row: any, dn: string | null) => {
+      const rawCat = String(getVal(row, 'categoria')).toLowerCase();
+      let ageInYears = 0;
+      let ageInMonths = 0;
+      if (dn) {
+        const birthDate = new Date(dn + 'T00:00:00');
+        const now = new Date();
+        ageInMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + (now.getMonth() - birthDate.getMonth());
+        if (now.getDate() < birthDate.getDate()) ageInMonths--;
+        if (ageInMonths < 0) ageInMonths = 0;
+        ageInYears = Math.floor(ageInMonths / 12);
+      }
+      const categories: string[] = [];
+      if (rawCat.includes('gestante')) categories.push('Gestante');
+      if (rawCat.includes('acamado')) categories.push('AcamadoDomiciliado');
+      if (rawCat.includes('saúde mental') || rawCat.includes('saude mental')) categories.push('SaudeMental');
+      if (dn) {
+        if (ageInMonths <= 24) categories.push('Criança');
+        else if (ageInYears >= 60) categories.push('Idoso');
+        else categories.push('Adulto');
+      } else {
+        if (rawCat.includes('criança') || rawCat.includes('crianca')) categories.push('Criança');
+        else if (rawCat.includes('idoso')) categories.push('Idoso');
+        else if (rawCat.includes('adulto')) categories.push('Adulto');
+        else categories.push('Adulto');
+      }
+      return categories;
+    };
+
+    // Passagem única — sem criação de domicílio
+    // O domicílio é gerado apenas quando o agente marcar "Responsável" no perfil e salvar
     for (let i = 0; i < parsedData.length; i++) {
       const row = parsedData[i];
       try {
         const cns = String(getVal(row, 'cns')).trim().replace(/\D/g, '');
         const name = String(getVal(row, 'nome')).trim().toUpperCase();
-        if (!cns || !name) { errorCount++; messages.push(`Linha ${i + 2}: CNS ou Nome ausente.`); continue; }
-
-        const isResp = normalizeSimNao(getVal(row, 'responsavel')) === 'Sim';
-        const rawRespCns = String(getVal(row, 'cns_responsavel')).trim().replace(/\D/g, '');
-        const respCns = rawRespCns || (isResp ? cns : ''); // Só usa CNS próprio como respCns se for responsável
-        const address = String(getVal(row, 'endereco')).trim(); // Sem fallback — endereço vazio impede criação de domicílio
-        const number = String(getVal(row, 'numero')).trim();
-        const complement = String(getVal(row, 'complemento')).trim();
-
-        // Household — só cria domicílio se o paciente for o responsável familiar
-        let householdId: string | null = null;
-        const { data: existingH } = await supabase.from('households')
-          .select('id').eq('responsible_cns', respCns).maybeSingle();
-
-        if (existingH) {
-          // Domicílio já existe — vincula e atualiza se for o responsável
-          householdId = existingH.id;
-          if (isResp) {
-            await supabase.from('households')
-              .update({ responsible_name: name, address, number, complement })
-              .eq('id', householdId);
-          }
-        } else if (isResp && address) {
-          // Só cria o domicílio se este paciente for o responsável E tiver endereço
-          const { data: newH, error: hErr } = await supabase.from('households').insert([{
-            address, number, complement,
-            microarea: user.microarea || '000',
-            area_color: user.color || '#00488d',
-            agent_id: user.id,
-            responsible_cns: respCns,
-            responsible_name: name,
-          }]).select().single();
-          if (hErr) throw hErr;
-          householdId = newH.id;
+        if (!cns || !name) {
+          errorCount++;
+          messages.push(`Linha ${i + 2}: CNS ou Nome ausente.`);
+          continue;
         }
-        // Se não for responsável e não existe domicílio, householdId permanece null
 
-        // Categories — categorização automática por idade + campo categoria
-        const rawCat = String(getVal(row, 'categoria')).toLowerCase();
         const dn = formatDate(String(getVal(row, 'dn')));
+        let address = String(getVal(row, 'endereco')).trim();
+        let number = String(getVal(row, 'numero')).trim();
+        let complement = String(getVal(row, 'complemento')).trim();
+        const isResp = normalizeSimNao(getVal(row, 'responsavel')) === 'Sim';
+        const respCns = String(getVal(row, 'cns_responsavel')).trim().replace(/\D/g, '');
 
-        // Calcular idade em anos e meses a partir da data de nascimento
-        let ageInYears = 0;
-        let ageInMonths = 0;
-        if (dn) {
-          const birthDate = new Date(dn + 'T00:00:00');
-          const now = new Date();
-          ageInYears = now.getFullYear() - birthDate.getFullYear();
-          ageInMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + (now.getMonth() - birthDate.getMonth());
-          // Ajuste se ainda não fez o aniversário esse mês
-          if (now.getDate() < birthDate.getDate()) ageInMonths--;
-          if (ageInMonths < 0) ageInMonths = 0;
-          ageInYears = Math.floor(ageInMonths / 12);
-        }
+        // Se não tem endereço mas tem CNS do responsável, herdar endereço do responsável
+        if (!address && respCns) {
+          const { data: respPatient } = await supabase
+            .from('patients')
+            .select('clinical_data')
+            .eq('cns', respCns)
+            .eq('agent_id', user.id)
+            .maybeSingle();
 
-        const categories: string[] = [];
-
-        // Categorias manuais (do campo categoria do CSV)
-        if (rawCat.includes('gestante')) categories.push('Gestante');
-        if (rawCat.includes('acamado')) categories.push('AcamadoDomiciliado');
-        if (rawCat.includes('saúde mental') || rawCat.includes('saude mental')) categories.push('SaudeMental');
-
-        // Categorização automática por idade (mesma regra do PatientForm)
-        if (dn) {
-          if (ageInMonths <= 24) {
-            // Criança com até 24 meses
-            if (!categories.includes('Criança')) categories.push('Criança');
-          } else if (ageInYears >= 60) {
-            // Idoso com 60 anos ou mais
-            if (!categories.includes('Idoso')) categories.push('Idoso');
-          } else {
-            // Adulto entre 24 meses e 60 anos
-            if (!categories.includes('Adulto')) categories.push('Adulto');
+          if (respPatient?.clinical_data) {
+            address = respPatient.clinical_data.address || '';
+            number = respPatient.clinical_data.address_number || '';
+            complement = respPatient.clinical_data.address_complement || '';
           }
-        } else {
-          // Sem data de nascimento: respeita o campo categoria do CSV
-          if (rawCat.includes('criança') || rawCat.includes('crianca')) categories.push('Criança');
-          else if (rawCat.includes('idoso')) categories.push('Idoso');
-          else if (rawCat.includes('adulto')) categories.push('Adulto');
-          else categories.push('Adulto'); // fallback
         }
 
         const hasDiabetes = normalizeSimNao(getVal(row, 'diabetes'));
@@ -230,24 +208,24 @@ export function ImportTool({ user }: { user: any }) {
 
         const clinical_data = {
           contact: String(getVal(row, 'contato')).trim(),
-          responsible_cns: respCns,
+          responsible_cns: respCns || (isResp ? cns : ''),
           socialBenefits,
-          // Salvar endereço nos dados clínicos para não perder mesmo sem domicílio
-          address: address || '',
-          address_number: number || '',
-          address_complement: complement || '',
+          address,
+          address_number: number,
+          address_complement: complement,
           chronic: { diabetes: hasDiabetes, hipertensao: hasHipertensao },
           adulto: { diabetes: hasDiabetes, hipertensao: hasHipertensao },
           idoso: { diabetes: hasDiabetes, hipertensao: hasHipertensao },
         };
 
         const { error: pErr } = await supabase.from('patients').insert([{
-          name, cns,
+          name,
+          cns,
           is_family_responsible: isResp,
           birth_date: dn,
           gender: String(getVal(row, 'genero')).trim() || null,
-          household_id: householdId,
-          categories,
+          household_id: null,
+          categories: buildCategories(row, dn),
           microarea: user.microarea || '000',
           area_color: user.color || '#00488d',
           agent_id: user.id,

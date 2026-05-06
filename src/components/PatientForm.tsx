@@ -531,7 +531,39 @@ export function PatientForm({ user }: { user: any }) {
   };
 
 
+  // Preencher endereço automaticamente ao digitar o CNS do responsável
+  React.useEffect(() => {
+    const cns = formData.responsibleCns?.replace(/\D/g, '');
+    if (!cns || cns.length < 15 || formData.isFamilyResponsible) return;
+
+    // Debounce: aguardar 600ms após parar de digitar
+    const timer = setTimeout(async () => {
+      const { data } = await supabase
+        .from('patients')
+        .select('clinical_data, cns')
+        .eq('cns', cns)
+        .eq('agent_id', user.id)
+        .maybeSingle();
+
+      if (data?.clinical_data) {
+          const cd = data.clinical_data;
+          setFormData((prev: any) => ({
+            ...prev,
+            address: prev.address || cd.address || '',
+            number: prev.number || cd.address_number || '',
+            complement: prev.complement || cd.address_complement || '',
+            contact: prev.contact || cd.contact || '',
+            contact2: prev.contact2 || cd.contact2 || cd.message_contact || '',
+            messageContact: prev.messageContact || cd.messageContact || cd.message_contact || '',
+          }));
+        }
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [formData.responsibleCns, formData.isFamilyResponsible]);
+
   // Automate category selection based on birth date
+
   React.useEffect(() => {
     if (!formData.birthDate) return;
     
