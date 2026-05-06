@@ -8,7 +8,8 @@ import {
   TrendingDown,
   Eye,
   Bed,
-  MapPin
+  MapPin,
+  Activity
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAgeInMonths, VACCINE_SCHEDULE, formatDate, calculateAge, getAgeNumber } from '../lib/dateUtils';
@@ -168,15 +169,21 @@ export function Dashboard({ user }: { user: any }) {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
         sevenDaysAgo.setHours(0, 0, 0, 0);
+        const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
 
-        let visitQuery = supabase.from('visits')
-          .select('date')
-          .gte('date', sevenDaysAgo.toISOString().split('T')[0]);
+        let visitQuery = supabase
+          .from('visits')
+          .select('date, created_at');
 
+        // Filtro por papel do usuário
         if (user.role === 'Gestor') visitQuery = visitQuery.eq('area_color', user.color);
         else if (user.role !== 'Administrador') visitQuery = visitQuery.eq('agent_id', user.id);
 
-        const { data: visitData } = await visitQuery;
+        const { data: visitData, error: visitError } = await visitQuery;
+
+        if (visitError) {
+          console.error('Erro ao buscar visitas para o gráfico:', visitError);
+        }
 
         // Build 7-day chart with real counts
         const dayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -189,7 +196,17 @@ export function Dashboard({ user }: { user: any }) {
         }
 
         (visitData || []).forEach((v: any) => {
-          const vDate = new Date(v.date + 'T00:00:00');
+          // Suporta tanto campo 'date' (YYYY-MM-DD) quanto 'created_at' (timestamp ISO)
+          const rawDate = v.date || v.created_at;
+          if (!rawDate) return;
+
+          // Normaliza para YYYY-MM-DD
+          const dateStr = String(rawDate).substring(0, 10);
+
+          // Só conta se estiver nos últimos 7 dias
+          if (dateStr < sevenDaysAgoStr) return;
+
+          const vDate = new Date(dateStr + 'T00:00:00');
           const match = chartDays.find(cd =>
             cd.date.getFullYear() === vDate.getFullYear() &&
             cd.date.getMonth() === vDate.getMonth() &&
@@ -436,17 +453,23 @@ export function Dashboard({ user }: { user: any }) {
                 <option>Últimos 7 dias</option>
               </select>
             </div>
-            <div className="flex-1 min-h-[200px]">
+            <div className="h-[220px] w-full">
+              {weeklyChartData.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-text-muted gap-2">
+                  <Activity className="w-8 h-8 opacity-30" />
+                  <p className="text-xs font-semibold uppercase tracking-wider opacity-50">Sem visitas nos últimos 7 dias</p>
+                </div>
+              ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
+                <LineChart data={weeklyChartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--color-text-muted)', fontSize: 11, fontWeight: 'bold' }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} />
-                  <RechartsTooltip contentStyle={{ borderRadius: '16px', backgroundColor: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
-                  <Line type="monotone" dataKey="visitas" stroke="#10b981" strokeWidth={4} dot={{ r: 6, fill: '#10b981', strokeWidth: 3, stroke: '#fff' }} />
-                  <Line type="monotone" dataKey="metas" stroke="#ef4444" strokeWidth={4} dot={{ r: 6, fill: '#ef4444', strokeWidth: 3, stroke: '#fff' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} allowDecimals={false} />
+                  <RechartsTooltip contentStyle={{ borderRadius: '16px', backgroundColor: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} formatter={(v: any) => [v, 'Visitas']} />
+                  <Line type="monotone" dataKey="visitas" stroke="#10b981" strokeWidth={4} dot={{ r: 6, fill: '#10b981', strokeWidth: 3, stroke: '#fff' }} activeDot={{ r: 8 }} />
                 </LineChart>
               </ResponsiveContainer>
+              )}
             </div>
           </div>
         </div>

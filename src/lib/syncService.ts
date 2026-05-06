@@ -10,6 +10,38 @@ interface SyncItem {
 
 class SyncService {
   private queueKey = 'gestao_acs_sync_queue';
+  private listeners: (() => void)[] = [];
+  private syncing = false;
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => {
+        this.sync();
+        this.notifyListeners();
+      });
+      window.addEventListener('offline', () => {
+        this.notifyListeners();
+      });
+    }
+  }
+
+  subscribe(callback: () => void) {
+    this.listeners.push(callback);
+    // Return unsubscribe function
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== callback);
+    };
+  }
+
+  private notifyListeners() {
+    this.listeners.forEach(l => {
+      try {
+        l();
+      } catch (e) {
+        console.error("Error calling sync listener:", e);
+      }
+    });
+  }
 
   private getQueue(): SyncItem[] {
     const queue = localStorage.getItem(this.queueKey);
@@ -18,6 +50,7 @@ class SyncService {
 
   private saveQueue(queue: SyncItem[]) {
     localStorage.setItem(this.queueKey, JSON.stringify(queue));
+    this.notifyListeners();
   }
 
   async addToQueue(table: string, action: 'INSERT' | 'UPDATE' | 'DELETE', data: any) {
@@ -30,7 +63,7 @@ class SyncService {
       timestamp: Date.now(),
     };
     queue.push(newItem);
-    this.saveQueue(queue);
+    this.saveQueue(newItem ? queue : queue); // Save and trigger subscriber updates
     
     if (navigator.onLine) {
       await this.sync();
@@ -38,10 +71,13 @@ class SyncService {
   }
 
   async sync() {
-    if (!navigator.onLine) return;
-
+    if (!navigator.onLine || this.syncing) return;
+    
     const queue = this.getQueue();
     if (queue.length === 0) return;
+
+    this.syncing = true;
+    this.notifyListeners();
 
     const remainingItems: SyncItem[] = [];
 
@@ -59,7 +95,6 @@ class SyncService {
           } else if (item.data.filter) {
             ({ error } = await query.match(item.data.filter));
           } else {
-            // Fallback for safety
             ({ error } = await query.eq('id', item.data.id));
           }
         }
@@ -71,12 +106,22 @@ class SyncService {
       }
     }
 
+    this.syncing = false;
     this.saveQueue(remainingItems);
   }
 
   getQueueLength(): number {
     return this.getQueue().length;
   }
+
+  isSyncing(): boolean {
+    return this.syncing;
+  }
+
+  isOnline(): boolean {
+    return typeof navigator !== 'undefined' ? navigator.onLine : true;
+  }
 }
 
 export const syncService = new SyncService();
+

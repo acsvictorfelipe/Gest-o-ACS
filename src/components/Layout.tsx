@@ -22,7 +22,9 @@ import {
   FileText,
   PieChart,
   Moon,
-  Sun
+  Sun,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getAgeInMonths } from '../lib/dateUtils';
@@ -45,13 +47,30 @@ export function Layout({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [criticalAlerts, setCriticalAlerts] = React.useState<any[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
-  const [syncQueueLength, setSyncQueueLength] = React.useState(0);
+  const [syncQueueLength, setSyncQueueLength] = React.useState(syncService.getQueueLength());
+  const [isOnline, setIsOnline] = React.useState(syncService.isOnline());
+  const [isSyncing, setIsSyncing] = React.useState(syncService.isSyncing());
 
   React.useEffect(() => {
-    const updateQueue = () => setSyncQueueLength(syncService.getQueueLength());
-    updateQueue();
-    const interval = setInterval(updateQueue, 2000);
-    return () => clearInterval(interval);
+    // Inscreve no syncService para atualizar em tempo real
+    const unsubscribe = syncService.subscribe(() => {
+      setSyncQueueLength(syncService.getQueueLength());
+      setIsSyncing(syncService.isSyncing());
+      setIsOnline(syncService.isOnline());
+    });
+
+    const handleConnectionChange = () => {
+      setIsOnline(navigator.onLine);
+    };
+
+    window.addEventListener('online', handleConnectionChange);
+    window.addEventListener('offline', handleConnectionChange);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('online', handleConnectionChange);
+      window.removeEventListener('offline', handleConnectionChange);
+    };
   }, []);
 
   React.useEffect(() => {
@@ -225,6 +244,39 @@ export function Layout({
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Connection / Sync Pill */}
+            <div className={`hidden md:flex items-center gap-2 px-3.5 py-2 rounded-2xl text-[11px] font-extrabold uppercase tracking-wider transition-all duration-300 border shadow-sm ${
+              !isOnline 
+                ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/30 text-amber-600 dark:text-amber-400' 
+                : isSyncing 
+                  ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/30 text-blue-600 dark:text-blue-400 animate-pulse' 
+                  : syncQueueLength > 0 
+                    ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900/30 text-orange-600 dark:text-orange-400'
+                    : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+            }`}>
+              {!isOnline ? (
+                <>
+                  <WifiOff className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span>Modo Offline</span>
+                </>
+              ) : isSyncing ? (
+                <>
+                  <RefreshCw className="w-4 h-4 text-blue-500 animate-spin shrink-0" />
+                  <span>Sincronizando</span>
+                </>
+              ) : syncQueueLength > 0 ? (
+                <>
+                  <RefreshCw className="w-4 h-4 text-orange-500 animate-bounce shrink-0" />
+                  <span>Fila: {syncQueueLength}</span>
+                </>
+              ) : (
+                <>
+                  <Wifi className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Online</span>
+                </>
+              )}
+            </div>
+
             <button 
               onClick={toggleTheme}
               className="p-2.5 text-text-secondary hover:text-text-primary hover:bg-bg-primary rounded-xl transition-all border border-border shadow-sm"
@@ -329,6 +381,19 @@ export function Layout({
             >
               <X className="w-6 h-6" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Offline UX Toast Banner */}
+      {!isOnline && (
+        <div className="fixed bottom-6 right-6 z-[9999] max-w-sm bg-amber-500 dark:bg-amber-600 text-white rounded-3xl p-5 shadow-2xl border border-amber-400 flex gap-4 items-start animate-in slide-in-from-bottom-5 duration-300">
+          <WifiOff className="w-6 h-6 shrink-0 text-amber-100" />
+          <div className="min-w-0">
+            <h4 className="font-extrabold text-sm uppercase tracking-wider text-amber-50">Modo Offline Ativo</h4>
+            <p className="text-[12px] font-medium text-amber-100/90 mt-1 leading-relaxed">
+              Você está sem conexão de rede. Suas alterações serão guardadas localmente com segurança e sincronizadas automaticamente quando o sinal retornar!
+            </p>
           </div>
         </div>
       )}
