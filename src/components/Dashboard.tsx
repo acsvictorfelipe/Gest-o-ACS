@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { supabase } from '../lib/supabase';
-import {
   Baby,
   Calendar as CalendarIcon,
   ChevronRight,
@@ -9,7 +8,12 @@ import {
   Eye,
   Bed,
   MapPin,
-  Activity
+  Activity,
+  CheckSquare,
+  Square,
+  Trash2,
+  Plus,
+  Check
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAgeInMonths, VACCINE_SCHEDULE, formatDate, calculateAge, getAgeNumber } from '../lib/dateUtils';
@@ -45,6 +49,32 @@ export function Dashboard({ user }: { user: any }) {
   const [loading, setLoading] = React.useState(true);
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  // Roteiro do Dia (Checklist de visitas planejadas para hoje)
+  const [dailyAgenda, setDailyAgenda] = React.useState<{id: string, name: string, done: boolean}[]>(() => {
+    const saved = localStorage.getItem('gestao_acs_daily_agenda');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const saveAgenda = (newAgenda: typeof dailyAgenda) => {
+    setDailyAgenda(newAgenda);
+    localStorage.setItem('gestao_acs_daily_agenda', JSON.stringify(newAgenda));
+  };
+
+  const handleAddToAgenda = (patientId: string) => {
+    const patient = allPatients.find(p => p.id === patientId);
+    if (!patient) return;
+    if (dailyAgenda.some(item => item.id === patientId)) return;
+    saveAgenda([...dailyAgenda, { id: patient.id, name: patient.name, done: false }]);
+  };
+
+  const handleRemoveFromAgenda = (patientId: string) => {
+    saveAgenda(dailyAgenda.filter(item => item.id !== patientId));
+  };
+
+  const handleToggleAgenda = (patientId: string) => {
+    saveAgenda(dailyAgenda.map(item => item.id === patientId ? { ...item, done: !item.done } : item));
+  };
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -509,6 +539,121 @@ export function Dashboard({ user }: { user: any }) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Roteiro de Visitas do Dia */}
+      <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h3 className="text-base font-bold text-text-primary uppercase tracking-tight flex items-center gap-2">
+              📋 Roteiro de Visitas de Hoje
+            </h3>
+            <p className="text-xs text-text-muted font-medium mt-1">Planeje e acompanhe suas visitas domiciliares de hoje.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleAddToAgenda(e.target.value);
+                  e.target.value = '';
+                }
+              }}
+              className="bg-bg-primary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-semibold text-text-secondary outline-none w-full sm:w-60 focus:ring-1 focus:ring-teal-500"
+            >
+              <option value="">+ Adicionar Paciente ao Roteiro...</option>
+              {allPatients
+                .filter(p => !dailyAgenda.some(item => item.id === p.id))
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(p => (
+                  <option key={p.id} value={p.id}>{p.name.toUpperCase()}</option>
+                ))
+              }
+            </select>
+            {dailyAgenda.length > 0 && (
+              <button 
+                onClick={() => { if(window.confirm("Limpar todo o roteiro de hoje?")) saveAgenda([]); }}
+                className="p-2 text-text-muted hover:text-red-500 transition-colors rounded-xl hover:bg-bg-primary"
+                title="Limpar Roteiro"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {dailyAgenda.length === 0 ? (
+          <div className="py-12 border border-dashed border-border rounded-[24px] flex flex-col items-center justify-center text-center">
+            <div className="w-12 h-12 rounded-full bg-teal-50 dark:bg-teal-900/10 text-teal-600 flex items-center justify-center mb-3">
+              <Plus className="w-6 h-6" />
+            </div>
+            <p className="text-sm font-semibold text-text-primary">Nenhum paciente planejado para hoje</p>
+            <p className="text-xs text-text-muted mt-1 max-w-sm">Selecione os pacientes no menu acima para organizar seu roteiro de visitas de hoje.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Progress bar */}
+            <div>
+              <div className="flex justify-between items-center text-xs font-bold text-text-muted uppercase mb-1">
+                <span>Progresso das Visitas</span>
+                <span>
+                  {dailyAgenda.filter(i => i.done).length} de {dailyAgenda.length} ({Math.round((dailyAgenda.filter(i => i.done).length / dailyAgenda.length) * 100)}%)
+                </span>
+              </div>
+              <div className="w-full bg-bg-primary h-2.5 rounded-full overflow-hidden border border-border">
+                <div 
+                  className="bg-teal-500 h-full transition-all duration-500"
+                  style={{ width: `${(dailyAgenda.filter(i => i.done).length / dailyAgenda.length) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+              {dailyAgenda.map((item) => (
+                <div 
+                  key={item.id}
+                  className={`p-4 rounded-[20px] border transition-all flex items-center justify-between gap-4 ${
+                    item.done 
+                      ? 'bg-slate-50/50 dark:bg-slate-900/20 border-slate-100 dark:border-slate-800 opacity-60' 
+                      : 'bg-bg-primary border-border hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <button 
+                      onClick={() => handleToggleAgenda(item.id)}
+                      className="text-text-muted hover:text-teal-600 transition-colors shrink-0"
+                    >
+                      {item.done ? (
+                        <CheckSquare className="w-6 h-6 text-teal-500" />
+                      ) : (
+                        <Square className="w-6 h-6 text-text-muted/40" />
+                      )}
+                    </button>
+                    <span className={`text-[13px] font-semibold uppercase truncate ${item.done ? 'line-through text-text-muted' : 'text-text-primary'}`}>
+                      {item.name}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button 
+                      onClick={() => navigate(`/editar-paciente/${item.id}`)}
+                      className="px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white font-bold text-[11px] rounded-xl transition-all uppercase tracking-wider"
+                    >
+                      Visitar Prontuário
+                    </button>
+                    <button 
+                      onClick={() => handleRemoveFromAgenda(item.id)}
+                      className="p-1.5 text-text-muted hover:text-red-500 transition-colors rounded-lg hover:bg-bg-secondary"
+                      title="Remover"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 3. Table and Calendar */}

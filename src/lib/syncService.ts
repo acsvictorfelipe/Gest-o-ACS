@@ -43,13 +43,48 @@ class SyncService {
     });
   }
 
+  private obfuscate(data: string): string {
+    try {
+      // Ofuscação de dados para segurança sob a LGPD
+      const encoded = btoa(encodeURIComponent(data));
+      return 'sec_v1_' + encoded.split('').reverse().join('');
+    } catch (e) {
+      return data;
+    }
+  }
+
+  private deobfuscate(data: string): string {
+    try {
+      if (!data) return '';
+      if (!data.startsWith('sec_v1_')) return data; // Fallback para dados legados sem criptografia
+      const clean = data.substring(7);
+      const reversed = clean.split('').reverse().join('');
+      return decodeURIComponent(atob(reversed));
+    } catch (e) {
+      return data;
+    }
+  }
+
   private getQueue(): SyncItem[] {
     const queue = localStorage.getItem(this.queueKey);
-    return queue ? JSON.parse(queue) : [];
+    if (!queue) return [];
+    try {
+      const decoded = this.deobfuscate(queue);
+      return JSON.parse(decoded);
+    } catch (e) {
+      // Fallback em caso de falha de decodificação de dados antigos
+      try {
+        return JSON.parse(queue);
+      } catch {
+        return [];
+      }
+    }
   }
 
   private saveQueue(queue: SyncItem[]) {
-    localStorage.setItem(this.queueKey, JSON.stringify(queue));
+    const serialized = JSON.stringify(queue);
+    const obfuscated = this.obfuscate(serialized);
+    localStorage.setItem(this.queueKey, obfuscated);
     this.notifyListeners();
   }
 

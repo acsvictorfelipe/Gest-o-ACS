@@ -152,10 +152,46 @@ export const formatDate = (dateStr: string) => {
   return `${day}/${month}/${year}`;
 };
 
-export const parseDate = (dateStr: string) => {
-  if (!dateStr) return null;
-  const parts = dateStr.split('-');
-  if (parts.length !== 3) return null;
-  // Create date at noon local time to avoid timezone shifts
-  return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+// Algoritmo de validação oficial do Cartão SUS (CNS)
+export const validateCNS = (cns: string): boolean => {
+  if (!cns) return false;
+  const cleanCns = cns.replace(/\D/g, '');
+  if (cleanCns.length !== 15) return false;
+
+  const firstDigit = cleanCns[0];
+  if (!['1', '2', '7', '8', '9'].includes(firstDigit)) return false;
+
+  if (['1', '2'].includes(firstDigit)) {
+    // CNS Permanente
+    const pis = cleanCns.substring(0, 11);
+    let sum = 0;
+    for (let i = 0; i < 11; i++) {
+      sum += parseInt(pis[i]) * (15 - i);
+    }
+    const rest = sum % 11;
+    let dv = 11 - rest;
+    if (dv === 11) dv = 0;
+
+    let result = '';
+    if (dv === 10) {
+      sum += 2;
+      const newRest = sum % 11;
+      let newDv = 11 - newRest;
+      if (newDv === 11) newDv = 0;
+      result = pis + "001" + String(newDv);
+    } else {
+      result = pis + "000" + String(dv);
+    }
+    return cleanCns === result;
+  } else if (['7', '8', '9'].includes(firstDigit)) {
+    // CNS Provisório
+    let sum = 0;
+    for (let i = 0; i < 15; i++) {
+      sum += parseInt(cleanCns[i]) * (15 - i);
+    }
+    return sum % 11 === 0;
+  }
+
+  return false;
 };
+

@@ -10,7 +10,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { calculateAge, getAgeNumber, getAgeInMonths, vaccineLabels, formatDate, parseDate } from '../lib/dateUtils';
+import { calculateAge, getAgeNumber, getAgeInMonths, vaccineLabels, formatDate, parseDate, validateCNS } from '../lib/dateUtils';
 import { PersonalInfo } from './patient-form/PersonalInfo';
 import { AddressInfo } from './patient-form/AddressInfo';
 import { MedicalInfo } from './patient-form/MedicalInfo';
@@ -622,6 +622,29 @@ export function PatientForm({ user }: { user: any }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validação de CNS SUS do Paciente
+    if (formData.cns) {
+      const isCnsValid = validateCNS(formData.cns);
+      if (!isCnsValid) {
+        const confirmSave = window.confirm(
+          `Atenção: O Cartão SUS (CNS) "${formData.cns}" do paciente não atende aos critérios do algoritmo oficial de validação do SUS (com 15 dígitos válidos).\n\nDeseja prosseguir e salvar mesmo assim?`
+        );
+        if (!confirmSave) return;
+      }
+    }
+
+    // Validação de CNS SUS do Responsável
+    if (formData.responsibleCns && !formData.isFamilyResponsible) {
+      const isRespCnsValid = validateCNS(formData.responsibleCns);
+      if (!isRespCnsValid) {
+        const confirmSave = window.confirm(
+          `Atenção: O CNS do Responsável "${formData.responsibleCns}" não atende aos critérios do algoritmo oficial de validação do SUS.\n\nDeseja prosseguir e salvar mesmo assim?`
+        );
+        if (!confirmSave) return;
+      }
+    }
+
     setLoading(true);
     
     try {
