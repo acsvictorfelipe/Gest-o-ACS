@@ -441,10 +441,10 @@ export function Dashboard({ user }: { user: any }) {
       </div>
 
       {/* 2. Middle Row */}
-      <div className="grid grid-cols-12 gap-6">
+      <div className="grid grid-cols-12 gap-6 items-start">
         {/* Acompanhamento Prioritário */}
         <div className="col-span-12 xl:col-span-3">
-          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm h-full flex flex-col">
+          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col">
             <h3 className="text-base font-bold text-text-primary mb-4 uppercase tracking-tight">Acompanhamento Prioritário</h3>
             <div className="space-y-3 flex-1">
               <div onClick={() => navigate('/pacientes?filter=pending_6m')} className="p-3 rounded-[24px] border border-red-100 bg-red-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-red-50/40 transition-colors cursor-pointer transition-all">
@@ -512,7 +512,7 @@ export function Dashboard({ user }: { user: any }) {
 
         {/* Visitas Semanais */}
         <div className="col-span-12 xl:col-span-5">
-          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm h-full flex flex-col">
+          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col">
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-base font-bold text-text-primary uppercase tracking-tight">Visitas por Semana</h3>
               <select className="bg-bg-primary border border-border rounded-xl px-4 py-2 text-[12px] font-semibold text-text-secondary outline-none">
@@ -542,7 +542,7 @@ export function Dashboard({ user }: { user: any }) {
 
         {/* Distribuição */}
         <div className="col-span-12 xl:col-span-4">
-          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm h-full flex flex-col">
+          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col">
             <h3 className="text-base font-bold text-text-primary mb-5 uppercase tracking-tight">Distribuição por Categoria</h3>
             <div className="flex-1 flex flex-col lg:flex-row items-center gap-6">
               <div className="relative w-32 h-32 shrink-0">
