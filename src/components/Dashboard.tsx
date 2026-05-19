@@ -444,13 +444,13 @@ export function Dashboard({ user }: { user: any }) {
       <div className="grid grid-cols-12 gap-6">
         {/* Acompanhamento Prioritário */}
         <div className="col-span-12 xl:col-span-3">
-          <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm h-full flex flex-col">
-            <h3 className="text-base font-bold text-text-primary mb-5 uppercase tracking-tight">Acompanhamento Prioritário</h3>
-            <div className="space-y-4 flex-1">
-              <div onClick={() => navigate('/pacientes?filter=pending_6m')} className="p-4 rounded-[24px] border border-red-100 bg-red-50/20 flex items-center gap-4 relative overflow-hidden group hover:bg-red-50/40 transition-colors cursor-pointer transition-all">
+          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm h-full flex flex-col">
+            <h3 className="text-base font-bold text-text-primary mb-4 uppercase tracking-tight">Acompanhamento Prioritário</h3>
+            <div className="space-y-3 flex-1">
+              <div onClick={() => navigate('/pacientes?filter=pending_6m')} className="p-3 rounded-[24px] border border-red-100 bg-red-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-red-50/40 transition-colors cursor-pointer transition-all">
                 <div className="absolute top-0 left-0 w-[4px] h-full bg-red-500" />
-                <div className="w-11 h-11 rounded-full bg-red-500 flex items-center justify-center text-white shadow-lg shadow-red-500/20 shrink-0">
-                  <Baby className="w-6 h-6" />
+                <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white shadow-lg shadow-red-500/20 shrink-0">
+                  <Baby className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
@@ -461,10 +461,10 @@ export function Dashboard({ user }: { user: any }) {
                 </div>
               </div>
 
-              <div onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} className="p-4 rounded-[24px] border border-orange-100 bg-orange-50/20 flex items-center gap-4 relative overflow-hidden group hover:bg-orange-50/40 transition-colors cursor-pointer transition-all">
+              <div onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} className="p-3 rounded-[24px] border border-orange-100 bg-orange-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-orange-50/40 transition-colors cursor-pointer transition-all">
                 <div className="absolute top-0 left-0 w-[4px] h-full bg-orange-500" />
-                <div className="w-11 h-11 rounded-full bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20 shrink-0">
-                  <CalendarIcon className="w-6 h-6" />
+                <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20 shrink-0">
+                  <CalendarIcon className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
@@ -475,10 +475,10 @@ export function Dashboard({ user }: { user: any }) {
                 </div>
               </div>
 
-              <div onClick={() => navigate('/pacientes?filter=vacinas_atrasadas')} className="p-4 rounded-[24px] border border-emerald-100 bg-emerald-50/20 flex items-center gap-4 relative overflow-hidden group hover:bg-emerald-50/40 transition-colors cursor-pointer transition-all">
+              <div onClick={() => navigate('/pacientes?filter=vacinas_atrasadas')} className="p-3 rounded-[24px] border border-emerald-100 bg-emerald-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-emerald-50/40 transition-colors cursor-pointer transition-all">
                 <div className="absolute top-0 left-0 w-[4px] h-full bg-emerald-500" />
-                <div className="w-11 h-11 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 shrink-0">
-                  <ShieldAlert className="w-6 h-6" />
+                <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 shrink-0">
+                  <ShieldAlert className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
@@ -489,10 +489,10 @@ export function Dashboard({ user }: { user: any }) {
                 </div>
               </div>
 
-              <div onClick={() => navigate('/pacientes?filter=receitas_vencendo')} className="p-4 rounded-[24px] border border-purple-100 bg-purple-50/20 flex items-center gap-4 relative overflow-hidden group hover:bg-purple-50/40 transition-colors cursor-pointer transition-all">
+              <div onClick={() => navigate('/pacientes?filter=receitas_vencendo')} className="p-3 rounded-[24px] border border-purple-100 bg-purple-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-purple-50/40 transition-colors cursor-pointer transition-all">
                 <div className="absolute top-0 left-0 w-[4px] h-full bg-purple-500" />
-                <div className="w-11 h-11 rounded-full bg-purple-500 flex items-center justify-center text-white shadow-lg shadow-purple-500/20 shrink-0">
-                  <Activity className="w-6 h-6" />
+                <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white shadow-lg shadow-purple-500/20 shrink-0">
+                  <Activity className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
@@ -512,14 +512,14 @@ export function Dashboard({ user }: { user: any }) {
 
         {/* Visitas Semanais */}
         <div className="col-span-12 xl:col-span-5">
-          <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm h-full flex flex-col">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm h-full flex flex-col">
+            <div className="flex items-center justify-between mb-5">
               <h3 className="text-base font-bold text-text-primary uppercase tracking-tight">Visitas por Semana</h3>
               <select className="bg-bg-primary border border-border rounded-xl px-4 py-2 text-[12px] font-semibold text-text-secondary outline-none">
                 <option>Últimos 7 dias</option>
               </select>
             </div>
-            <div className="h-[180px] w-full">
+            <div className="h-[160px] w-full mt-auto">
               {weeklyChartData.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-text-muted gap-2">
                   <Activity className="w-8 h-8 opacity-30" />
@@ -542,13 +542,13 @@ export function Dashboard({ user }: { user: any }) {
 
         {/* Distribuição */}
         <div className="col-span-12 xl:col-span-4">
-          <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm h-full flex flex-col">
-            <h3 className="text-base font-bold text-text-primary mb-6 uppercase tracking-tight">Distribuição por Categoria</h3>
-            <div className="flex-1 flex flex-col lg:flex-row items-center gap-8">
-              <div className="relative w-36 h-36 shrink-0">
+          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm h-full flex flex-col">
+            <h3 className="text-base font-bold text-text-primary mb-5 uppercase tracking-tight">Distribuição por Categoria</h3>
+            <div className="flex-1 flex flex-col lg:flex-row items-center gap-6">
+              <div className="relative w-32 h-32 shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={distribuicaoData} innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value" stroke="none">
+                    <Pie data={distribuicaoData} innerRadius={45} outerRadius={60} paddingAngle={5} dataKey="value" stroke="none">
                       {distribuicaoData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
                     </Pie>
                   </PieChart>
