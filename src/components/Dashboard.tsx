@@ -519,7 +519,7 @@ export function Dashboard({ user }: { user: any }) {
                 <option>Últimos 7 dias</option>
               </select>
             </div>
-            <div className="h-[220px] w-full">
+            <div className="h-[180px] w-full">
               {weeklyChartData.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-text-muted gap-2">
                   <Activity className="w-8 h-8 opacity-30" />
@@ -545,10 +545,10 @@ export function Dashboard({ user }: { user: any }) {
           <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm h-full flex flex-col">
             <h3 className="text-base font-bold text-text-primary mb-6 uppercase tracking-tight">Distribuição por Categoria</h3>
             <div className="flex-1 flex flex-col lg:flex-row items-center gap-8">
-              <div className="relative w-44 h-44 shrink-0">
+              <div className="relative w-36 h-36 shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={distribuicaoData} innerRadius={60} outerRadius={85} paddingAngle={5} dataKey="value" stroke="none">
+                    <Pie data={distribuicaoData} innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value" stroke="none">
                       {distribuicaoData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
                     </Pie>
                   </PieChart>
