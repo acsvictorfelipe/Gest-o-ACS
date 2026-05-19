@@ -14,7 +14,8 @@ import {
   Square,
   Trash2,
   Plus,
-  Check
+  Check,
+  ShieldAlert
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAgeInMonths, VACCINE_SCHEDULE, formatDate, calculateAge, getAgeNumber } from '../lib/dateUtils';
@@ -140,7 +141,8 @@ export function Dashboard({ user }: { user: any }) {
           saudeMental: 0,
           pendingVisits: 0,
           lateVaccines: 0,
-          childVisitAlerts: 0
+          childVisitAlerts: 0,
+          receitasAVencer: 0
         };
 
         patientsData.forEach(p => {
@@ -188,9 +190,27 @@ export function Dashboard({ user }: { user: any }) {
 
           if (categories.includes('Gestante')) newStats.gestantes++;
           if (categories.includes('AcamadoDomiciliado')) newStats.acamados++;
-          if (categories.includes('Idoso') || categories.includes('Idosos') || patientAgeNum >= 60) newStats.idosos++;
-          if (categories.includes('Adulto') || (ageInMonths > 24 && patientAgeNum < 60)) newStats.adultos++;
+          if (categories.includes('Idoso') || categories.includes('Idosos')) newStats.idosos++;
+          if (categories.includes('Adulto')) newStats.adultos++;
           if (categories.includes('SaudeMental') || categories.includes('Saúde Mental')) newStats.saudeMental++;
+          
+          if (categories.includes('AcamadoDomiciliado') && clinical.acamadodomiciliado?.dataReceita && clinical.acamadodomiciliado?.validadeReceita) {
+            const dataReceita = new Date(clinical.acamadodomiciliado.dataReceita);
+            const validadeDias = parseInt(clinical.acamadodomiciliado.validadeReceita, 10);
+            if (!isNaN(dataReceita.getTime()) && !isNaN(validadeDias)) {
+              const dataVencimento = new Date(dataReceita);
+              dataVencimento.setDate(dataVencimento.getDate() + validadeDias);
+              
+              const dataAlerta = new Date(dataVencimento);
+              dataAlerta.setDate(dataAlerta.getDate() - 15);
+              
+              const hoje = new Date();
+              
+              if (hoje >= dataAlerta) {
+                newStats.receitasAVencer++;
+              }
+            }
+          }
         });
 
         setStats(newStats);
@@ -458,16 +478,31 @@ export function Dashboard({ user }: { user: any }) {
               <div onClick={() => navigate('/pacientes?filter=vacinas_atrasadas')} className="p-4 rounded-[24px] border border-emerald-100 bg-emerald-50/20 flex items-center gap-4 relative overflow-hidden group hover:bg-emerald-50/40 transition-colors cursor-pointer transition-all">
                 <div className="absolute top-0 left-0 w-[4px] h-full bg-emerald-500" />
                 <div className="w-11 h-11 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 shrink-0">
-                  <Baby className="w-6 h-6" />
+                  <ShieldAlert className="w-6 h-6" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <h5 className="text-[14px] font-semibold text-text-primary leading-none">{stats.lateVaccines} vacinas atrasadas</h5>
-                    <Badge variant="success" className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full">0-2 ANOS</Badge>
+                    <h5 className="text-[14px] font-semibold text-text-primary leading-none">{stats.lateVaccines} com atraso</h5>
+                    <Badge variant="success" className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full">VACINAS</Badge>
                   </div>
-                  <p className="text-[12px] text-text-secondary font-medium">Crianças com pendência vacinal</p>
+                  <p className="text-[12px] text-text-secondary font-medium">Crianças (0-2 anos) sem vacina registrada</p>
                 </div>
               </div>
+
+              <div onClick={() => navigate('/pacientes?filter=receitas_vencendo')} className="p-4 rounded-[24px] border border-purple-100 bg-purple-50/20 flex items-center gap-4 relative overflow-hidden group hover:bg-purple-50/40 transition-colors cursor-pointer transition-all">
+                <div className="absolute top-0 left-0 w-[4px] h-full bg-purple-500" />
+                <div className="w-11 h-11 rounded-full bg-purple-500 flex items-center justify-center text-white shadow-lg shadow-purple-500/20 shrink-0">
+                  <Activity className="w-6 h-6" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <h5 className="text-[14px] font-semibold text-text-primary leading-none">{stats.receitasAVencer} a vencer</h5>
+                    <Badge variant="default" className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full bg-purple-100 text-purple-700">RECEITAS</Badge>
+                  </div>
+                  <p className="text-[12px] text-text-secondary font-medium">Acamados/Domiciliados precisando de renovação</p>
+                </div>
+              </div>
+
             </div>
             <button onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} className="w-full mt-6 py-3 border border-border rounded-2xl text-teal-600 font-semibold text-[13px] flex items-center justify-center gap-2 hover:bg-bg-primary transition-colors">
               Ver todos os pendentes <ChevronRight className="w-4 h-4" />

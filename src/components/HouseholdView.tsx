@@ -83,7 +83,7 @@ export function HouseholdView({ user }: { user: any }) {
       }
     };
     fetchData();
-  }, [id, user.microarea]);
+  }, [id]);
 
   useEffect(() => {
     if (household) {

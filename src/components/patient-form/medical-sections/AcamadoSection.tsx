@@ -112,6 +112,42 @@ export function AcamadoSection({ formData, setFormData }: AcamadoSectionProps) {
             </select>
           </div>
         )}
+        
+        <div>
+          <label className="block text-[10px] font-bold uppercase text-text-muted mb-2">Data da Receita</label>
+          <input 
+            type="date"
+            value={formData.clinicalData?.acamadodomiciliado?.dataReceita || ''}
+            onChange={e => setFormData(prev => ({
+              ...prev, 
+              clinicalData: { 
+                ...prev.clinicalData, 
+                acamadodomiciliado: { ...(prev.clinicalData?.acamadodomiciliado || {}), dataReceita: e.target.value } 
+              }
+            }))}
+            className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-700 rounded-xl p-3 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold uppercase text-text-muted mb-2">Validade da Receita</label>
+          <select 
+            value={formData.clinicalData?.acamadodomiciliado?.validadeReceita || ''}
+            onChange={e => setFormData(prev => ({
+              ...prev, 
+              clinicalData: { 
+                ...prev.clinicalData, 
+                acamadodomiciliado: { ...(prev.clinicalData?.acamadodomiciliado || {}), validadeReceita: e.target.value } 
+              }
+            }))}
+            className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-700 rounded-xl p-3 text-sm"
+          >
+            <option value="">Selecione...</option>
+            <option value="30">30 dias</option>
+            <option value="60">60 dias</option>
+            <option value="180">180 dias</option>
+          </select>
+        </div>
+
         <div className="md:col-span-3">
           <label className="block text-[10px] font-bold uppercase text-text-muted mb-2">Observações</label>
           <textarea 

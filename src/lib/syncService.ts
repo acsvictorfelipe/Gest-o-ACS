@@ -12,6 +12,7 @@ class SyncService {
   private queueKey = 'gestao_acs_sync_queue';
   private listeners: (() => void)[] = [];
   private syncing = false;
+  private lastSyncedAt: Date | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -142,6 +143,10 @@ class SyncService {
     }
 
     this.syncing = false;
+    if (remainingItems.length < queue.length) {
+      // At least one item synced successfully
+      this.lastSyncedAt = new Date();
+    }
     this.saveQueue(remainingItems);
   }
 
@@ -155,6 +160,10 @@ class SyncService {
 
   isOnline(): boolean {
     return typeof navigator !== 'undefined' ? navigator.onLine : true;
+  }
+
+  getLastSyncedAt(): Date | null {
+    return this.lastSyncedAt;
   }
 }
 

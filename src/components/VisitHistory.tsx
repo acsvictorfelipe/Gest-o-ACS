@@ -3,17 +3,43 @@ import { supabase } from '../lib/supabase';
 import {
   History,
   Search,
-  Filter,
   Calendar,
-  User,
   ChevronRight,
-  CheckCircle2,
   Loader2,
-  ArrowLeft
 } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { formatDate } from '../lib/dateUtils';
+
+type PeriodKey = 'hoje' | '7d' | '30d' | '90d' | 'todos';
+
+const PERIODS: { key: PeriodKey; label: string }[] = [
+  { key: 'hoje', label: 'Hoje' },
+  { key: '7d', label: '7 dias' },
+  { key: '30d', label: '30 dias' },
+  { key: '90d', label: '90 dias' },
+  { key: 'todos', label: 'Todos' },
+];
+
+function getPeriodStart(period: PeriodKey): string | null {
+  const now = new Date();
+  if (period === 'hoje') {
+    return now.toISOString().split('T')[0];
+  }
+  if (period === '7d') {
+    now.setDate(now.getDate() - 7);
+    return now.toISOString().split('T')[0];
+  }
+  if (period === '30d') {
+    now.setDate(now.getDate() - 30);
+    return now.toISOString().split('T')[0];
+  }
+  if (period === '90d') {
+    now.setDate(now.getDate() - 90);
+    return now.toISOString().split('T')[0];
+  }
+  return null; // 'todos' — sem filtro
+}
 
 export function VisitHistory({ user }: { user: any }) {
   const navigate = useNavigate();
@@ -21,6 +47,7 @@ export function VisitHistory({ user }: { user: any }) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('Todas');
+  const [period, setPeriod] = useState<PeriodKey>('30d');
 
   useEffect(() => {
     const fetchVisits = async () => {
@@ -48,6 +75,12 @@ export function VisitHistory({ user }: { user: any }) {
           query = query.eq('agent_id', user.id);
         }
 
+        // Apply period filter server-side for performance
+        const periodStart = getPeriodStart(period);
+        if (periodStart) {
+          query = query.gte('date', periodStart);
+        }
+
         const { data, error } = await query;
         if (error) throw error;
         setVisits(data || []);
@@ -64,7 +97,7 @@ export function VisitHistory({ user }: { user: any }) {
       }
     };
     fetchVisits();
-  }, [user.id, user.role, user.color]);
+  }, [user.id, user.role, user.color, user.microarea, period]);
 
   const filteredVisits = visits.filter(v => {
     const patientName = v.patients?.name || '';
@@ -83,19 +116,37 @@ export function VisitHistory({ user }: { user: any }) {
           <h2 className="text-2xl font-bold tracking-tight text-text-primary dark:text-white">Histórico de Visitas</h2>
           <p className="text-sm text-text-secondary font-medium tracking-tight">Visualize o registro completo das visitas domiciliares.</p>
         </header>
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar lg:pb-0">
-          {visitTypes.map(type => (
-            <button
-              key={type}
-              onClick={() => setFilterType(type)}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all tracking-tight whitespace-nowrap ${filterType === type
-                ? 'bg-primary text-white shadow-sm'
-                : 'bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 text-text-secondary dark:text-text-muted hover:bg-bg-primary'
-                }`}
-            >
-              {type}
-            </button>
-          ))}
+        <div className="flex flex-col gap-2">
+          {/* Period selector */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {PERIODS.map(p => (
+              <button
+                key={p.key}
+                onClick={() => setPeriod(p.key)}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all tracking-tight whitespace-nowrap ${period === p.key
+                  ? 'bg-teal-600 text-white shadow-sm'
+                  : 'bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 text-text-secondary dark:text-text-muted hover:bg-bg-primary'
+                  }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          {/* Type selector */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            {visitTypes.map(type => (
+              <button
+                key={type}
+                onClick={() => setFilterType(type)}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all tracking-tight whitespace-nowrap ${filterType === type
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 text-text-secondary dark:text-text-muted hover:bg-bg-primary'
+                  }`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -118,6 +169,11 @@ export function VisitHistory({ user }: { user: any }) {
         </div>
       ) : (
         <div className="bg-bg-secondary dark:bg-slate-900 rounded-xl border border-border dark:border-slate-800 overflow-hidden shadow-sm">
+          <div className="px-6 py-3 border-b border-border dark:border-slate-800 flex items-center justify-between bg-bg-primary/50">
+            <p className="text-[11px] font-bold text-text-muted uppercase tracking-widest">
+              {filteredVisits.length} {filteredVisits.length === 1 ? 'visita encontrada' : 'visitas encontradas'}
+            </p>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
@@ -199,10 +255,10 @@ export function VisitHistory({ user }: { user: any }) {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4} className="px-8 py-24 text-center">
+                    <td colSpan={5} className="px-8 py-24 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <History className="w-8 h-8 text-border" />
-                        <p className="text-sm font-medium text-text-muted">Nenhuma visita encontrada.</p>
+                        <p className="text-sm font-medium text-text-muted">Nenhuma visita encontrada para o período selecionado.</p>
                       </div>
                     </td>
                   </tr>
@@ -215,3 +271,4 @@ export function VisitHistory({ user }: { user: any }) {
     </div>
   );
 }
+

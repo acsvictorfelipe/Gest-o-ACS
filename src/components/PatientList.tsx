@@ -179,76 +179,58 @@ export function PatientList({ user }: { user: any }) {
       return matchesSearch && isSameDay(targetDate, dueDate);
     }
 
-    if (activeFilter === 'pending' || activeFilter === 'visitas-atraso' || activeFilter === 'visitas_atrasadas') {
+    // Visitas atrasadas — normalized: canonical key is 'visitas_atrasadas'
+    if (activeFilter === 'visitas_atrasadas') {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
       return matchesSearch && (!lastVisit || lastVisit < thirtyDaysAgo);
     }
 
-    if (activeFilter === 'bebes-pendentes' || activeFilter === 'criancas_pendentes') {
+    // Visita de 6 meses pendente — canonical key is 'pending_6m'
+    if (activeFilter === 'pending_6m') {
       const isChild = p.categories?.includes('Criança');
-      const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 99;
-      const visited6m = p.clinical_data?.crianca?.visita6meses === 'Sim';
-      
-      return matchesSearch && isChild && ageInMonths >= 5 && ageInMonths <= 6 && !visited6m;
+      if (!isChild || !p.birth_date) return false;
+      const ageInMonths = getAgeInMonths(p.birth_date);
+      const alreadyVisited = p.clinical_data?.crianca?.visita6meses === 'Sim';
+      return matchesSearch && ageInMonths <= 6 && !alreadyVisited;
     }
 
-    if (activeFilter === 'vaccine' || activeFilter === 'vacinas_atrasadas') {
+    // Vacinas atrasadas — canonical key is 'vacinas_atrasadas'
+    if (activeFilter === 'vacinas_atrasadas') {
       const isChild = p.categories?.includes('Criança');
       if (!isChild) return false;
-      
       const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
-      
-      // Strict 0-2 years check as requested
       if (ageInMonths > 24) return false;
-
-      const clinical = p.clinical_data || {};
-      const vaccines = clinical.crianca?.vacinas || {};
-      
-      // Get vaccines that should have been taken by now (strictly older than or equal to group age)
+      const vaccines = p.clinical_data?.crianca?.vacinas || {};
       const hasPendingVaccine = VACCINE_SCHEDULE.some(group => {
         if (group.age <= ageInMonths) {
           return group.vaccines.some(v => vaccines[v.id] !== 'Sim');
         }
         return false;
       });
-      
       return matchesSearch && hasPendingVaccine;
     }
 
-    if (activeFilter === 'pending_6m') {
+    // Crianças — canonical key is 'criancas'
+    if (activeFilter === 'criancas') {
       const isChild = p.categories?.includes('Criança');
-      if (!isChild || !p.birth_date) return false;
-      
-      const ageInMonths = getAgeInMonths(p.birth_date);
-      
-      // Show children up to 6 months who haven't had the visit
-      const inWindow = ageInMonths <= 6;
-      
-      const alreadyVisited = !!p.clinical_data?.crianca?.visita6meses && p.clinical_data.crianca.visita6meses === 'Sim';
-      
-      return matchesSearch && inWindow && !alreadyVisited;
+      if (!isChild) return false;
+      const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
+      return matchesSearch && ageInMonths < 144; // up to 12 years
     }
 
-    if (activeFilter === 'criancas' || activeFilter === 'crianças') {
-      const isChild = p.categories?.includes('Criança');
-      const isAdult = p.categories?.includes('Adulto') || p.categories?.includes('Idoso');
-      
-      if (!isChild || isAdult) return false;
-      
-      const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
-      // Define children as up to 12 years (144 months)
-      return matchesSearch && ageInMonths < 144;
-    }
     if (activeFilter === 'gestantes') return matchesSearch && p.categories?.includes('Gestante');
     if (activeFilter === 'acamados') return matchesSearch && p.categories?.includes('AcamadoDomiciliado');
+
+    // Idosos — canonical key is 'idosos'
     if (activeFilter === 'idosos') {
-      const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
-      return matchesSearch && (ageNum >= 60 || p.categories?.includes('Idoso') || p.categories?.includes('Idosos'));
+      return matchesSearch && (p.categories?.includes('Idoso') || p.categories?.includes('Idosos'));
     }
+
     if (activeFilter === 'adultos') return matchesSearch && p.categories?.includes('Adulto');
-    if (activeFilter === 'saudemental' || activeFilter === 'saude-mental') return matchesSearch && p.categories?.includes('SaudeMental');
+    if (activeFilter === 'saudemental') return matchesSearch && p.categories?.includes('SaudeMental');
+
     if (activeFilter === 'hipertensos') {
       const clinical = p.clinical_data || {};
       return matchesSearch && (
@@ -263,7 +245,8 @@ export function PatientList({ user }: { user: any }) {
         clinical.idoso?.pressaoAlta === 'Sim'
       );
     }
-    if (activeFilter === 'diabéticos' || activeFilter === 'diabeticos') {
+
+    if (activeFilter === 'diabeticos') {
       const clinical = p.clinical_data || {};
       return matchesSearch && (
         clinical.chronic?.diabetes === 'Sim' ||
@@ -272,6 +255,26 @@ export function PatientList({ user }: { user: any }) {
         clinical.adulto?.diabetes === 'Sim' || 
         clinical.idoso?.diabetes === 'Sim'
       );
+    }
+
+    if (activeFilter === 'receitas_vencendo') {
+      if (!p.categories?.includes('AcamadoDomiciliado')) return false;
+      const clinical = p.clinical_data || {};
+      if (clinical.acamadodomiciliado?.dataReceita && clinical.acamadodomiciliado?.validadeReceita) {
+        const dataReceita = new Date(clinical.acamadodomiciliado.dataReceita);
+        const validadeDias = parseInt(clinical.acamadodomiciliado.validadeReceita, 10);
+        if (!isNaN(dataReceita.getTime()) && !isNaN(validadeDias)) {
+          const dataVencimento = new Date(dataReceita);
+          dataVencimento.setDate(dataVencimento.getDate() + validadeDias);
+          
+          const dataAlerta = new Date(dataVencimento);
+          dataAlerta.setDate(dataAlerta.getDate() - 15);
+          
+          const hoje = new Date();
+          return matchesSearch && hoje >= dataAlerta;
+        }
+      }
+      return false;
     }
 
     return matchesSearch;
@@ -382,6 +385,7 @@ export function PatientList({ user }: { user: any }) {
              activeFilter === 'saudemental' || activeFilter === 'saude-mental' ? 'Saúde Mental' :
              activeFilter === 'bebes-pendentes' ? 'Bebês com Visitas Pendentes' :
              activeFilter === 'visitas-atraso' ? 'Visitas em Atraso' :
+             activeFilter === 'receitas_vencendo' ? 'Receitas a Vencer' :
              'Pacientes'}
           </h2>
           <p className="text-[12px] text-slate-500 font-medium mt-1">Gerencie os atendimentos e registros da sua microárea.</p>
@@ -436,6 +440,7 @@ export function PatientList({ user }: { user: any }) {
                { id: 'hipertensos', label: 'Hipertensos' },
                { id: 'diabéticos', label: 'Diabéticos' },
                { id: 'acamados', label: 'Acamados' },
+               { id: 'receitas_vencendo', label: 'Receitas a Vencer' },
              ].map((f) => (
                <button
                  key={f.id}
@@ -579,6 +584,34 @@ export function PatientList({ user }: { user: any }) {
                                 S. Mental
                               </span>
                             )}
+                            {(() => {
+                              if (!p.categories?.includes('AcamadoDomiciliado')) return null;
+                              const clinical = p.clinical_data || {};
+                              if (clinical.acamadodomiciliado?.dataReceita && clinical.acamadodomiciliado?.validadeReceita) {
+                                const dataReceita = new Date(clinical.acamadodomiciliado.dataReceita);
+                                const validadeDias = parseInt(clinical.acamadodomiciliado.validadeReceita, 10);
+                                if (!isNaN(dataReceita.getTime()) && !isNaN(validadeDias)) {
+                                  const dataVencimento = new Date(dataReceita);
+                                  dataVencimento.setDate(dataVencimento.getDate() + validadeDias);
+                                  
+                                  const dataAlerta = new Date(dataVencimento);
+                                  dataAlerta.setDate(dataAlerta.getDate() - 15);
+                                  
+                                  const hoje = new Date();
+                                  if (hoje >= dataAlerta) {
+                                    return (
+                                      <span 
+                                        className="px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-tight text-white animate-pulse shadow-sm" 
+                                        style={{ backgroundColor: '#A855F7' }}
+                                      >
+                                        Receita Vencendo
+                                      </span>
+                                    );
+                                  }
+                                }
+                              }
+                              return null;
+                            })()}
                           </div>
                         </td>
                         <td className="px-8 py-5">

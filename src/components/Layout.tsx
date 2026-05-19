@@ -12,6 +12,7 @@ import {
   X,
   ChevronDown,
   RefreshCw,
+  History,
   Heart,
   Stethoscope,
   Activity,
@@ -50,6 +51,7 @@ export function Layout({
   const [syncQueueLength, setSyncQueueLength] = React.useState(syncService.getQueueLength());
   const [isOnline, setIsOnline] = React.useState(syncService.isOnline());
   const [isSyncing, setIsSyncing] = React.useState(syncService.isSyncing());
+  const [lastSyncedAt, setLastSyncedAt] = React.useState<Date | null>(syncService.getLastSyncedAt());
 
   React.useEffect(() => {
     // Inscreve no syncService para atualizar em tempo real
@@ -57,6 +59,7 @@ export function Layout({
       setSyncQueueLength(syncService.getQueueLength());
       setIsSyncing(syncService.isSyncing());
       setIsOnline(syncService.isOnline());
+      setLastSyncedAt(syncService.getLastSyncedAt());
     });
 
     const handleConnectionChange = () => {
@@ -76,7 +79,13 @@ export function Layout({
   React.useEffect(() => {
     const fetchAlerts = async () => {
       if (!user) return;
-      const { data } = await supabase.from('patients').select('*').eq('agent_id', user.id);
+      let alertQuery = supabase.from('patients').select('*');
+      if (user.role === 'Gestor') {
+        alertQuery = alertQuery.eq('area_color', user.color);
+      } else if (user.role !== 'Administrador') {
+        alertQuery = alertQuery.eq('agent_id', user.id);
+      }
+      const { data } = await alertQuery;
       if (data) {
         const pending = data.filter(p => {
           const age = getAgeInMonths(p.birth_date);
@@ -149,7 +158,7 @@ export function Layout({
           );
         })}
 
-        <div className="mt-8 mb-4 px-4 text-[11px] font-bold text-text-muted uppercase tracking-widest">Relatórios</div>
+        <div className="mt-8 mb-4 px-4 text-[11px] font-bold text-text-muted uppercase tracking-widest">Relatórios & Exportação</div>
         <button 
           onClick={() => navigate('/relatorios')}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
@@ -160,13 +169,22 @@ export function Layout({
           <span className={`text-[14px] font-semibold ${location.pathname === '/relatorios' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Indicadores</span>
         </button>
         <button 
-          onClick={() => navigate('/importar')}
+          onClick={() => navigate('/historico')}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
-            location.pathname === '/importar' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
+            location.pathname === '/historico' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
           }`}
         >
-          <FileText className={`w-5 h-5 transition-colors ${location.pathname === '/importar' ? 'text-primary' : 'text-text-muted group-hover:text-text-secondary'}`} />
-          <span className={`text-[14px] font-semibold ${location.pathname === '/importar' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Exportações</span>
+          <History className={`w-5 h-5 transition-colors ${location.pathname === '/historico' ? 'text-primary' : 'text-text-muted group-hover:text-text-secondary'}`} />
+          <span className={`text-[14px] font-semibold ${location.pathname === '/historico' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Histórico de Visitas</span>
+        </button>
+        <button 
+          onClick={() => navigate('/exportar')}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
+            location.pathname === '/exportar' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
+          }`}
+        >
+          <FileText className={`w-5 h-5 transition-colors ${location.pathname === '/exportar' ? 'text-primary' : 'text-text-muted group-hover:text-text-secondary'}`} />
+          <span className={`text-[14px] font-semibold ${location.pathname === '/exportar' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Exportar Dados</span>
         </button>
 
         <div className="mt-8 mb-4 px-4 text-[11px] font-bold text-text-muted uppercase tracking-widest">Configurações</div>
@@ -272,7 +290,12 @@ export function Layout({
               ) : (
                 <>
                   <Wifi className="w-3.5 h-3.5 md:w-4 md:h-4 text-emerald-500 shrink-0" />
-                  <span className="hidden sm:inline">Online</span>
+                  <span className="hidden sm:inline">
+                    {lastSyncedAt
+                      ? `Sinc. ${lastSyncedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                      : 'Online'
+                    }
+                  </span>
                 </>
               )}
             </div>

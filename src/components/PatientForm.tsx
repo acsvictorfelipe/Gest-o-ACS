@@ -25,6 +25,19 @@ export function PatientForm({ user }: { user: any }) {
   const [loading, setLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+
+  // Warn if the user tries to close the tab/refresh with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
 
   const isReadOnly = user.role === 'Gestor';
 
@@ -620,6 +633,15 @@ export function PatientForm({ user }: { user: any }) {
     });
   }, [formData.birthDate]);
 
+  const handleChange = (updater: any) => {
+    setIsDirty(true);
+    if (typeof updater === 'function') {
+      setFormData(updater);
+    } else {
+      setFormData(updater);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -646,6 +668,7 @@ export function PatientForm({ user }: { user: any }) {
     }
 
     setLoading(true);
+    setIsDirty(false); // Reset dirty flag so navigation after save doesn't warn
     
     try {
       // 1. Check if Household with this Responsible CNS already exists
@@ -706,7 +729,10 @@ export function PatientForm({ user }: { user: any }) {
             contact: formData.contact,
             contact2: formData.contact2,
             message_contact: formData.messageContact,
-            responsible_cns: targetCns
+            responsible_cns: targetCns,
+            address: formData.address,
+            address_number: formData.number,
+            address_complement: formData.complement
           },
           last_visit_at: formData.visitDate ? new Date().toISOString() : undefined
         };
@@ -819,7 +845,10 @@ export function PatientForm({ user }: { user: any }) {
           ...formData.clinicalData,
           contact: formData.contact,
           message_contact: formData.messageContact,
-          responsible_cns: targetCns
+          responsible_cns: targetCns,
+          address: formData.address,
+          address_number: formData.number,
+          address_complement: formData.complement
         }
       };
 
@@ -1012,7 +1041,13 @@ export function PatientForm({ user }: { user: any }) {
               <Download className="w-5 h-5" />
             </button>
           )}
-          <button onClick={() => navigate('/')} className="p-2 text-slate-500 hover:text-red-500 transition-colors bg-slate-50 rounded-lg">
+          <button 
+            onClick={() => {
+              if (isDirty && !window.confirm('Há alterações não salvas. Deseja sair sem salvar?')) return;
+              navigate('/');
+            }} 
+            className="p-2 text-slate-500 hover:text-red-500 transition-colors bg-slate-50 rounded-lg"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -1032,7 +1067,10 @@ export function PatientForm({ user }: { user: any }) {
           deleteConfirm={deleteConfirm} 
           setDeleteConfirm={setDeleteConfirm} 
           handleDelete={handleDelete} 
-          onCancel={() => navigate('/pacientes')}
+          onCancel={() => {
+            if (isDirty && !window.confirm('Há alterações não salvas. Deseja sair sem salvar?')) return;
+            navigate('/pacientes');
+          }}
           isReadOnly={isReadOnly}
         />
       </form>
