@@ -444,67 +444,55 @@ export function Dashboard({ user }: { user: any }) {
       <div className="grid grid-cols-12 gap-6 items-start">
         {/* Acompanhamento Prioritário */}
         <div className="col-span-12 xl:col-span-3">
-          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col">
-            <h3 className="text-base font-bold text-text-primary mb-4 uppercase tracking-tight">Acompanhamento Prioritário</h3>
-            <div className="space-y-3 flex-1">
-              <div onClick={() => navigate('/pacientes?filter=pending_6m')} className="p-3 rounded-[24px] border border-red-100 bg-red-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-red-50/40 transition-colors cursor-pointer transition-all">
+          <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col h-full">
+            <h3 className="text-sm font-bold text-text-primary mb-3 uppercase tracking-tight">Acompanhamento Prioritário</h3>
+            <div className="space-y-2 flex-1">
+              <div onClick={() => navigate('/pacientes?filter=pending_6m')} className="p-2.5 rounded-[20px] border border-red-100 bg-red-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-red-50/40 transition-colors cursor-pointer transition-all">
                 <div className="absolute top-0 left-0 w-[4px] h-full bg-red-500" />
-                <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white shadow-lg shadow-red-500/20 shrink-0">
-                  <Baby className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center text-white shadow-sm shrink-0">
+                  <Baby className="w-4 h-4" />
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h5 className="text-[14px] font-semibold text-text-primary leading-none">{stats.childVisitAlerts} {stats.childVisitAlerts === 1 ? 'bebê aguardando visita' : 'bebês aguardando visita'}</h5>
-                    <Badge variant="error" className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full">6 MESES</Badge>
-                  </div>
-                  <p className="text-[12px] text-text-secondary font-medium">Visita de 6 meses pendente</p>
+                <div className="flex-1 flex items-center justify-between gap-2">
+                  <h5 className="text-[12px] font-semibold text-text-primary leading-tight line-clamp-1">{stats.childVisitAlerts} visitas (6 meses)</h5>
+                  <Badge variant="error" className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-md shrink-0">PENDENTE</Badge>
                 </div>
               </div>
 
-              <div onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} className="p-3 rounded-[24px] border border-orange-100 bg-orange-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-orange-50/40 transition-colors cursor-pointer transition-all">
+              <div onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} className="p-2.5 rounded-[20px] border border-orange-100 bg-orange-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-orange-50/40 transition-colors cursor-pointer transition-all">
                 <div className="absolute top-0 left-0 w-[4px] h-full bg-orange-500" />
-                <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20 shrink-0">
-                  <CalendarIcon className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white shadow-sm shrink-0">
+                  <CalendarIcon className="w-4 h-4" />
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h5 className="text-[14px] font-semibold text-text-primary leading-none">{stats.pendingVisits} visitas em atraso</h5>
-                    <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center text-white text-[11px] font-bold shadow-sm">{stats.pendingVisits}</div>
-                  </div>
-                  <p className="text-[12px] text-text-secondary font-medium">Pacientes sem registro nos últimos 30 dias</p>
+                <div className="flex-1 flex items-center justify-between gap-2">
+                  <h5 className="text-[12px] font-semibold text-text-primary leading-tight line-clamp-1">{stats.pendingVisits} visitas em atraso</h5>
+                  <div className="px-2 py-0.5 rounded-md bg-orange-500 text-white text-[9px] font-bold shadow-sm shrink-0">{stats.pendingVisits}</div>
                 </div>
               </div>
 
-              <div onClick={() => navigate('/pacientes?filter=vacinas_atrasadas')} className="p-3 rounded-[24px] border border-emerald-100 bg-emerald-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-emerald-50/40 transition-colors cursor-pointer transition-all">
+              <div onClick={() => navigate('/pacientes?filter=vacinas_atrasadas')} className="p-2.5 rounded-[20px] border border-emerald-100 bg-emerald-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-emerald-50/40 transition-colors cursor-pointer transition-all">
                 <div className="absolute top-0 left-0 w-[4px] h-full bg-emerald-500" />
-                <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 shrink-0">
-                  <ShieldAlert className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-sm shrink-0">
+                  <ShieldAlert className="w-4 h-4" />
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h5 className="text-[14px] font-semibold text-text-primary leading-none">{stats.lateVaccines} com atraso</h5>
-                    <Badge variant="success" className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full">VACINAS</Badge>
-                  </div>
-                  <p className="text-[12px] text-text-secondary font-medium">Crianças (0-2 anos) sem vacina registrada</p>
+                <div className="flex-1 flex items-center justify-between gap-2">
+                  <h5 className="text-[12px] font-semibold text-text-primary leading-tight line-clamp-1">{stats.lateVaccines} vacinas atrasadas</h5>
+                  <Badge variant="success" className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-md shrink-0">VACINAS</Badge>
                 </div>
               </div>
 
-              <div onClick={() => navigate('/pacientes?filter=receitas_vencendo')} className="p-3 rounded-[24px] border border-purple-100 bg-purple-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-purple-50/40 transition-colors cursor-pointer transition-all">
+              <div onClick={() => navigate('/pacientes?filter=receitas_vencendo')} className="p-2.5 rounded-[20px] border border-purple-100 bg-purple-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-purple-50/40 transition-colors cursor-pointer transition-all">
                 <div className="absolute top-0 left-0 w-[4px] h-full bg-purple-500" />
-                <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white shadow-lg shadow-purple-500/20 shrink-0">
-                  <Activity className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white shadow-sm shrink-0">
+                  <Activity className="w-4 h-4" />
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h5 className="text-[14px] font-semibold text-text-primary leading-none">{stats.receitasAVencer} a vencer</h5>
-                    <Badge variant="default" className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full bg-purple-100 text-purple-700">RECEITAS</Badge>
-                  </div>
-                  <p className="text-[12px] text-text-secondary font-medium">Acamados/Domiciliados precisando de renovação</p>
+                <div className="flex-1 flex items-center justify-between gap-2">
+                  <h5 className="text-[12px] font-semibold text-text-primary leading-tight line-clamp-1">{stats.receitasAVencer} a vencer</h5>
+                  <Badge variant="default" className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 shrink-0">RECEITAS</Badge>
                 </div>
               </div>
 
             </div>
-            <button onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} className="w-full mt-6 py-3 border border-border rounded-2xl text-teal-600 font-semibold text-[13px] flex items-center justify-center gap-2 hover:bg-bg-primary transition-colors">
+            <button onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} className="w-full mt-4 py-2.5 border border-border rounded-xl text-teal-600 font-semibold text-[12px] flex items-center justify-center gap-2 hover:bg-bg-primary transition-colors">
               Ver todos os pendentes <ChevronRight className="w-4 h-4" />
             </button>
           </div>
