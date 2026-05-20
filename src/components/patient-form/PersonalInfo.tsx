@@ -24,7 +24,7 @@ export function PersonalInfo({ formData, setFormData, isReadOnly }: PersonalInfo
           <input 
             type="text" 
             value={(formData.isFamilyResponsible ? formData.cns : formData.responsibleCns) || ''}
-            onChange={e => setFormData({ ...formData, responsibleCns: e.target.value })}
+            onChange={e => setFormData({ ...formData, responsibleCns: e.target.value.replace(/\s+/g, '') })}
             disabled={formData.isFamilyResponsible || isReadOnly}
             className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 appearance-none disabled:opacity-50" 
             placeholder="000 0000 0000 0000" 
@@ -58,7 +58,7 @@ export function PersonalInfo({ formData, setFormData, isReadOnly }: PersonalInfo
             type="text" 
             disabled={isReadOnly}
             value={formData.cns || ''}
-            onChange={e => setFormData({ ...formData, cns: e.target.value })}
+            onChange={e => setFormData({ ...formData, cns: e.target.value.replace(/\s+/g, '') })}
             className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
           />
         </div>

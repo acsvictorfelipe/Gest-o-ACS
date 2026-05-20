@@ -15,7 +15,10 @@ import {
   Trash2,
   Plus,
   Check,
-  ShieldAlert
+  ShieldAlert,
+  Heart,
+  Stethoscope,
+  Users
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAgeInMonths, VACCINE_SCHEDULE, formatDate, calculateAge, getAgeNumber } from '../lib/dateUtils';
@@ -51,6 +54,7 @@ export function Dashboard({ user }: { user: any }) {
   const [loading, setLoading] = React.useState(true);
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
   // Roteiro do Dia (Checklist de visitas planejadas para hoje)
   const [dailyAgenda, setDailyAgenda] = React.useState<{id: string, name: string, done: boolean}[]>(() => {
@@ -83,16 +87,22 @@ export function Dashboard({ user }: { user: any }) {
       if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
 
       try {
-        // Fetch Households Count
         let householdQuery = supabase.from('households').select('*', { count: 'exact', head: true })
+          .neq('responsible_name', 'Responsável não cadastrado');
+        
+        let newHouseholdQuery = supabase.from('households').select('*', { count: 'exact', head: true })
+          .gte('created_at', startOfMonth.toISOString())
           .neq('responsible_name', 'Responsável não cadastrado');
 
         if (user.role === 'Gestor') {
           householdQuery = householdQuery.eq('area_color', user.color);
+          newHouseholdQuery = newHouseholdQuery.eq('area_color', user.color);
         } else if (user.role !== 'Administrador') {
           householdQuery = householdQuery.eq('agent_id', user.id);
+          newHouseholdQuery = newHouseholdQuery.eq('agent_id', user.id);
         }
         const { count: hCount } = await householdQuery;
+        const { count: newHCount } = await newHouseholdQuery;
 
         let patientsData: any[] = [];
         let from = 0;
@@ -142,7 +152,16 @@ export function Dashboard({ user }: { user: any }) {
           pendingVisits: 0,
           lateVaccines: 0,
           childVisitAlerts: 0,
-          receitasAVencer: 0
+          receitasAVencer: 0,
+          newCidadaos: 0,
+          newHouseholds: newHCount || 0,
+          newGestantes: 0,
+          partosThisMonth: 0,
+          newCriancas: 0,
+          newIdosos: 0,
+          newHipertensos: 0,
+          newDiabeticos: 0,
+          newAcamados: 0
         };
 
         patientsData.forEach(p => {
@@ -176,8 +195,8 @@ export function Dashboard({ user }: { user: any }) {
           }
 
           if (p.birth_date && ageInMonths <= 6 && categories.includes('Criança')) {
-            const visited6m = clinical.crianca?.visita6meses === 'Sim';
-            if (!visited6m) {
+            const isAtrazo = !lastVisit || lastVisit < thirtyDaysAgo;
+            if (isAtrazo) {
               newStats.childVisitAlerts++;
             }
           }
@@ -193,6 +212,26 @@ export function Dashboard({ user }: { user: any }) {
           if (categories.includes('Idoso') || categories.includes('Idosos')) newStats.idosos++;
           if (categories.includes('Adulto')) newStats.adultos++;
           if (categories.includes('SaudeMental') || categories.includes('Saúde Mental')) newStats.saudeMental++;
+
+          const createdAt = p.created_at ? new Date(p.created_at) : null;
+          const isNewThisMonth = createdAt && createdAt >= startOfMonth;
+          
+          if (isNewThisMonth) {
+            newStats.newCidadaos++;
+            if (categories.includes('Gestante')) newStats.newGestantes++;
+            if (categories.includes('Criança') && ageInMonths <= 24) newStats.newCriancas++;
+            if (categories.includes('Idoso') || categories.includes('Idosos')) newStats.newIdosos++;
+            if (categories.includes('AcamadoDomiciliado')) newStats.newAcamados++;
+            if (isDiabetico) newStats.newDiabeticos++;
+            if (isHipertenso) newStats.newHipertensos++;
+          }
+
+          if (clinical.gestante?.data_parto) {
+            const dataParto = new Date(clinical.gestante.data_parto);
+            if (dataParto >= startOfMonth && dataParto <= new Date()) {
+              newStats.partosThisMonth++;
+            }
+          }
           
           if (categories.includes('AcamadoDomiciliado') && clinical.acamadodomiciliado?.dataReceita && clinical.acamadodomiciliado?.validadeReceita) {
             const dataReceita = new Date(clinical.acamadodomiciliado.dataReceita);
@@ -277,24 +316,31 @@ export function Dashboard({ user }: { user: any }) {
     fetchData();
   }, [user]);
 
+  const getGestantesTrend = () => {
+    const net = stats.newGestantes - stats.partosThisMonth;
+    if (net > 0) return { direction: 'up', value: `+${net} este mês` };
+    if (net < 0) return { direction: 'down', value: `${net} este mês` };
+    return { direction: 'up', value: `${stats.newGestantes} este mês` };
+  };
+
   const statCards = [
     {
       id: 'cidadaos',
-      icon: UI_CONFIG.categorias.outros.icon,
+      icon: Users,
       value: stats.totalPatients,
-      label: 'Cidadãos',
+      label: 'CIDADÃOS',
       sublabel: 'Total cadastrados',
-      trend: { direction: 'up', value: '8% este mês' },
-      config: UI_CONFIG.categorias.outros,
+      trend: { direction: 'up', value: `+${stats.newCidadaos} este mês` },
+      config: { primary: '#64748b', soft: 'rgba(100, 116, 139, 0.1)' },
       filter: 'all'
     },
     {
       id: 'domicilios',
       icon: MapPin,
       value: stats.totalHouseholds,
-      label: 'Domicílios',
+      label: 'DOMICÍLIOS',
       sublabel: 'Total residências',
-      trend: { direction: 'up', value: '4 este mês' },
+      trend: { direction: 'up', value: `+${stats.newHouseholds} este mês` },
       config: { primary: '#6366f1', soft: 'rgba(99, 102, 241, 0.1)' },
       filter: 'households'
     },
@@ -304,7 +350,7 @@ export function Dashboard({ user }: { user: any }) {
       value: stats.gestantes,
       label: 'GESTANTES',
       sublabel: 'Acompanhadas',
-      trend: { direction: 'up', value: '2 este mês' },
+      trend: getGestantesTrend(),
       config: UI_CONFIG.categorias.gestantes,
       filter: 'gestantes'
     },
@@ -314,7 +360,7 @@ export function Dashboard({ user }: { user: any }) {
       value: stats.criancas2y,
       label: 'CRIANÇAS < 2',
       sublabel: 'Em acompanhamento',
-      trend: { direction: 'up', value: '12 este mês' },
+      trend: { direction: 'up', value: `+${stats.newCriancas} este mês` },
       config: UI_CONFIG.categorias.criancas,
       filter: 'criancas'
     },
@@ -324,7 +370,7 @@ export function Dashboard({ user }: { user: any }) {
       value: stats.idosos,
       label: 'IDOSOS',
       sublabel: 'Em acompanhamento',
-      trend: { direction: 'up', value: '12 este mês' },
+      trend: { direction: 'up', value: `+${stats.newIdosos} este mês` },
       config: UI_CONFIG.categorias.idosos,
       filter: 'idosos'
     },
@@ -334,7 +380,7 @@ export function Dashboard({ user }: { user: any }) {
       value: stats.hipertensos,
       label: 'HIPERTENSOS',
       sublabel: 'Em acompanhamento',
-      trend: { direction: 'up', value: '16 este mês' },
+      trend: { direction: 'up', value: `+${stats.newHipertensos} este mês` },
       config: UI_CONFIG.categorias.hipertensos,
       filter: 'hipertensos'
     },
@@ -344,7 +390,7 @@ export function Dashboard({ user }: { user: any }) {
       value: stats.diabeticos,
       label: 'DIABÉTICOS',
       sublabel: 'Em acompanhamento',
-      trend: { direction: 'up', value: '7 este mês' },
+      trend: { direction: 'up', value: `+${stats.newDiabeticos} este mês` },
       config: UI_CONFIG.categorias.diabeticos,
       filter: 'diabeticos'
     },
@@ -354,7 +400,7 @@ export function Dashboard({ user }: { user: any }) {
       value: stats.acamados,
       label: 'ACAMADOS',
       sublabel: 'Domiciliados',
-      trend: { direction: 'up', value: '1 este mês' },
+      trend: { direction: 'up', value: `+${stats.newAcamados} este mês` },
       config: UI_CONFIG.categorias.acamados,
       filter: 'acamados'
     }
@@ -431,8 +477,8 @@ export function Dashboard({ user }: { user: any }) {
 
             <div className="mt-auto space-y-1">
               <p className="text-[11px] text-text-secondary font-medium opacity-60 truncate">{stat.sublabel}</p>
-              <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600">
-                <TrendingUp className="w-3.5 h-3.5" />
+              <div className={`flex items-center gap-1 text-[11px] font-bold ${stat.trend.direction === 'up' ? 'text-emerald-600' : 'text-red-500'}`}>
+                {stat.trend.direction === 'up' ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                 {stat.trend.value}
               </div>
             </div>
@@ -441,7 +487,7 @@ export function Dashboard({ user }: { user: any }) {
       </div>
 
       {/* 2. Middle Row */}
-      <div className="grid grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-12 gap-6 items-stretch pb-6">
         {/* Acompanhamento Prioritário */}
         <div className="col-span-12 xl:col-span-3">
           <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col h-full">
@@ -453,7 +499,7 @@ export function Dashboard({ user }: { user: any }) {
                   <Baby className="w-4 h-4" />
                 </div>
                 <div className="flex-1 flex items-center justify-between gap-2">
-                  <h5 className="text-[12px] font-semibold text-text-primary leading-tight line-clamp-1">{stats.childVisitAlerts} visitas (6 meses)</h5>
+                  <h5 className="text-[12px] font-semibold text-text-primary leading-tight line-clamp-1">{stats.childVisitAlerts} visitas (até 6m)</h5>
                   <Badge variant="error" className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-md shrink-0">PENDENTE</Badge>
                 </div>
               </div>
@@ -498,256 +544,44 @@ export function Dashboard({ user }: { user: any }) {
           </div>
         </div>
 
-        {/* Visitas Semanais */}
+        {/* Últimos Pacientes Visitados */}
         <div className="col-span-12 xl:col-span-5">
-          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold text-text-primary uppercase tracking-tight">Visitas por Semana</h3>
-              <select className="bg-bg-primary border border-border rounded-xl px-4 py-2 text-[12px] font-semibold text-text-secondary outline-none">
-                <option>Últimos 7 dias</option>
-              </select>
+          <div className="bg-bg-secondary rounded-[32px] border border-border shadow-sm flex flex-col h-full">
+            <div className="p-4 border-b border-slate-50 flex items-center justify-between bg-bg-secondary shrink-0 rounded-t-[32px]">
+              <h3 className="text-sm font-bold text-text-primary uppercase tracking-tight">Últimos Pacientes Visitados</h3>
             </div>
-            <div className="h-[160px] w-full mt-auto">
-              {weeklyChartData.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-text-muted gap-2">
-                  <Activity className="w-8 h-8 opacity-30" />
-                  <p className="text-xs font-semibold uppercase tracking-wider opacity-50">Sem visitas nos últimos 7 dias</p>
-                </div>
-              ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={weeklyChartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--color-text-muted)', fontSize: 11, fontWeight: 'bold' }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} allowDecimals={false} />
-                  <RechartsTooltip contentStyle={{ borderRadius: '16px', backgroundColor: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} formatter={(v: any) => [v, 'Visitas']} />
-                  <Line type="monotone" dataKey="visitas" stroke="#10b981" strokeWidth={4} dot={{ r: 6, fill: '#10b981', strokeWidth: 3, stroke: '#fff' }} activeDot={{ r: 8 }} />
-                </LineChart>
-              </ResponsiveContainer>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Distribuição */}
-        <div className="col-span-12 xl:col-span-4">
-          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col">
-            <h3 className="text-base font-bold text-text-primary mb-5 uppercase tracking-tight">Distribuição por Categoria</h3>
-            <div className="flex-1 flex flex-col lg:flex-row items-center gap-6">
-              <div className="relative w-32 h-32 shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={distribuicaoData} innerRadius={45} outerRadius={60} paddingAngle={5} dataKey="value" stroke="none">
-                      {distribuicaoData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <h2 className="text-2xl font-bold text-text-primary leading-none">{stats.totalPatients}</h2>
-                  <p className="text-[10px] font-semibold text-text-muted uppercase tracking-widest mt-1">Total</p>
-                </div>
-              </div>
-              <div className="flex-1 space-y-1.5 w-full">
-                {distribuicaoData.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-[11px] font-semibold">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                      <span className="text-slate-600 truncate">{item.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-text-primary">{item.value}</span>
-                      <span className="text-text-muted font-medium">({stats.totalPatients > 0 ? Math.round((item.value / stats.totalPatients) * 100) : 0}%)</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Roteiro de Visitas do Dia */}
-      <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h3 className="text-base font-bold text-text-primary uppercase tracking-tight flex items-center gap-2">
-              📋 Roteiro de Visitas de Hoje
-            </h3>
-            <p className="text-xs text-text-muted font-medium mt-1">Planeje e acompanhe suas visitas domiciliares de hoje.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <select
-              onChange={(e) => {
-                if (e.target.value) {
-                  handleAddToAgenda(e.target.value);
-                  e.target.value = '';
-                }
-              }}
-              className="bg-bg-primary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-xl px-4 py-2 text-xs font-semibold text-text-secondary outline-none w-full sm:w-60 focus:ring-1 focus:ring-teal-500"
-            >
-              <option value="">+ Adicionar Paciente ao Roteiro...</option>
-              {allPatients
-                .filter(p => !dailyAgenda.some(item => item.id === p.id))
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map(p => (
-                  <option key={p.id} value={p.id}>{p.name.toUpperCase()}</option>
-                ))
-              }
-            </select>
-            {dailyAgenda.length > 0 && (
-              <button 
-                onClick={() => { if(window.confirm("Limpar todo o roteiro de hoje?")) saveAgenda([]); }}
-                className="p-2 text-text-muted hover:text-red-500 transition-colors rounded-xl hover:bg-bg-primary"
-                title="Limpar Roteiro"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {dailyAgenda.length === 0 ? (
-          <div className="py-12 border border-dashed border-border rounded-[24px] flex flex-col items-center justify-center text-center">
-            <div className="w-12 h-12 rounded-full bg-teal-50 dark:bg-teal-900/10 text-teal-600 flex items-center justify-center mb-3">
-              <Plus className="w-6 h-6" />
-            </div>
-            <p className="text-sm font-semibold text-text-primary">Nenhum paciente planejado para hoje</p>
-            <p className="text-xs text-text-muted mt-1 max-w-sm">Selecione os pacientes no menu acima para organizar seu roteiro de visitas de hoje.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Progress bar */}
-            <div>
-              <div className="flex justify-between items-center text-xs font-bold text-text-muted uppercase mb-1">
-                <span>Progresso das Visitas</span>
-                <span>
-                  {dailyAgenda.filter(i => i.done).length} de {dailyAgenda.length} ({Math.round((dailyAgenda.filter(i => i.done).length / dailyAgenda.length) * 100)}%)
-                </span>
-              </div>
-              <div className="w-full bg-bg-primary h-2.5 rounded-full overflow-hidden border border-border">
-                <div 
-                  className="bg-teal-500 h-full transition-all duration-500"
-                  style={{ width: `${(dailyAgenda.filter(i => i.done).length / dailyAgenda.length) * 100}%` }}
-                />
-              </div>
-            </div>
-
-            {/* List */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-              {dailyAgenda.map((item) => (
-                <div 
-                  key={item.id}
-                  className={`p-4 rounded-[20px] border transition-all flex items-center justify-between gap-4 ${
-                    item.done 
-                      ? 'bg-slate-50/50 dark:bg-slate-900/20 border-slate-100 dark:border-slate-800 opacity-60' 
-                      : 'bg-bg-primary border-border hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <button 
-                      onClick={() => handleToggleAgenda(item.id)}
-                      className="text-text-muted hover:text-teal-600 transition-colors shrink-0"
-                    >
-                      {item.done ? (
-                        <CheckSquare className="w-6 h-6 text-teal-500" />
-                      ) : (
-                        <Square className="w-6 h-6 text-text-muted/40" />
-                      )}
-                    </button>
-                    <span className={`text-[13px] font-semibold uppercase truncate ${item.done ? 'line-through text-text-muted' : 'text-text-primary'}`}>
-                      {item.name}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button 
-                      onClick={() => navigate(`/editar-paciente/${item.id}`)}
-                      className="px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white font-bold text-[11px] rounded-xl transition-all uppercase tracking-wider"
-                    >
-                      Visitar Prontuário
-                    </button>
-                    <button 
-                      onClick={() => handleRemoveFromAgenda(item.id)}
-                      className="p-1.5 text-text-muted hover:text-red-500 transition-colors rounded-lg hover:bg-bg-secondary"
-                      title="Remover"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 3. Table and Calendar */}
-      <div className="grid grid-cols-12 gap-6 pb-6">
-        {/* Table */}
-        <div className="col-span-12 xl:col-span-8">
-          <div className="bg-bg-secondary rounded-[32px] border border-border shadow-sm overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-slate-50 flex items-center justify-between bg-bg-secondary sticky top-0 z-10">
-              <h3 className="text-base font-bold text-text-primary tracking-tight">Últimos Pacientes Visitados</h3>
-            </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto flex-1">
               <table className="w-full text-left border-collapse">
-                <thead>
+                <thead className="sticky top-0 z-10 bg-bg-secondary shadow-sm">
                   <tr className="bg-bg-primary/50">
-                    <th className="px-6 py-4 text-[11px] font-bold text-text-muted uppercase tracking-widest border-b border-border">Paciente</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-text-muted uppercase tracking-widest border-b border-border">Categoria</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-text-muted uppercase tracking-widest border-b border-border">Idade</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-text-muted uppercase tracking-widest border-b border-border">Última Visita</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-text-muted uppercase tracking-widest border-b border-border">Situação</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-text-muted uppercase tracking-widest border-b border-border text-center">Ações</th>
+                    <th className="px-4 py-3 text-[10px] font-bold text-text-muted uppercase tracking-widest border-b border-border">Paciente</th>
+                    <th className="px-4 py-3 text-[10px] font-bold text-text-muted uppercase tracking-widest border-b border-border">Visita</th>
+                    <th className="px-4 py-3 text-[10px] font-bold text-text-muted uppercase tracking-widest border-b border-border">Situação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {recentPatients.map((p, i) => {
                     const isAtrazo = !(p.last_visit_at && new Date(p.last_visit_at) > thirtyDaysAgo);
                     return (
-                      <tr key={i} className="hover:bg-bg-primary/80 transition-colors group">
-                        <td className="px-6 py-2">
-                          <div className="flex items-center gap-4">
-                            <div
-                              className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-[12px] shadow-md"
-                              style={getAvatarStyle(p.categories?.[0] || 'Outros')}
-                            >
+                      <tr key={i} className="hover:bg-bg-primary/80 transition-colors group cursor-pointer" onClick={() => navigate(`/domicilio/${p.household_id || ''}`)}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] shadow-sm shrink-0" style={getAvatarStyle(p.categories?.[0] || 'Outros')}>
                               {p.name?.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-[13px] font-semibold text-text-primary truncate uppercase leading-tight">{p.name}</p>
-                              <p className="text-[10px] text-text-muted font-semibold mt-0.5 uppercase tracking-wider">{p.cns || '000 0000 0000 0000'}</p>
+                              <p className="text-[12px] font-bold text-text-primary truncate uppercase leading-tight">{p.name}</p>
+                              <p className="text-[9px] text-text-muted font-bold mt-0.5 tracking-wider">{p.cns || 'S/ CNS'}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-2">
-                          <div className="flex flex-wrap gap-1.5">
-                            {p.categories?.slice(0, 2).map((c: string) => (
-                              <span
-                                key={c}
-                                className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-lg shadow-sm"
-                                style={getCategoryStyle(c)}
-                              >
-                                {c}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-6 py-2 text-[12px] font-semibold text-slate-600">
-                          {p.birth_date ? calculateAge(p.birth_date) : '--'}
-                        </td>
-                        <td className="px-6 py-2 text-[12px] font-semibold text-slate-600">
+                        <td className="px-4 py-3 text-[11px] font-bold text-slate-600">
                           {p.last_visit_at ? formatDate(p.last_visit_at) : '--'}
                         </td>
-                        <td className="px-6 py-2">
-                          <div className={`inline-flex items-center gap-2 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase ${!isAtrazo ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-orange-50 text-orange-600 border border-orange-100'
-                            }`}>
+                        <td className="px-4 py-3">
+                          <div className={`inline-flex items-center justify-center px-2 py-0.5 rounded-md text-[9px] font-bold uppercase ${!isAtrazo ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-orange-50 text-orange-600 border border-orange-100'}`}>
                             {!isAtrazo ? 'Em dia' : 'Atraso'}
                           </div>
-                        </td>
-                        <td className="px-6 py-2 text-center">
-                          <button onClick={() => navigate(`/domicilio/${p.household_id || ''}`)} className="p-1.5 rounded-full border border-border text-text-muted hover:bg-bg-primary hover:text-text-primary transition-all">
-                            <Eye className="w-4 h-4" />
-                          </button>
                         </td>
                       </tr>
                     );
@@ -755,12 +589,9 @@ export function Dashboard({ user }: { user: any }) {
                 </tbody>
               </table>
             </div>
-            <div className="p-4 border-t border-slate-50 flex justify-center">
-              <button
-                onClick={() => navigate('/pacientes')}
-                className="flex items-center gap-2 text-[14px] font-semibold text-teal-600 hover:text-teal-700 transition-colors"
-              >
-                Ver todos os pacientes <ChevronRight className="w-4 h-4" />
+            <div className="p-3 border-t border-slate-50 flex justify-center shrink-0">
+              <button onClick={() => navigate('/pacientes')} className="flex items-center gap-1 text-[12px] font-bold text-teal-600 hover:text-teal-700 transition-colors">
+                Ver todos os pacientes <ChevronRight className="w-3 h-3" />
               </button>
             </div>
           </div>
@@ -768,11 +599,11 @@ export function Dashboard({ user }: { user: any }) {
 
         {/* Calendar */}
         <div className="col-span-12 xl:col-span-4">
-          <div className="bg-bg-secondary rounded-[32px] border border-border shadow-sm overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-slate-50 bg-bg-secondary sticky top-0 z-10">
-              <h3 className="text-base font-bold text-text-primary tracking-tight">Calendário de Pendências</h3>
+          <div className="bg-bg-secondary rounded-[32px] border border-border shadow-sm flex flex-col h-full">
+            <div className="p-4 border-b border-slate-50 bg-bg-secondary shrink-0 rounded-t-[32px]">
+              <h3 className="text-sm font-bold text-text-primary uppercase tracking-tight">Calendário de Pendências</h3>
             </div>
-            <div className="p-4 flex items-center justify-center">
+            <div className="p-4 flex-1 flex flex-col items-center justify-center">
               <div className="w-full">
                 <PendingCalendar patients={allPatients} />
               </div>

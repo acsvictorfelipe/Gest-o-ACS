@@ -187,13 +187,16 @@ export function PatientList({ user }: { user: any }) {
       return matchesSearch && (!lastVisit || lastVisit < thirtyDaysAgo);
     }
 
-    // Visita de 6 meses pendente — canonical key is 'pending_6m'
+    // Bebês com Visita Atrasada (até 6 meses) — canonical key is 'pending_6m'
     if (activeFilter === 'pending_6m') {
       const isChild = p.categories?.includes('Criança');
       if (!isChild || !p.birth_date) return false;
       const ageInMonths = getAgeInMonths(p.birth_date);
-      const alreadyVisited = p.clinical_data?.crianca?.visita6meses === 'Sim';
-      return matchesSearch && ageInMonths <= 6 && !alreadyVisited;
+      if (ageInMonths > 6) return false;
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
+      return matchesSearch && (!lastVisit || lastVisit < thirtyDaysAgo);
     }
 
     // Vacinas atrasadas — canonical key is 'vacinas_atrasadas'

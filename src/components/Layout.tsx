@@ -87,10 +87,14 @@ export function Layout({
       }
       const { data } = await alertQuery;
       if (data) {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         const pending = data.filter(p => {
+          if (!p.categories?.includes('Criança') || !p.birth_date) return false;
           const age = getAgeInMonths(p.birth_date);
-          const visited6m = p.clinical_data?.crianca?.visita6meses === 'Sim';
-          return age >= 5 && age <= 6 && !visited6m;
+          if (age > 6) return false;
+          const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
+          return !lastVisit || lastVisit < thirtyDaysAgo;
         });
         setCriticalAlerts(pending);
       }
@@ -347,7 +351,7 @@ export function Layout({
                           <p className="text-sm font-semibold text-text-primary group-hover:text-primary transition-colors">{alert.name}</p>
                           <div className="flex flex-wrap gap-2 mt-2">
                             <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded font-semibold uppercase">
-                              Visita 6º Mês
+                              Bebê (Até 6m)
                             </span>
                             <span className="text-[10px] text-text-muted font-semibold uppercase">
                               Pendente
