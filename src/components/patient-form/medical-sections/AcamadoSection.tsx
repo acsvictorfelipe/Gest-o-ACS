@@ -4,9 +4,10 @@ import { Activity } from 'lucide-react';
 interface AcamadoSectionProps {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
+  isReadOnly?: boolean;
 }
 
-export function AcamadoSection({ formData, setFormData }: AcamadoSectionProps) {
+export function AcamadoSection({ formData, setFormData, isReadOnly }: AcamadoSectionProps) {
   if (!formData.categories.includes('AcamadoDomiciliado')) return null;
 
   return (

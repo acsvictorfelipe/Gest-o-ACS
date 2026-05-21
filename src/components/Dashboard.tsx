@@ -18,7 +18,8 @@ import {
   ShieldAlert,
   Heart,
   Stethoscope,
-  Users
+  Users,
+  Megaphone
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAgeInMonths, VACCINE_SCHEDULE, formatDate, calculateAge, getAgeNumber } from '../lib/dateUtils';
@@ -26,433 +27,134 @@ import { Badge } from './Badge';
 import { PendingCalendar } from './PendingCalendar';
 import { motion } from 'motion/react';
 import {
-  LineChart, Line, PieChart, Pie, Cell,
+  AreaChart, Area, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
 } from 'recharts';
 import { UI_CONFIG } from '../constants';
 
+import { useDashboard } from '../hooks/useDashboard';
+
 export function Dashboard({ user }: { user: any }) {
   const navigate = useNavigate();
-  const [stats, setStats] = React.useState({
-    totalPatients: 0,
-    totalHouseholds: 0,
-    gestantes: 0,
-    criancas2y: 0,
-    criancasTotal: 0,
-    hipertensos: 0,
-    diabeticos: 0,
-    acamados: 0,
-    idosos: 0,
-    adultos: 0,
-    pendingVisits: 0,
-    lateVaccines: 0,
-    childVisitAlerts: 0
-  });
-  const [allPatients, setAllPatients] = React.useState<any[]>([]);
-  const [recentPatients, setRecentPatients] = React.useState<any[]>([]);
-  const [weeklyChartData, setWeeklyChartData] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const {
+    stats,
+    allPatients,
+    recentPatients,
+    weeklyChartData,
+    loading,
+    statCards,
+    distribuicaoData,
+    getAvatarStyle,
+    dailyAgenda,
+    handleRemoveFromAgenda,
+    handleToggleAgenda
+  } = useDashboard(user);
 
-  // Roteiro do Dia (Checklist de visitas planejadas para hoje)
-  const [dailyAgenda, setDailyAgenda] = React.useState<{id: string, name: string, done: boolean}[]>(() => {
-    const saved = localStorage.getItem('gestao_acs_daily_agenda');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const saveAgenda = (newAgenda: typeof dailyAgenda) => {
-    setDailyAgenda(newAgenda);
-    localStorage.setItem('gestao_acs_daily_agenda', JSON.stringify(newAgenda));
-  };
-
-  const handleAddToAgenda = (patientId: string) => {
-    const patient = allPatients.find(p => p.id === patientId);
-    if (!patient) return;
-    if (dailyAgenda.some(item => item.id === patientId)) return;
-    saveAgenda([...dailyAgenda, { id: patient.id, name: patient.name, done: false }]);
-  };
-
-  const handleRemoveFromAgenda = (patientId: string) => {
-    saveAgenda(dailyAgenda.filter(item => item.id !== patientId));
-  };
-
-  const handleToggleAgenda = (patientId: string) => {
-    saveAgenda(dailyAgenda.map(item => item.id === patientId ? { ...item, done: !item.done } : item));
-  };
+  const [activeCampaigns, setActiveCampaigns] = React.useState<any[]>([]);
 
   React.useEffect(() => {
-    const fetchData = async () => {
-      if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
-
+    async function fetchCampaigns() {
       try {
-        let householdQuery = supabase.from('households').select('*', { count: 'exact', head: true })
-          .neq('responsible_name', 'Responsável não cadastrado');
-        
-        let newHouseholdQuery = supabase.from('households').select('*', { count: 'exact', head: true })
-          .gte('created_at', startOfMonth.toISOString())
-          .neq('responsible_name', 'Responsável não cadastrado');
-
-        if (user.role === 'Gestor') {
-          householdQuery = householdQuery.eq('area_color', user.color);
-          newHouseholdQuery = newHouseholdQuery.eq('area_color', user.color);
-        } else if (user.role !== 'Administrador') {
-          householdQuery = householdQuery.eq('agent_id', user.id);
-          newHouseholdQuery = newHouseholdQuery.eq('agent_id', user.id);
+        const { data, error } = await supabase
+          .from('campaigns')
+          .select('*')
+          .eq('active', true)
+          .order('created_at', { ascending: false });
+        if (!error && data) {
+          setActiveCampaigns(data);
         }
-        const { count: hCount } = await householdQuery;
-        const { count: newHCount } = await newHouseholdQuery;
-
-        let patientsData: any[] = [];
-        let from = 0;
-        let to = 999;
-        let hasMore = true;
-
-        while (hasMore && patientsData.length < 10000) {
-          let query = supabase.from('patients').select('*').range(from, to);
-
-          if (user.role === 'Administrador') {
-          } else if (user.role === 'Gestor') {
-            query = query.eq('area_color', user.color);
-          } else {
-            query = query.eq('agent_id', user.id);
-          }
-
-          const { data, error } = await query;
-          if (error) throw error;
-
-          if (data && data.length > 0) {
-            patientsData = [...patientsData, ...data];
-            if (data.length < 1000) {
-              hasMore = false;
-            } else {
-              from += 1000;
-              to += 1000;
-            }
-          } else {
-            hasMore = false;
-          }
-        }
-
-        setAllPatients(patientsData);
-
-        const newStats = {
-          totalPatients: patientsData.length,
-          totalHouseholds: hCount || 0,
-          gestantes: 0,
-          criancas2y: 0,
-          criancasTotal: 0,
-          acamados: 0,
-          idosos: 0,
-          adultos: 0,
-          hipertensos: 0,
-          diabeticos: 0,
-          saudeMental: 0,
-          pendingVisits: 0,
-          lateVaccines: 0,
-          childVisitAlerts: 0,
-          receitasAVencer: 0,
-          newCidadaos: 0,
-          newHouseholds: newHCount || 0,
-          newGestantes: 0,
-          partosThisMonth: 0,
-          newCriancas: 0,
-          newIdosos: 0,
-          newHipertensos: 0,
-          newDiabeticos: 0,
-          newAcamados: 0
-        };
-
-        patientsData.forEach(p => {
-          const clinical = p.clinical_data || {};
-          const categories = p.categories || [];
-
-          const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
-          if (!lastVisit || lastVisit < thirtyDaysAgo) {
-            newStats.pendingVisits++;
-          }
-
-          const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 999;
-          const patientAgeNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
-
-          if (categories.includes('Criança') && ageInMonths <= 24) {
-            newStats.criancasTotal++;
-            newStats.criancas2y++;
-
-            // Check for late vaccines for children 0-2 years
-            const vacinas = clinical.crianca?.vacinas || {};
-            const isLate = VACCINE_SCHEDULE.some(group => {
-              if (group.age <= ageInMonths) {
-                return group.vaccines.some(v => vacinas[v.id] !== 'Sim');
-              }
-              return false;
-            });
-
-            if (isLate) {
-              newStats.lateVaccines++;
-            }
-          }
-
-          if (p.birth_date && ageInMonths <= 6 && categories.includes('Criança')) {
-            const isAtrazo = !lastVisit || lastVisit < thirtyDaysAgo;
-            if (isAtrazo) {
-              newStats.childVisitAlerts++;
-            }
-          }
-
-          const isDiabetico = clinical.chronic?.diabetes === 'Sim' || clinical.gestante?.diabetes === 'Sim';
-          const isHipertenso = clinical.chronic?.hipertensao === 'Sim' || clinical.gestante?.hipertensao === 'Sim';
-
-          if (isDiabetico) newStats.diabeticos++;
-          if (isHipertenso) newStats.hipertensos++;
-
-          if (categories.includes('Gestante')) newStats.gestantes++;
-          if (categories.includes('AcamadoDomiciliado')) newStats.acamados++;
-          if (categories.includes('Idoso') || categories.includes('Idosos')) newStats.idosos++;
-          if (categories.includes('Adulto')) newStats.adultos++;
-          if (categories.includes('SaudeMental') || categories.includes('Saúde Mental')) newStats.saudeMental++;
-
-          const createdAt = p.created_at ? new Date(p.created_at) : null;
-          const isNewThisMonth = createdAt && createdAt >= startOfMonth;
-          
-          if (isNewThisMonth) {
-            newStats.newCidadaos++;
-            if (categories.includes('Gestante')) newStats.newGestantes++;
-            if (categories.includes('Criança') && ageInMonths <= 24) newStats.newCriancas++;
-            if (categories.includes('Idoso') || categories.includes('Idosos')) newStats.newIdosos++;
-            if (categories.includes('AcamadoDomiciliado')) newStats.newAcamados++;
-            if (isDiabetico) newStats.newDiabeticos++;
-            if (isHipertenso) newStats.newHipertensos++;
-          }
-
-          if (clinical.gestante?.data_parto) {
-            const dataParto = new Date(clinical.gestante.data_parto);
-            if (dataParto >= startOfMonth && dataParto <= new Date()) {
-              newStats.partosThisMonth++;
-            }
-          }
-          
-          if (categories.includes('AcamadoDomiciliado') && clinical.acamadodomiciliado?.dataReceita && clinical.acamadodomiciliado?.validadeReceita) {
-            const dataReceita = new Date(clinical.acamadodomiciliado.dataReceita);
-            const validadeDias = parseInt(clinical.acamadodomiciliado.validadeReceita, 10);
-            if (!isNaN(dataReceita.getTime()) && !isNaN(validadeDias)) {
-              const dataVencimento = new Date(dataReceita);
-              dataVencimento.setDate(dataVencimento.getDate() + validadeDias);
-              
-              const dataAlerta = new Date(dataVencimento);
-              dataAlerta.setDate(dataAlerta.getDate() - 15);
-              
-              const hoje = new Date();
-              
-              if (hoje >= dataAlerta) {
-                newStats.receitasAVencer++;
-              }
-            }
-          }
-        });
-
-        setStats(newStats);
-        setRecentPatients(patientsData.sort((a, b) => new Date(b.last_visit_at || 0).getTime() - new Date(a.last_visit_at || 0).getTime()).slice(0, 5));
-
-        // Fetch real weekly visit data
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-        sevenDaysAgo.setHours(0, 0, 0, 0);
-        const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
-
-        let visitQuery = supabase
-          .from('visits')
-          .select('date, created_at');
-
-        // Filtro por papel do usuário
-        if (user.role === 'Gestor') visitQuery = visitQuery.eq('area_color', user.color);
-        else if (user.role !== 'Administrador') visitQuery = visitQuery.eq('agent_id', user.id);
-
-        const { data: visitData, error: visitError } = await visitQuery;
-
-        if (visitError) {
-          console.error('Erro ao buscar visitas para o gráfico:', visitError);
-        }
-
-        // Build 7-day chart with real counts
-        const dayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-        const chartDays: { name: string; visitas: number; date: Date }[] = [];
-        for (let d = 6; d >= 0; d--) {
-          const day = new Date();
-          day.setDate(day.getDate() - d);
-          day.setHours(0, 0, 0, 0);
-          chartDays.push({ name: dayLabels[day.getDay()], visitas: 0, date: day });
-        }
-
-        (visitData || []).forEach((v: any) => {
-          // Suporta tanto campo 'date' (YYYY-MM-DD) quanto 'created_at' (timestamp ISO)
-          const rawDate = v.date || v.created_at;
-          if (!rawDate) return;
-
-          // Normaliza para YYYY-MM-DD
-          const dateStr = String(rawDate).substring(0, 10);
-
-          // Só conta se estiver nos últimos 7 dias
-          if (dateStr < sevenDaysAgoStr) return;
-
-          const vDate = new Date(dateStr + 'T00:00:00');
-          const match = chartDays.find(cd =>
-            cd.date.getFullYear() === vDate.getFullYear() &&
-            cd.date.getMonth() === vDate.getMonth() &&
-            cd.date.getDate() === vDate.getDate()
-          );
-          if (match) match.visitas++;
-        });
-
-        setWeeklyChartData(chartDays.map(d => ({ name: d.name, visitas: d.visitas })));
-
-      } catch (error) {
-        console.error("Dashboard error:", error);
-      } finally {
-        setLoading(false);
+      } catch (err) {
+        console.error('Erro ao buscar campanhas:', err);
       }
-    };
-    fetchData();
-  }, [user]);
-
-  const getGestantesTrend = () => {
-    const net = stats.newGestantes - stats.partosThisMonth;
-    if (net > 0) return { direction: 'up', value: `+${net} este mês` };
-    if (net < 0) return { direction: 'down', value: `${net} este mês` };
-    return { direction: 'up', value: `${stats.newGestantes} este mês` };
-  };
-
-  const statCards = [
-    {
-      id: 'cidadaos',
-      icon: Users,
-      value: stats.totalPatients,
-      label: 'CIDADÃOS',
-      sublabel: 'Total cadastrados',
-      trend: { direction: 'up', value: `+${stats.newCidadaos} este mês` },
-      config: { primary: '#64748b', soft: 'rgba(100, 116, 139, 0.1)' },
-      filter: 'all'
-    },
-    {
-      id: 'domicilios',
-      icon: MapPin,
-      value: stats.totalHouseholds,
-      label: 'DOMICÍLIOS',
-      sublabel: 'Total residências',
-      trend: { direction: 'up', value: `+${stats.newHouseholds} este mês` },
-      config: { primary: '#6366f1', soft: 'rgba(99, 102, 241, 0.1)' },
-      filter: 'households'
-    },
-    {
-      id: 'gestantes',
-      icon: UI_CONFIG.categorias.gestantes.icon,
-      value: stats.gestantes,
-      label: 'GESTANTES',
-      sublabel: 'Acompanhadas',
-      trend: getGestantesTrend(),
-      config: UI_CONFIG.categorias.gestantes,
-      filter: 'gestantes'
-    },
-    {
-      id: 'criancas',
-      icon: UI_CONFIG.categorias.criancas.icon,
-      value: stats.criancas2y,
-      label: 'CRIANÇAS < 2',
-      sublabel: 'Em acompanhamento',
-      trend: { direction: 'up', value: `+${stats.newCriancas} este mês` },
-      config: UI_CONFIG.categorias.criancas,
-      filter: 'criancas'
-    },
-    {
-      id: 'idosos',
-      icon: UI_CONFIG.categorias.idosos.icon,
-      value: stats.idosos,
-      label: 'IDOSOS',
-      sublabel: 'Em acompanhamento',
-      trend: { direction: 'up', value: `+${stats.newIdosos} este mês` },
-      config: UI_CONFIG.categorias.idosos,
-      filter: 'idosos'
-    },
-    {
-      id: 'hipertensos',
-      icon: UI_CONFIG.categorias.hipertensos.icon,
-      value: stats.hipertensos,
-      label: 'HIPERTENSOS',
-      sublabel: 'Em acompanhamento',
-      trend: { direction: 'up', value: `+${stats.newHipertensos} este mês` },
-      config: UI_CONFIG.categorias.hipertensos,
-      filter: 'hipertensos'
-    },
-    {
-      id: 'diabeticos',
-      icon: UI_CONFIG.categorias.diabeticos.icon,
-      value: stats.diabeticos,
-      label: 'DIABÉTICOS',
-      sublabel: 'Em acompanhamento',
-      trend: { direction: 'up', value: `+${stats.newDiabeticos} este mês` },
-      config: UI_CONFIG.categorias.diabeticos,
-      filter: 'diabeticos'
-    },
-    {
-      id: 'acamados',
-      icon: Bed,
-      value: stats.acamados,
-      label: 'ACAMADOS',
-      sublabel: 'Domiciliados',
-      trend: { direction: 'up', value: `+${stats.newAcamados} este mês` },
-      config: UI_CONFIG.categorias.acamados,
-      filter: 'acamados'
     }
-  ];
+    fetchCampaigns();
+  }, []);
+
+  const thirtyDaysAgo = React.useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d;
+  }, []);
 
   const chartData = weeklyChartData;
-
-  const distribuicaoData = [
-    { name: 'Crianças', value: stats.criancasTotal, color: UI_CONFIG.categorias.criancas.primary },
-    { name: 'Gestantes', value: stats.gestantes, color: UI_CONFIG.categorias.gestantes.primary },
-    { name: 'Idosos', value: stats.idosos, color: UI_CONFIG.categorias.idosos.primary },
-    { name: 'Hipertensos', value: stats.hipertensos, color: UI_CONFIG.categorias.hipertensos.primary },
-    { name: 'Diabéticos', value: stats.diabeticos, color: UI_CONFIG.categorias.diabeticos.primary },
-    { name: 'Adultos', value: stats.adultos, color: UI_CONFIG.categorias.adultos.primary },
-    { name: 'Saúde Mental', value: stats.saudeMental, color: UI_CONFIG.categorias.saudeMental.primary },
-    { name: 'Acamados', value: stats.acamados, color: UI_CONFIG.categorias.acamados.primary },
-    { name: 'Outros', value: stats.totalPatients - (stats.criancasTotal + stats.gestantes + stats.idosos + stats.hipertensos + stats.diabeticos + stats.adultos + stats.saudeMental + stats.acamados), color: UI_CONFIG.categorias.outros.primary },
-  ].filter(d => d.value > 0);
-
-  const getCategoryStyle = (category: string) => {
-    const cat = category === 'Diabetico' || category === 'Diabético' ? UI_CONFIG.categorias.diabeticos :
-      category === 'Idoso' ? UI_CONFIG.categorias.idosos :
-        category === 'Hipertenso' ? UI_CONFIG.categorias.hipertensos :
-          category === 'Criança' ? UI_CONFIG.categorias.criancas :
-            category === 'Gestante' ? UI_CONFIG.categorias.gestantes :
-              category === 'Adulto' ? UI_CONFIG.categorias.adultos :
-                category === 'Saúde Mental' ? UI_CONFIG.categorias.saudeMental :
-                  category === 'AcamadoDomiciliado' || category === 'Acamado / Domiciliado' ? UI_CONFIG.categorias.acamados :
-                    UI_CONFIG.categorias.outros;
-
-    return { backgroundColor: cat.primary, color: '#fff', border: 'none' };
-  };
-
-  const getAvatarStyle = (category: string) => {
-    const cat = category === 'Diabetico' || category === 'Diabético' ? UI_CONFIG.categorias.diabeticos :
-      category === 'Idoso' ? UI_CONFIG.categorias.idosos :
-        category === 'Hipertenso' ? UI_CONFIG.categorias.hipertensos :
-          category === 'Criança' ? UI_CONFIG.categorias.criancas :
-            category === 'Gestante' ? UI_CONFIG.categorias.gestantes :
-              category === 'Adulto' ? UI_CONFIG.categorias.adultos :
-                category === 'Saúde Mental' ? UI_CONFIG.categorias.saudeMental :
-                  category === 'AcamadoDomiciliado' ? UI_CONFIG.categorias.acamados :
-                    UI_CONFIG.categorias.outros;
-
-    return { backgroundColor: cat.primary, color: '#fff' };
-  };
 
   if (loading) return null;
 
   return (
-    <div className="space-y-6 relative">
-      {/* 1. Stat Cards Grid */}
+    <div className="space-y-6 relative pb-8">
+      {/* Active Campaigns Banner */}
+      {activeCampaigns.length > 0 && (
+        <div className="space-y-3">
+          {activeCampaigns.map((campaign, i) => (
+            <motion.div
+              key={campaign.id}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className="backdrop-blur-md bg-gradient-to-r from-teal-500/15 via-indigo-500/10 to-teal-500/5 border border-teal-500/20 rounded-[28px] p-5 shadow-lg relative overflow-hidden group"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-teal-500/20 transition-all duration-700" />
+              <div className="flex gap-4 items-start relative z-10">
+                <div className="w-12 h-12 rounded-2xl bg-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0 shadow-inner">
+                  <Megaphone className="w-5 h-5 animate-bounce" />
+                </div>
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black bg-teal-600/15 text-teal-700 dark:text-teal-400 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      Campanha de Saúde
+                    </span>
+                    <span className="text-[9px] text-text-muted font-bold">
+                      {formatDate(campaign.created_at)}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-extrabold text-text-primary uppercase tracking-tight leading-snug">
+                    {campaign.title}
+                  </h3>
+                  <p className="text-[12px] text-text-secondary leading-relaxed font-medium">
+                    {campaign.content}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* 1. Quick Actions Bar */}
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="backdrop-blur-md bg-bg-secondary/80 border border-border rounded-[28px] p-5 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400">
+            <Activity className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-text-primary leading-tight">Painel do Agente de Saúde</h2>
+            <p className="text-[11px] text-text-secondary font-medium mt-0.5">Acesso rápido para ações diárias de campo</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5 flex-wrap w-full md:w-auto justify-end">
+          <button
+            onClick={() => navigate('/novo-cadastro')}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl text-[12px] font-bold shadow-md shadow-teal-600/10 active:scale-98 transition-all w-full sm:w-auto"
+          >
+            <Plus className="w-4 h-4" />
+            Novo Cidadão
+          </button>
+          
+          <button
+            onClick={() => navigate('/pacientes')}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white rounded-2xl text-[12px] font-bold shadow-sm active:scale-98 transition-all w-full sm:w-auto"
+          >
+            <CalendarIcon className="w-4 h-4" />
+            Registrar Visita
+          </button>
+        </div>
+      </motion.div>
+
+      {/* 2. Stat Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
         {statCards.map((stat, i) => (
           <motion.div
@@ -486,128 +188,451 @@ export function Dashboard({ user }: { user: any }) {
         ))}
       </div>
 
-      {/* 2. Middle Row */}
-      <div className="grid grid-cols-12 gap-6 items-stretch pb-6">
-        {/* Acompanhamento Prioritário */}
-        <div className="col-span-12 xl:col-span-3">
-          <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col h-full">
-            <h3 className="text-sm font-bold text-text-primary mb-3 uppercase tracking-tight">Acompanhamento Prioritário</h3>
-            <div className="space-y-2 flex-1">
-              <div onClick={() => navigate('/pacientes?filter=pending_6m')} className="p-2.5 rounded-[20px] border border-red-100 bg-red-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-red-50/40 transition-colors cursor-pointer transition-all">
-                <div className="absolute top-0 left-0 w-[4px] h-full bg-red-500" />
-                <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center text-white shadow-sm shrink-0">
-                  <Baby className="w-4 h-4" />
-                </div>
-                <div className="flex-1 flex items-center justify-between gap-2">
-                  <h5 className="text-[12px] font-semibold text-text-primary leading-tight line-clamp-1">{stats.childVisitAlerts} visitas (até 6m)</h5>
-                  <Badge variant="error" className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-md shrink-0">PENDENTE</Badge>
-                </div>
-              </div>
-
-              <div onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} className="p-2.5 rounded-[20px] border border-orange-100 bg-orange-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-orange-50/40 transition-colors cursor-pointer transition-all">
-                <div className="absolute top-0 left-0 w-[4px] h-full bg-orange-500" />
-                <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white shadow-sm shrink-0">
-                  <CalendarIcon className="w-4 h-4" />
-                </div>
-                <div className="flex-1 flex items-center justify-between gap-2">
-                  <h5 className="text-[12px] font-semibold text-text-primary leading-tight line-clamp-1">{stats.pendingVisits} visitas em atraso</h5>
-                  <div className="px-2 py-0.5 rounded-md bg-orange-500 text-white text-[9px] font-bold shadow-sm shrink-0">{stats.pendingVisits}</div>
-                </div>
-              </div>
-
-              <div onClick={() => navigate('/pacientes?filter=vacinas_atrasadas')} className="p-2.5 rounded-[20px] border border-emerald-100 bg-emerald-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-emerald-50/40 transition-colors cursor-pointer transition-all">
-                <div className="absolute top-0 left-0 w-[4px] h-full bg-emerald-500" />
-                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-sm shrink-0">
-                  <ShieldAlert className="w-4 h-4" />
-                </div>
-                <div className="flex-1 flex items-center justify-between gap-2">
-                  <h5 className="text-[12px] font-semibold text-text-primary leading-tight line-clamp-1">{stats.lateVaccines} vacinas atrasadas</h5>
-                  <Badge variant="success" className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-md shrink-0">VACINAS</Badge>
-                </div>
-              </div>
-
-              <div onClick={() => navigate('/pacientes?filter=receitas_vencendo')} className="p-2.5 rounded-[20px] border border-purple-100 bg-purple-50/20 flex items-center gap-3 relative overflow-hidden group hover:bg-purple-50/40 transition-colors cursor-pointer transition-all">
-                <div className="absolute top-0 left-0 w-[4px] h-full bg-purple-500" />
-                <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white shadow-sm shrink-0">
-                  <Activity className="w-4 h-4" />
-                </div>
-                <div className="flex-1 flex items-center justify-between gap-2">
-                  <h5 className="text-[12px] font-semibold text-text-primary leading-tight line-clamp-1">{stats.receitasAVencer} a vencer</h5>
-                  <Badge variant="default" className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 shrink-0">RECEITAS</Badge>
-                </div>
-              </div>
-
+      {/* 3. Row 1: Planejamento e Acompanhamento (Calendário, Roteiro, Prioritários) */}
+      <div className="grid grid-cols-12 gap-6 items-stretch">
+        {/* Calendário de Pendências */}
+        <div className="col-span-12 lg:col-span-4">
+          <div className="bg-bg-secondary rounded-[32px] p-3 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
+            <div className="flex-1 overflow-auto">
+              <PendingCalendar patients={allPatients} />
             </div>
-            <button onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} className="w-full mt-4 py-2.5 border border-border rounded-xl text-teal-600 font-semibold text-[12px] flex items-center justify-center gap-2 hover:bg-bg-primary transition-colors">
-              Ver todos os pendentes <ChevronRight className="w-4 h-4" />
-            </button>
           </div>
         </div>
 
-        {/* Últimos Pacientes Visitados */}
-        <div className="col-span-12 xl:col-span-5">
-          <div className="bg-bg-secondary rounded-[32px] border border-border shadow-sm flex flex-col h-full">
-            <div className="p-4 border-b border-slate-50 flex items-center justify-between bg-bg-secondary shrink-0 rounded-t-[32px]">
-              <h3 className="text-sm font-bold text-text-primary uppercase tracking-tight">Últimos Pacientes Visitados</h3>
+        {/* Roteiro de Hoje (Checklist) */}
+        <div className="col-span-12 lg:col-span-4">
+          <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400">
+                  <CheckSquare className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Roteiro de Hoje</h3>
+                  <p className="text-[10px] text-text-secondary font-medium">Lista de visitas do dia</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold bg-teal-50 text-teal-600 dark:bg-teal-950/30 dark:text-teal-400 px-2.5 py-0.5 rounded-full border border-teal-100 dark:border-teal-900/30 shrink-0">
+                {dailyAgenda.filter(i => i.done).length}/{dailyAgenda.length}
+              </span>
             </div>
-            <div className="overflow-x-auto flex-1">
-              <table className="w-full text-left border-collapse">
-                <thead className="sticky top-0 z-10 bg-bg-secondary shadow-sm">
-                  <tr className="bg-bg-primary/50">
-                    <th className="px-4 py-3 text-[10px] font-bold text-text-muted uppercase tracking-widest border-b border-border">Paciente</th>
-                    <th className="px-4 py-3 text-[10px] font-bold text-text-muted uppercase tracking-widest border-b border-border">Visita</th>
-                    <th className="px-4 py-3 text-[10px] font-bold text-text-muted uppercase tracking-widest border-b border-border">Situação</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {recentPatients.map((p, i) => {
-                    const isAtrazo = !(p.last_visit_at && new Date(p.last_visit_at) > thirtyDaysAgo);
+
+            {/* Progress bar */}
+            {dailyAgenda.length > 0 && (
+              <div className="mb-3 shrink-0 bg-bg-primary/50 dark:bg-slate-800/10 p-2 rounded-xl border border-border/60">
+                <div className="flex justify-between items-center text-[10px] font-bold text-text-secondary mb-1">
+                  <span className="uppercase tracking-wider">Progresso das Visitas</span>
+                  <span className="text-teal-600 dark:text-teal-400">{Math.round((dailyAgenda.filter(i => i.done).length / dailyAgenda.length) * 100)}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-teal-500 rounded-full transition-all duration-500" 
+                    style={{ width: `${Math.round((dailyAgenda.filter(i => i.done).length / dailyAgenda.length) * 100)}%` }} 
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+              {dailyAgenda.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                  <div className="w-12 h-12 rounded-full bg-teal-50 dark:bg-teal-950/20 flex items-center justify-center text-teal-600 dark:text-teal-400 mb-3 shrink-0">
+                    <MapPin className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <p className="text-[12px] font-black text-text-primary uppercase tracking-tight">Roteiro de Campo Vazio</p>
+                  <p className="text-[10px] text-text-muted mt-1 max-w-[200px] leading-relaxed">
+                    Adicione visitas ao seu roteiro através da lista de cidadãos para começar o dia!
+                  </p>
+                  <button 
+                    onClick={() => navigate('/pacientes')} 
+                    className="mt-4 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-[11px] font-bold shadow-md shadow-teal-600/10 active:scale-98 transition-all shrink-0"
+                  >
+                    Buscar Cidadãos
+                  </button>
+                </div>
+              ) : (
+                dailyAgenda.map((item) => {
+                  const patient = allPatients.find(p => p.id === item.id);
+                  const primaryCategory = patient?.categories?.[0] || 'Outros';
+                  const address = patient?.address;
+                  
+                  const categoryKey = primaryCategory.toLowerCase().includes('criança') ? 'criancas' :
+                                     primaryCategory.toLowerCase().includes('gestante') ? 'gestantes' :
+                                     primaryCategory.toLowerCase().includes('idoso') ? 'idosos' :
+                                     primaryCategory.toLowerCase().includes('hipertenso') ? 'hipertensos' :
+                                     primaryCategory.toLowerCase().includes('diabético') || primaryCategory.toLowerCase().includes('diabetico') ? 'diabeticos' :
+                                     'outros';
+                  const categoryConfig = (UI_CONFIG.categorias as any)[categoryKey] || UI_CONFIG.categorias.outros;
+
+                  return (
+                    <motion.div 
+                      layout
+                      key={item.id}
+                      className="flex flex-col gap-1 p-2.5 bg-bg-primary/40 dark:bg-slate-800/10 hover:bg-bg-primary dark:hover:bg-slate-800/30 rounded-2xl border border-border/60 transition-all group"
+                    >
+                      <div className="flex items-center justify-between min-w-0">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <button
+                            onClick={() => handleToggleAgenda(item.id)}
+                            className={`w-4 h-4 rounded-lg flex items-center justify-center border transition-all shrink-0 ${
+                              item.done 
+                                ? 'bg-teal-500 border-teal-500 text-white' 
+                                : 'border-slate-300 dark:border-slate-700 hover:border-teal-500'
+                            }`}
+                          >
+                            {item.done && <Check className="w-3 h-3 stroke-[3]" />}
+                          </button>
+                          <span className={`text-[12px] font-black truncate uppercase tracking-tight ${
+                            item.done 
+                              ? 'line-through text-text-muted dark:text-text-secondary/40 font-bold' 
+                              : 'text-text-primary'
+                          }`}>
+                            {item.name}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveFromAgenda(item.id)}
+                          className="p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-500 text-text-muted transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 shrink-0"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between pl-6.5">
+                        <span className="text-[8px] font-extrabold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0" style={{ backgroundColor: categoryConfig.primary, color: '#fff' }}>
+                          {primaryCategory}
+                        </span>
+                        {address && (
+                          <span className="text-[9px] font-bold text-text-muted truncate max-w-[150px] uppercase text-right ml-2">
+                            {address}
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Acompanhamento Prioritário */}
+        <div className="col-span-12 lg:col-span-4">
+          <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
+            <div className="flex items-center gap-2.5 mb-3 pb-2 border-b border-slate-100 dark:border-slate-800 shrink-0">
+              <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-600 dark:text-red-400">
+                <ShieldAlert className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Acompanhamento Prioritário</h3>
+                <p className="text-[10px] text-text-secondary font-medium">Alertas de saúde ativos</p>
+              </div>
+            </div>
+            <div className="space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+              {/* Alerta 1: Crianças / Bebês */}
+              <div 
+                onClick={() => navigate('/pacientes?filter=pending_6m')} 
+                className={`p-2.5 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
+                  stats.childVisitAlerts > 0
+                    ? 'border-red-100 dark:border-red-950/30 bg-red-50/10 hover:bg-red-50/20'
+                    : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
+                }`}
+              >
+                <div className={`absolute top-0 left-0 w-[4px] h-full ${stats.childVisitAlerts > 0 ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                <div className={`w-8.5 h-8.5 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${stats.childVisitAlerts > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                  {stats.childVisitAlerts > 0 ? <Baby className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
+                </div>
+                <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                  <div className="min-w-0">
+                    <h5 className="text-[12px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
+                      {stats.childVisitAlerts > 0 ? `${stats.childVisitAlerts} visitas (bebês)` : 'Bebês c/ Visita'}
+                    </h5>
+                    <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Acompanhamento até 6m</p>
+                  </div>
+                  <Badge variant={stats.childVisitAlerts > 0 ? 'error' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0">
+                    {stats.childVisitAlerts > 0 ? 'PENDENTE' : 'EM DIA'}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Alerta 2: Visitas em Atraso */}
+              <div 
+                onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} 
+                className={`p-2.5 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
+                  stats.pendingVisits > 0
+                    ? 'border-orange-100 dark:border-orange-950/30 bg-orange-50/10 hover:bg-orange-50/20'
+                    : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
+                }`}
+              >
+                <div className={`absolute top-0 left-0 w-[4px] h-full ${stats.pendingVisits > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`} />
+                <div className={`w-8.5 h-8.5 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${stats.pendingVisits > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`}>
+                  {stats.pendingVisits > 0 ? <CalendarIcon className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
+                </div>
+                <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                  <div className="min-w-0">
+                    <h5 className="text-[12px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
+                      {stats.pendingVisits > 0 ? `${stats.pendingVisits} visitas em atraso` : 'Visitas da Microárea'}
+                    </h5>
+                    <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Rotina mensal de campo</p>
+                  </div>
+                  <div className={`px-2 py-0.5 rounded-lg text-[9px] font-black shadow-sm shrink-0 ${stats.pendingVisits > 0 ? 'bg-orange-500 text-white' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'}`}>
+                    {stats.pendingVisits > 0 ? stats.pendingVisits : 'OK'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Alerta 3: Vacinas Atrasadas */}
+              <div 
+                onClick={() => navigate('/pacientes?filter=vacinas_atrasadas')} 
+                className={`p-2.5 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
+                  stats.lateVaccines > 0
+                    ? 'border-red-100 dark:border-red-950/30 bg-red-50/10 hover:bg-red-50/20'
+                    : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
+                }`}
+              >
+                <div className={`absolute top-0 left-0 w-[4px] h-full ${stats.lateVaccines > 0 ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                <div className={`w-8.5 h-8.5 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${stats.lateVaccines > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                  {stats.lateVaccines > 0 ? <ShieldAlert className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
+                </div>
+                <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                  <div className="min-w-0">
+                    <h5 className="text-[12px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
+                      {stats.lateVaccines > 0 ? `${stats.lateVaccines} vacinas atrasadas` : 'Vacinação de Crianças'}
+                    </h5>
+                    <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Crianças menores de 2 anos</p>
+                  </div>
+                  <Badge variant={stats.lateVaccines > 0 ? 'error' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0">
+                    {stats.lateVaccines > 0 ? 'ATRASO' : 'COMPLETO'}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Alerta 4: Receitas Vencendo */}
+              <div 
+                onClick={() => navigate('/pacientes?filter=receitas_vencendo')} 
+                className={`p-2.5 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
+                  stats.receitasAVencer > 0
+                    ? 'border-purple-100 dark:border-purple-950/30 bg-purple-50/10 hover:bg-purple-50/20'
+                    : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
+                }`}
+              >
+                <div className={`absolute top-0 left-0 w-[4px] h-full ${stats.receitasAVencer > 0 ? 'bg-purple-500' : 'bg-emerald-500'}`} />
+                <div className={`w-8.5 h-8.5 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${stats.receitasAVencer > 0 ? 'bg-purple-500' : 'bg-emerald-500'}`}>
+                  {stats.receitasAVencer > 0 ? <Activity className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
+                </div>
+                <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                  <div className="min-w-0">
+                    <h5 className="text-[12px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
+                      {stats.receitasAVencer > 0 ? `${stats.receitasAVencer} receitas vencendo` : 'Receitas de Uso Contínuo'}
+                    </h5>
+                    <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Medicamentos controlados</p>
+                  </div>
+                  <Badge variant={stats.receitasAVencer > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0 ${stats.receitasAVencer > 0 ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300' : ''}`}>
+                    {stats.receitasAVencer > 0 ? 'ATENÇÃO' : 'VÁLIDAS'}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Row 2: Histórico e Análises (Últimos Visitados, Gráfico de Linha, Rosca Demográfica) */}
+      <div className="grid grid-cols-12 gap-6 items-stretch">
+        {/* Últimos Pacientes Visitados */}
+        <div className="col-span-12 lg:col-span-4">
+          <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
+            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100 dark:border-slate-800 shrink-0">
+              <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                <Users className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Últimos Visitados</h3>
+                <p className="text-[10px] text-text-secondary font-medium">Histórico recente de campo</p>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+              {recentPatients.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                  <p className="text-xs text-text-muted">Nenhum paciente visitado recentemente.</p>
+                </div>
+              ) : (
+                recentPatients.slice(0, 4).map((p, i) => {
+                  const isAtrazo = !(p.last_visit_at && new Date(p.last_visit_at) > thirtyDaysAgo);
+                  return (
+                    <div 
+                      key={i} 
+                      className="flex items-center justify-between p-2.5 rounded-2xl bg-bg-primary/40 dark:bg-slate-800/10 hover:bg-bg-primary dark:hover:bg-slate-800/30 border border-border/60 transition-colors cursor-pointer group" 
+                      onClick={() => navigate(`/domicilio/${p.household_id || ''}`)}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8.5 h-8.5 rounded-xl flex items-center justify-center font-black text-[11px] shadow-sm shrink-0" style={getAvatarStyle(p.categories?.[0] || 'Outros')}>
+                          {p.name?.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[12px] font-black text-text-primary truncate uppercase leading-none tracking-tight">{p.name}</p>
+                          <p className="text-[9px] text-text-muted mt-1 font-bold truncate">
+                            CNS {p.cns || 'S/ CNS'} {p.birth_date && ` • ${calculateAge(p.birth_date)} anos`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
+                        <span className="text-[9px] font-bold text-text-secondary">{p.last_visit_at ? formatDate(p.last_visit_at) : '--'}</span>
+                        <span className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide border ${!isAtrazo ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30' : 'bg-orange-50 text-orange-600 border-orange-100 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30'}`}>
+                          {!isAtrazo ? 'Em dia' : 'Atraso'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            
+
+          </div>
+        </div>
+
+        {/* Visitas nos Últimos 7 Dias */}
+        <div className="col-span-12 lg:col-span-4">
+          <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
+            <div className="flex items-center justify-between mb-3 pb-1 shrink-0">
+              <div>
+                <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Visitas / 7 Dias</h3>
+                <p className="text-[10px] text-text-secondary font-medium">Fluxo de visitas de campo</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <p className="text-[16px] font-black text-teal-600 dark:text-teal-400 leading-none">{chartData.reduce((acc, curr) => acc + curr.visitas, 0)}</p>
+                  <p className="text-[8px] text-text-muted font-black uppercase tracking-wider mt-0.5">Total</p>
+                </div>
+                <div className="text-right border-l border-border/60 pl-2.5">
+                  <p className="text-[16px] font-black text-indigo-500 dark:text-indigo-400 leading-none">{(chartData.reduce((acc, curr) => acc + curr.visitas, 0) / 7).toFixed(1)}</p>
+                  <p className="text-[8px] text-text-muted font-black uppercase tracking-wider mt-0.5">Média/Dia</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 w-full h-full min-h-0">
+              {weeklyChartData.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                   <p className="text-xs text-text-muted">Nenhum histórico recente.</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={weeklyChartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorVisitas" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#0d9488" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#0d9488" stopOpacity={0.0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.08)" />
+                    <XAxis 
+                      dataKey="name" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: '600' }} 
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: '600' }} 
+                      allowDecimals={false}
+                    />
+                    <RechartsTooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(255, 255, 255, 0.96)', 
+                        border: '1px solid #e2e8f0', 
+                        borderRadius: '16px',
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.04)',
+                        fontSize: '11px'
+                      }}
+                      itemStyle={{ color: '#0d9488', fontWeight: 'bold' }}
+                      labelStyle={{ fontWeight: '800', color: '#1e293b' }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="visitas" 
+                      stroke="#0d9488" 
+                      strokeWidth={3} 
+                      fillOpacity={1} 
+                      fill="url(#colorVisitas)" 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Distribuição por Categoria (Donut) */}
+        <div className="col-span-12 lg:col-span-4">
+          <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
+            <div className="shrink-0 mb-3 pb-1">
+              <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Cidadãos por Categoria</h3>
+              <p className="text-[10px] text-text-secondary font-medium">Perfil clínico da microárea</p>
+            </div>
+            {distribuicaoData.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center">
+                <p className="text-xs text-text-muted">Sem dados cadastrados.</p>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-row items-center justify-between gap-3 min-h-0">
+                <div className="relative w-[130px] h-[130px] shrink-0 flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={distribuicaoData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={56}
+                        paddingAngle={2.5}
+                        dataKey="value"
+                      >
+                        {distribuicaoData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'rgba(255, 255, 255, 0.96)', 
+                          border: '1px solid #e2e8f0', 
+                          borderRadius: '14px',
+                          fontSize: '11px',
+                          fontWeight: 'bold'
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+                    <span className="text-[18px] font-black text-text-primary leading-none">{stats.totalPatients}</span>
+                    <span className="text-[8px] text-text-muted font-black uppercase tracking-wider mt-0.5">Total</span>
+                  </div>
+                </div>
+                <div className="flex-1 grid grid-cols-2 gap-x-2.5 gap-y-1.5 max-h-[230px] overflow-y-auto pr-1 custom-scrollbar">
+                  {distribuicaoData.map((d, index) => {
+                    const pct = stats.totalPatients > 0 ? ((d.value / stats.totalPatients) * 100).toFixed(0) : '0';
                     return (
-                      <tr key={i} className="hover:bg-bg-primary/80 transition-colors group cursor-pointer" onClick={() => navigate(`/domicilio/${p.household_id || ''}`)}>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] shadow-sm shrink-0" style={getAvatarStyle(p.categories?.[0] || 'Outros')}>
-                              {p.name?.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-[12px] font-bold text-text-primary truncate uppercase leading-tight">{p.name}</p>
-                              <p className="text-[9px] text-text-muted font-bold mt-0.5 tracking-wider">{p.cns || 'S/ CNS'}</p>
-                            </div>
+                      <div key={index} className="flex flex-col gap-0.5 p-1.5 rounded-xl hover:bg-bg-primary/50 dark:hover:bg-slate-800/10 transition-colors min-w-0">
+                        <div className="flex items-center justify-between text-[9px] font-bold">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                            <span className="text-text-secondary truncate uppercase leading-none">{d.name}</span>
                           </div>
-                        </td>
-                        <td className="px-4 py-3 text-[11px] font-bold text-slate-600">
-                          {p.last_visit_at ? formatDate(p.last_visit_at) : '--'}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className={`inline-flex items-center justify-center px-2 py-0.5 rounded-md text-[9px] font-bold uppercase ${!isAtrazo ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-orange-50 text-orange-600 border border-orange-100'}`}>
-                            {!isAtrazo ? 'Em dia' : 'Atraso'}
+                          <span className="text-text-primary font-black shrink-0 ml-1">{d.value}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <div className="flex-1 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: d.color }} />
                           </div>
-                        </td>
-                      </tr>
+                          <span className="text-[8px] text-text-muted font-extrabold leading-none shrink-0">{pct}%</span>
+                        </div>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-3 border-t border-slate-50 flex justify-center shrink-0">
-              <button onClick={() => navigate('/pacientes')} className="flex items-center gap-1 text-[12px] font-bold text-teal-600 hover:text-teal-700 transition-colors">
-                Ver todos os pacientes <ChevronRight className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Calendar */}
-        <div className="col-span-12 xl:col-span-4">
-          <div className="bg-bg-secondary rounded-[32px] border border-border shadow-sm flex flex-col h-full">
-            <div className="p-4 border-b border-slate-50 bg-bg-secondary shrink-0 rounded-t-[32px]">
-              <h3 className="text-sm font-bold text-text-primary uppercase tracking-tight">Calendário de Pendências</h3>
-            </div>
-            <div className="p-4 flex-1 flex flex-col items-center justify-center">
-              <div className="w-full">
-                <PendingCalendar patients={allPatients} />
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

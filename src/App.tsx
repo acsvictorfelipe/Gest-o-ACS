@@ -14,6 +14,7 @@ import { UserManagement } from './components/UserManagement';
 import { VisitHistory } from './components/VisitHistory';
 import { ExportTool } from './components/ExportTool';
 import { syncService } from './lib/syncService';
+import { encryptionService } from './lib/encryption';
 
 // NOTE: In production, replace this with an env var or Supabase RLS policy.
 // Never rely solely on client-side role checks for access control.
@@ -79,7 +80,11 @@ export default function App() {
 
   const fetchProfile = async (supabaseUser: any) => {
     try {
+      if (supabaseUser?.id) {
+        encryptionService.setKey(supabaseUser.id);
+      }
       const { data, error } = await supabase
+
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)

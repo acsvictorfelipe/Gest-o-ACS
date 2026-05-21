@@ -4,9 +4,10 @@ import { Activity } from 'lucide-react';
 interface SaudeMentalSectionProps {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
+  isReadOnly?: boolean;
 }
 
-export function SaudeMentalSection({ formData, setFormData }: SaudeMentalSectionProps) {
+export function SaudeMentalSection({ formData, setFormData, isReadOnly }: SaudeMentalSectionProps) {
   if (!formData.categories.includes('SaudeMental')) return null;
 
   return (

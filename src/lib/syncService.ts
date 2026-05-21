@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { encryptionService } from './encryption';
 
 interface SyncItem {
   id: string;
@@ -45,25 +46,26 @@ class SyncService {
   }
 
   private obfuscate(data: string): string {
-    try {
-      // Ofuscação de dados para segurança sob a LGPD
-      const encoded = btoa(encodeURIComponent(data));
-      return 'sec_v1_' + encoded.split('').reverse().join('');
-    } catch (e) {
-      return data;
-    }
+    return encryptionService.encrypt(data);
   }
 
   private deobfuscate(data: string): string {
-    try {
-      if (!data) return '';
-      if (!data.startsWith('sec_v1_')) return data; // Fallback para dados legados sem criptografia
-      const clean = data.substring(7);
-      const reversed = clean.split('').reverse().join('');
-      return decodeURIComponent(atob(reversed));
-    } catch (e) {
-      return data;
+    if (!data) return '';
+    
+    // Fallback retrocompatível: decodifica o formato Base64 v1 antigo se encontrado
+    if (data.startsWith('sec_v1_')) {
+      try {
+        const clean = data.substring(7);
+        const reversed = clean.split('').reverse().join('');
+        return decodeURIComponent(atob(reversed));
+      } catch (e) {
+        console.error('Falha no fallback de decodificação Base64 legada:', e);
+        return data;
+      }
     }
+    
+    // Caso contrário, decifra de forma segura com AES-256
+    return encryptionService.decrypt(data);
   }
 
   private getQueue(): SyncItem[] {

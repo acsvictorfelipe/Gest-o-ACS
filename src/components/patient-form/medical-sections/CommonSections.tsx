@@ -4,9 +4,10 @@ import { User, HeartPulse } from 'lucide-react';
 interface CommonSectionsProps {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
+  isReadOnly?: boolean;
 }
 
-export function CommonSections({ formData, setFormData }: CommonSectionsProps) {
+export function CommonSections({ formData, setFormData, isReadOnly }: CommonSectionsProps) {
   const isAdulto = formData.categories.includes('Adulto');
   const isIdoso = formData.categories.includes('Idoso');
 

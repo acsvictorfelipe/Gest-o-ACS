@@ -5,9 +5,10 @@ import { getAgeNumber } from '../../../lib/dateUtils';
 interface RastreamentoSectionProps {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
+  isReadOnly?: boolean;
 }
 
-export function RastreamentoSection({ formData, setFormData }: RastreamentoSectionProps) {
+export function RastreamentoSection({ formData, setFormData, isReadOnly }: RastreamentoSectionProps) {
   const age = getAgeNumber(formData.birthDate);
   const isFemale = formData.gender === 'Feminino';
 

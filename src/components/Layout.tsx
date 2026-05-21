@@ -192,7 +192,7 @@ export function Layout({
         </button>
 
         <div className="mt-8 mb-4 px-4 text-[11px] font-bold text-text-muted uppercase tracking-widest">Configurações</div>
-        {user?.role === 'Administrador' && (
+        {(user?.role === 'Administrador' || user?.role === 'Gestor') && (
           <button 
             onClick={() => navigate('/usuarios')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group mb-1 ${
@@ -200,7 +200,7 @@ export function Layout({
             }`}
           >
             <ShieldCheck className={`w-5 h-5 transition-colors ${location.pathname === '/usuarios' ? 'text-primary' : 'text-text-muted group-hover:text-text-secondary'}`} />
-            <span className={`text-[14px] font-semibold ${location.pathname === '/usuarios' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Gerenciar Usuários</span>
+            <span className={`text-[14px] font-semibold ${location.pathname === '/usuarios' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Painel Administrativo</span>
           </button>
         )}
         <button 

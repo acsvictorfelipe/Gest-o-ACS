@@ -44,6 +44,7 @@ export function PatientForm({ user }: { user: any }) {
   const [formData, setFormData] = useState({
     name: '',
     cns: '',
+    createdAt: '',
     responsibleCns: '',
     isFamilyResponsible: false,
     birthDate: '',
@@ -242,6 +243,7 @@ export function PatientForm({ user }: { user: any }) {
           setFormData({
             name: data.name || '',
             cns: data.cns || '',
+            createdAt: data.created_at || '',
             responsibleCns: hData.responsible_cns || data.clinical_data?.responsible_cns || '',
             isFamilyResponsible: data.is_family_responsible || false,
             birthDate: data.birth_date || '',

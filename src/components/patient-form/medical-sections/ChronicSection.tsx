@@ -5,9 +5,10 @@ import { parseDate } from '../../../lib/dateUtils';
 interface ChronicSectionProps {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
+  isReadOnly?: boolean;
 }
 
-export function ChronicSection({ formData, setFormData }: ChronicSectionProps) {
+export function ChronicSection({ formData, setFormData, isReadOnly }: ChronicSectionProps) {
   const hasChronicCategory = formData.categories.some((c: string) => 
     ['AcamadoDomiciliado', 'Gestante', 'Adulto', 'Idoso', 'Hipertenso', 'Diabético'].includes(c)
   );

@@ -7,6 +7,7 @@ interface GestanteSectionProps {
   addDateToList: (category: string, list: string) => void;
   removeDateFromList: (category: string, list: string, index: number) => void;
   updateDateInList: (category: string, list: string, index: number, value: any) => void;
+  isReadOnly?: boolean;
 }
 
 export function GestanteSection({ 
@@ -14,7 +15,8 @@ export function GestanteSection({
   setFormData, 
   addDateToList, 
   removeDateFromList, 
-  updateDateInList 
+  updateDateInList,
+  isReadOnly
 }: GestanteSectionProps) {
   if (!formData.categories.includes('Gestante')) return null;
 

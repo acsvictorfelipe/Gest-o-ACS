@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { syncService } from '../lib/syncService';
+import { encryptionService } from '../lib/encryption';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   User, 
@@ -30,7 +31,9 @@ import {
   Heart,
   Home,
   MessageCircle,
-  Phone
+  Phone,
+  CheckSquare,
+  Calendar
 } from 'lucide-react';
 import { UI_CONFIG } from '../constants';
 
@@ -48,6 +51,34 @@ export function PatientList({ user }: { user: any }) {
   const [deleting, setDeleting] = useState(false);
   const [householdsMap, setHouseholdsMap] = useState<Record<string, { address: string; number: string; complement: string }>>({});
   const [selectedStreet, setSelectedStreet] = useState('');
+  const [dailyAgenda, setDailyAgenda] = useState<any[]>([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('gestao_acs_daily_agenda');
+    if (saved) {
+      try {
+        const decrypted = encryptionService.decrypt(saved);
+        setDailyAgenda(JSON.parse(decrypted || saved));
+      } catch {
+        setDailyAgenda([]);
+      }
+    }
+  }, []);
+
+  const handleToggleAgenda = (patient: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const isSaved = dailyAgenda.some(item => item.id === patient.id);
+    let newAgenda;
+    if (isSaved) {
+      newAgenda = dailyAgenda.filter(item => item.id !== patient.id);
+    } else {
+      newAgenda = [...dailyAgenda, { id: patient.id, name: patient.name, done: false }];
+    }
+    setDailyAgenda(newAgenda);
+    const serialized = JSON.stringify(newAgenda);
+    const encrypted = encryptionService.encrypt(serialized);
+    localStorage.setItem('gestao_acs_daily_agenda', encrypted);
+  };
 
   useEffect(() => {
     const filter = searchParams.get('filter');
@@ -631,27 +662,38 @@ export function PatientList({ user }: { user: any }) {
                         </td>
                         <td className="px-8 py-5 text-right">
                           <div className="flex items-center justify-end gap-2">
-                             <button 
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 if (p.household_id) {
-                                   navigate(`/domicilio/${p.household_id}`);
-                                 }
-                               }}
-                               className={`p-2 rounded-lg transition-all ${
-                                 !p.household_id || (p.cns === p.clinical_data?.responsible_cns && !p.is_family_responsible)
-                                   ? 'text-red-600 bg-red-50 hover:bg-red-100 ring-2 ring-red-600/30' 
-                                   : p.is_family_responsible
-                                     ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100 ring-2 ring-emerald-600/30'
-                                     : 'text-text-muted hover:text-teal-600 bg-slate-50 hover:bg-teal-50'
-                               }`}
-                               title={!p.household_id ? "Sem Domicílio" : p.is_family_responsible ? "Responsável Familiar" : "Membro da Família"}
-                             >
-                               <Home className={`w-4.5 h-4.5 ${(!p.household_id || (p.cns === p.clinical_data?.responsible_cns && !p.is_family_responsible)) ? 'animate-pulse' : ''}`} />
-                             </button>
-                             <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 group-hover:text-teal-600 transition-colors">
-                               <ChevronRight className="w-5 h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
-                             </div>
+                            <button 
+                              onClick={(e) => handleToggleAgenda(p, e)}
+                              className={`p-2 rounded-lg transition-all ${
+                                dailyAgenda.some(item => item.id === p.id)
+                                  ? 'text-teal-600 bg-teal-50 dark:bg-teal-950/30'
+                                  : 'text-text-muted hover:text-teal-600 bg-slate-50 hover:bg-teal-50 dark:bg-slate-800/40 dark:hover:bg-slate-800'
+                              }`}
+                              title={dailyAgenda.some(item => item.id === p.id) ? "Remover do Roteiro do Dia" : "Adicionar ao Roteiro do Dia"}
+                            >
+                              <CheckSquare className="w-4.5 h-4.5" />
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (p.household_id) {
+                                  navigate(`/domicilio/${p.household_id}`);
+                                }
+                              }}
+                              className={`p-2 rounded-lg transition-all ${
+                                !p.household_id || (p.cns === p.clinical_data?.responsible_cns && !p.is_family_responsible)
+                                  ? 'text-red-600 bg-red-50 hover:bg-red-100 ring-2 ring-red-600/30' 
+                                  : p.is_family_responsible
+                                    ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100 ring-2 ring-emerald-600/30'
+                                    : 'text-text-muted hover:text-teal-600 bg-slate-50 hover:bg-teal-50 dark:bg-slate-800/40 dark:hover:bg-slate-800'
+                              }`}
+                              title={!p.household_id ? "Sem Domicílio" : p.is_family_responsible ? "Responsável Familiar" : "Membro da Família"}
+                            >
+                              <Home className={`w-4.5 h-4.5 ${(!p.household_id || (p.cns === p.clinical_data?.responsible_cns && !p.is_family_responsible)) ? 'animate-pulse' : ''}`} />
+                            </button>
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 group-hover:text-teal-600 transition-colors">
+                              <ChevronRight className="w-5 h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -731,7 +773,18 @@ export function PatientList({ user }: { user: any }) {
                           )}
                         </div>
                       </div>
-                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <button 
+                        onClick={(e) => handleToggleAgenda(p, e)}
+                        className={`p-2 rounded-lg transition-all ${
+                          dailyAgenda.some(item => item.id === p.id)
+                            ? 'text-teal-600 bg-teal-50 dark:bg-teal-950/30'
+                            : 'text-text-muted hover:text-teal-600 bg-slate-50 dark:bg-slate-800/40 hover:bg-teal-50'
+                        }`}
+                        title={dailyAgenda.some(item => item.id === p.id) ? "Remover do Roteiro do Dia" : "Adicionar ao Roteiro do Dia"}
+                      >
+                        <CheckSquare className="w-4 h-4" />
+                      </button>
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
@@ -743,7 +796,7 @@ export function PatientList({ user }: { user: any }) {
                           !p.household_id || (p.cns === p.clinical_data?.responsible_cns && !p.is_family_responsible)
                             ? 'text-red-600 bg-red-50 ring-2 ring-red-500/30' 
                             : p.is_family_responsible
-                              ? 'text-emerald-600 bg-emerald-50 ring-2 ring-emerald-500/30'
+                              ? 'text-emerald-600 bg-emerald-50 ring-2 ring-emerald-600/30'
                               : 'text-teal-600 bg-teal-50'
                         }`}
                         title={!p.household_id ? "Sem Domicílio" : p.is_family_responsible ? "Responsável" : "Membro"}
