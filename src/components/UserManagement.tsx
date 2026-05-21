@@ -102,6 +102,42 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
   const fetchData = async () => {
     setLoading(true);
     try {
+      // Helper function to fetch all rows paginated in chunks of 1000
+      const fetchAllFromTable = async (
+        tableName: string,
+        orderCol?: string,
+        ascending = false,
+        areaColorFilter?: string
+      ) => {
+        let allData: any[] = [];
+        let from = 0;
+        let to = 999;
+        let hasMore = true;
+        while (hasMore) {
+          let query = supabase.from(tableName).select('*').range(from, to);
+          if (areaColorFilter) {
+            query = query.eq('area_color', areaColorFilter);
+          }
+          if (orderCol) {
+            query = query.order(orderCol, { ascending });
+          }
+          const { data, error } = await query;
+          if (error) throw error;
+          if (data && data.length > 0) {
+            allData = [...allData, ...data];
+            if (data.length < 1000) {
+              hasMore = false;
+            } else {
+              from += 1000;
+              to += 1000;
+            }
+          } else {
+            hasMore = false;
+          }
+        }
+        return allData;
+      };
+
       // 1. Fetch profiles
       const { data: pData } = await supabase.from('profiles').select('*').order('name');
       let loadedUsers = pData || [];
@@ -110,28 +146,18 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
       }
       setUsers(loadedUsers);
 
+      const areaColorFilter = currentUser?.role === 'Gestor' ? currentUser.color : undefined;
+
       // 2. Fetch all patients
-      const { data: patData } = await supabase.from('patients').select('*');
-      let loadedPatients = patData || [];
-      if (currentUser?.role === 'Gestor') {
-        loadedPatients = loadedPatients.filter(p => p.area_color === currentUser.color);
-      }
+      const loadedPatients = await fetchAllFromTable('patients', undefined, false, areaColorFilter);
       setPatients(loadedPatients);
 
       // 3. Fetch all households
-      const { data: hData } = await supabase.from('households').select('*');
-      let loadedHouseholds = hData || [];
-      if (currentUser?.role === 'Gestor') {
-        loadedHouseholds = loadedHouseholds.filter(h => h.area_color === currentUser.color);
-      }
+      const loadedHouseholds = await fetchAllFromTable('households', undefined, false, areaColorFilter);
       setHouseholds(loadedHouseholds);
 
       // 4. Fetch all visits
-      const { data: vData } = await supabase.from('visits').select('*').order('date', { ascending: false });
-      let loadedVisits = vData || [];
-      if (currentUser?.role === 'Gestor') {
-        loadedVisits = loadedVisits.filter(v => v.area_color === currentUser.color);
-      }
+      const loadedVisits = await fetchAllFromTable('visits', 'date', false, areaColorFilter);
       setVisits(loadedVisits);
 
       // 5. Fetch campaigns (try-catch in case table not yet created)

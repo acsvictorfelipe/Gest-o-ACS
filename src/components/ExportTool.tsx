@@ -10,17 +10,39 @@ export function ExportTool({ user }: { user: any }) {
   const exportData = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('patients').select('*, households(address, number, complement, microarea)');
+      let data: any[] = [];
+      let from = 0;
+      let to = 999;
+      let hasMore = true;
 
-      if (user.role === 'Gestor') {
-        query = query.eq('area_color', user.color);
-      } else if (user.role !== 'Administrador') {
-        query = query.eq('agent_id', user.id);
+      while (hasMore) {
+        let query = supabase
+          .from('patients')
+          .select('*, households(address, number, complement, microarea)')
+          .range(from, to);
+
+        if (user.role === 'Gestor') {
+          query = query.eq('area_color', user.color);
+        } else if (user.role !== 'Administrador') {
+          query = query.eq('agent_id', user.id);
+        }
+
+        const { data: chunkData, error } = await query;
+
+        if (error) throw error;
+
+        if (chunkData && chunkData.length > 0) {
+          data = [...data, ...chunkData];
+          if (chunkData.length < 1000) {
+            hasMore = false;
+          } else {
+            from += 1000;
+            to += 1000;
+          }
+        } else {
+          hasMore = false;
+        }
       }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
 
       if (!data || data.length === 0) {
         alert('Nenhum dado encontrado para exportação.');

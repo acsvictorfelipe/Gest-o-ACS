@@ -111,34 +111,54 @@ export function Reports({ user }: { user: any }) {
     const fetchVisitsForMonth = async () => {
       setFetchingVisits(true);
       try {
-        let query = supabase
-          .from('visits')
-          .select(`
-            *,
-            patients (
-              id,
-              name,
-              cns,
-              birth_date,
-              categories,
-              clinical_data
-            )
-          `)
-          .order('date', { ascending: true });
+        let allVisits: any[] = [];
+        let vFrom = 0;
+        let vTo = 999;
+        let vHasMore = true;
 
-        if (user.role === 'Administrador') {
-          // No filters
-        } else if (user.role === 'Gestor') {
-          query = query.eq('area_color', user.color);
-        } else {
-          query = query.eq('agent_id', user.id);
+        while (vHasMore) {
+          let query = supabase
+            .from('visits')
+            .select(`
+              *,
+              patients (
+                id,
+                name,
+                cns,
+                birth_date,
+                categories,
+                clinical_data
+              )
+            `)
+            .order('date', { ascending: true })
+            .range(vFrom, vTo);
+
+          if (user.role === 'Administrador') {
+            // No filters
+          } else if (user.role === 'Gestor') {
+            query = query.eq('area_color', user.color);
+          } else {
+            query = query.eq('agent_id', user.id);
+          }
+
+          const { data, error } = await query;
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            allVisits = [...allVisits, ...data];
+            if (data.length < 1000) {
+              vHasMore = false;
+            } else {
+              vFrom += 1000;
+              vTo += 1000;
+            }
+          } else {
+            vHasMore = false;
+          }
         }
 
-        const { data, error } = await query;
-        if (error) throw error;
-
         // Filter by selected year and month
-        const filtered = (data || []).filter(v => {
+        const filtered = allVisits.filter(v => {
           if (!v.date) return false;
           const dateParts = v.date.split('-');
           if (dateParts.length < 2) return false;
