@@ -5,7 +5,9 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { 
   X, 
   Download,
-  Loader2
+  Loader2,
+  Home,
+  CheckCircle2
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -26,6 +28,13 @@ export function PatientForm({ user }: { user: any }) {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+
+  // States for household side preview drawer
+  const [showHouseholdDrawer, setShowHouseholdDrawer] = useState(false);
+  const [householdData, setHouseholdData] = useState<any>(null);
+  const [householdResidents, setHouseholdResidents] = useState<any[]>([]);
+  const [householdVisits, setHouseholdVisits] = useState<any[]>([]);
+  const [loadingHousehold, setLoadingHousehold] = useState(false);
 
   // Warn if the user tries to close the tab/refresh with unsaved changes
   useEffect(() => {
@@ -61,6 +70,7 @@ export function PatientForm({ user }: { user: any }) {
     categories: [] as string[],
     clinicalData: {
       visitasGerais: [] as { date: string, summary: string }[],
+      consultasGerais: [] as { date: string, summary: string }[],
       socialBenefits: [] as string[],
       saudeMental: {
         notes: ''
@@ -671,6 +681,14 @@ export function PatientForm({ user }: { user: any }) {
 
     setLoading(true);
     setIsDirty(false); // Reset dirty flag so navigation after save doesn't warn
+
+    const cleanClinicalData = { ...formData.clinicalData };
+    if (cleanClinicalData.visitasGerais) {
+      cleanClinicalData.visitasGerais = cleanClinicalData.visitasGerais.filter((v: any) => v && v.date);
+    }
+    if (cleanClinicalData.consultasGerais) {
+      cleanClinicalData.consultasGerais = cleanClinicalData.consultasGerais.filter((c: any) => c && c.date);
+    }
     
     try {
       // 1. Check if Household with this Responsible CNS already exists
@@ -702,7 +720,10 @@ export function PatientForm({ user }: { user: any }) {
               responsible_name: formData.name,
               address: formData.address,
               number: formData.number,
-              complement: formData.complement
+              complement: formData.complement,
+              microarea: user.microarea,
+              area_color: user.color || '#00488d',
+              agent_id: user.id
             });
           }
         }
@@ -727,7 +748,7 @@ export function PatientForm({ user }: { user: any }) {
           area_color: user.color || '#00488d',
           agent_id: user.id,
           clinical_data: {
-            ...formData.clinicalData,
+            ...cleanClinicalData,
             contact: formData.contact,
             contact2: formData.contact2,
             message_contact: formData.messageContact,
@@ -775,7 +796,6 @@ export function PatientForm({ user }: { user: any }) {
           .from('households')
           .select('id')
           .eq('responsible_cns', targetCns)
-          .eq('microarea', user.microarea)
           .maybeSingle();
 
         if (hError) throw hError;
@@ -784,7 +804,7 @@ export function PatientForm({ user }: { user: any }) {
           // Household exists, use it
           householdId = householdData.id;
           
-          // If this patient is the responsible, update household info
+          // If this patient is the responsible, update household info (and ensure it is in the current microarea)
           if (formData.isFamilyResponsible) {
             const { error: updateHError } = await supabase
               .from('households')
@@ -792,7 +812,10 @@ export function PatientForm({ user }: { user: any }) {
                 responsible_name: formData.name,
                 address: formData.address,
                 number: formData.number,
-                complement: formData.complement
+                complement: formData.complement,
+                microarea: user.microarea,
+                area_color: user.color || '#00488d',
+                agent_id: user.id
               })
               .eq('id', householdId);
             if (updateHError) throw updateHError;
@@ -844,7 +867,7 @@ export function PatientForm({ user }: { user: any }) {
         area_color: user.color || '#00488d',
         agent_id: user.id,
         clinical_data: {
-          ...formData.clinicalData,
+          ...cleanClinicalData,
           contact: formData.contact,
           message_contact: formData.messageContact,
           responsible_cns: targetCns,
@@ -1025,6 +1048,56 @@ export function PatientForm({ user }: { user: any }) {
     syncDataFromCns();
   }, [formData.cns, formData.responsibleCns, formData.isFamilyResponsible]);
 
+  // Fetch household details for the slide-over preview drawer
+  useEffect(() => {
+    const fetchHouseholdDetails = async () => {
+      if (!showHouseholdDrawer || !formData.householdId) return;
+      setLoadingHousehold(true);
+      try {
+        // 1. Fetch household info
+        const { data: hData, error: hError } = await supabase
+          .from('households')
+          .select('*')
+          .eq('id', formData.householdId)
+          .single();
+        
+        if (hError) throw hError;
+        setHouseholdData(hData);
+
+        // 2. Fetch residents
+        const { data: rData, error: rError } = await supabase
+          .from('patients')
+          .select('*')
+          .eq('household_id', formData.householdId);
+        
+        if (rError) throw rError;
+        setHouseholdResidents(rData || []);
+
+        // 3. Fetch recent visits of all residents combined
+        if (rData && rData.length > 0) {
+          const residentIds = rData.map(r => r.id);
+          const { data: vData, error: vError } = await supabase
+            .from('visits')
+            .select('*')
+            .in('patient_id', residentIds)
+            .order('date', { ascending: false })
+            .limit(5);
+          
+          if (vError) throw vError;
+          setHouseholdVisits(vData || []);
+        } else {
+          setHouseholdVisits([]);
+        }
+      } catch (error) {
+        console.error("Error fetching drawer household details:", error);
+      } finally {
+        setLoadingHousehold(false);
+      }
+    };
+
+    fetchHouseholdDetails();
+  }, [showHouseholdDrawer, formData.householdId]);
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom-2 duration-300">
       <div className="flex justify-between items-center bg-white dark:bg-slate-900 px-6 py-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -1033,6 +1106,17 @@ export function PatientForm({ user }: { user: any }) {
           <p className="text-xs text-slate-500 font-medium tracking-tight">Preencha as informações detalhadas do prontuário.</p>
         </header>
         <div className="flex items-center gap-2">
+          {formData.householdId && (
+            <button 
+              type="button" 
+              onClick={() => setShowHouseholdDrawer(true)}
+              className="p-2 text-slate-500 hover:text-primary dark:hover:text-teal-400 transition-colors bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center gap-1.5 text-xs font-semibold"
+              title="Visualizar Domicílio"
+            >
+              <Home className="w-4 h-4" />
+              <span className="hidden sm:inline">Ver Domicílio</span>
+            </button>
+          )}
           {id && (
             <button 
               type="button" 
@@ -1076,6 +1160,183 @@ export function PatientForm({ user }: { user: any }) {
           isReadOnly={isReadOnly}
         />
       </form>
+
+      {/* Floating Action Button (FAB) */}
+      {formData.householdId && !showHouseholdDrawer && (
+        <button
+          type="button"
+          onClick={() => setShowHouseholdDrawer(true)}
+          className="fixed right-6 bottom-6 z-40 bg-primary hover:bg-primary-dark text-white rounded-full p-4 shadow-2xl hover:shadow-primary/30 active:scale-95 transition-all flex items-center gap-2 group md:px-5"
+          title="Ver Domicílio na tela"
+        >
+          <Home className="w-5 h-5" />
+          <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out font-bold text-xs uppercase tracking-wider hidden md:inline-block">
+            Ver Domicílio
+          </span>
+        </button>
+      )}
+
+      {/* Slide-over Drawer Panel */}
+      {showHouseholdDrawer && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-300"
+            onClick={() => setShowHouseholdDrawer(false)}
+          />
+          
+          {/* Drawer Panel */}
+          <div className="relative w-full max-w-lg md:max-w-xl bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col z-10 border-l border-slate-200 dark:border-slate-800 animate-in slide-in-from-right duration-300">
+            
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+              <div className="flex items-center gap-2">
+                <Home className="w-5 h-5 text-primary" />
+                <div>
+                  <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-tight">Detalhes do Domicílio</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Consulta rápida da residência do cidadão</p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowHouseholdDrawer(false)}
+                className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+
+            {/* Drawer Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+              {loadingHousehold ? (
+                <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Carregando informações...</p>
+                </div>
+              ) : householdData ? (
+                <>
+                  {/* Household Info Card */}
+                  <div className="bg-gradient-to-br from-primary to-primary-dark dark:from-teal-800 dark:to-teal-950 rounded-2xl p-6 text-white shadow-md relative overflow-hidden">
+                    <div className="absolute right-0 top-0 h-full w-1/3 bg-white/10 skew-x-12 translate-x-12"></div>
+                    <div className="relative z-10">
+                      <span className="text-[9px] font-bold uppercase tracking-widest opacity-75 block mb-1">Responsável Familiar</span>
+                      <h4 className="text-xl font-bold font-headline mb-4">{householdData.responsible_name}</h4>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-xs bg-white/15 px-3 py-1.5 rounded-lg w-fit">
+                          <span className="font-semibold opacity-85">SUS:</span>
+                          <span>{householdData.responsible_cns}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs bg-white/15 px-3 py-1.5 rounded-lg">
+                          <span className="font-semibold opacity-85">Endereço:</span>
+                          <span>{householdData.address}, {householdData.number} {householdData.complement ? ` - ${householdData.complement}` : ''}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Residents List */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Moradores ({householdResidents.length})</h4>
+                    </div>
+                    
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800/50 p-2 space-y-1">
+                      {householdResidents.map(r => (
+                        <div 
+                          key={r.id} 
+                          className="flex items-center justify-between p-3 rounded-xl hover:bg-white dark:hover:bg-slate-800/50 transition-colors group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-850 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300">
+                              {r.name?.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{r.name}</p>
+                              <p className="text-[9px] text-slate-500 dark:text-slate-400">CNS: {r.cns}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[8px] px-2 py-0.5 rounded font-bold uppercase ${
+                              r.is_family_responsible 
+                                ? 'bg-primary/10 text-primary dark:bg-teal-500/20 dark:text-teal-400' 
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                            }`}>
+                              {r.is_family_responsible ? 'Responsável' : 'Dependente'}
+                            </span>
+                            {r.id !== id && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isDirty && !window.confirm('Há alterações não salvas. Deseja sair do formulário atual para ver outro cidadão?')) return;
+                                  setShowHouseholdDrawer(false);
+                                  navigate(`/editar-paciente/${r.id}`);
+                                }}
+                                className="text-[10px] text-primary dark:text-teal-400 font-bold hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                Editar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Visit History */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Últimas Visitas</h4>
+                    {householdVisits.length > 0 ? (
+                      <div className="space-y-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800/50 rounded-2xl p-4">
+                        {householdVisits.map((v, i) => (
+                          <div key={v.id} className="flex gap-3 relative">
+                            {i !== householdVisits.length - 1 && <div className="absolute left-[9px] top-6 bottom-[-16px] w-[1px] bg-slate-200 dark:bg-slate-850"></div>}
+                            <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-600 dark:text-emerald-400 z-10 shrink-0 mt-0.5">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="text-xs">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-bold text-slate-800 dark:text-slate-200">{v.type}</span>
+                                <span className="text-[9px] bg-slate-200 dark:bg-slate-850 text-slate-600 dark:text-slate-400 px-1.5 py-0.5 rounded font-medium">
+                                  {formatDate(v.date)}
+                                </span>
+                              </div>
+                              <p className="text-slate-500 dark:text-slate-400 leading-normal">{v.summary}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center p-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800/50 rounded-2xl text-xs text-slate-500 dark:text-slate-400">
+                        Nenhuma visita registrada recentemente para este domicílio.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bottom Actions */}
+                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isDirty && !window.confirm('Há alterações não salvas. Deseja sair sem salvar para ver o domicílio completo?')) return;
+                        setShowHouseholdDrawer(false);
+                        navigate(`/domicilio/${householdData.id}`);
+                      }}
+                      className="w-full py-3 bg-primary text-white text-xs font-bold rounded-xl shadow-md hover:bg-primary-dark transition-all flex items-center justify-center gap-2"
+                    >
+                      Abrir Domicílio Completo
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center p-8 text-sm text-slate-500 dark:text-slate-400">
+                  Erro ao carregar o domicílio. Verifique se ele foi criado corretamente.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

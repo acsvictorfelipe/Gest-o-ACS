@@ -40,7 +40,7 @@ interface VisitasHistoricoSectionProps {
 interface TimelineItem {
   id: string;
   date: string;
-  type: 'cadastro' | 'visita_db' | 'visita_local' | 'consulta_puericultura' | 'consulta_prenatal' | 'puerperio' | 'marco_gestacional';
+  type: 'cadastro' | 'visita_db' | 'visita_local' | 'consulta_puericultura' | 'consulta_prenatal' | 'puerperio' | 'marco_gestacional' | 'consulta_geral';
   title: string;
   summary?: string;
   status?: 'Realizada' | 'Ausente' | 'Pendente';
@@ -67,8 +67,9 @@ export function VisitasHistoricoSection({
   // Expanded state for long notes
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   
-  // Inline editing state for local visits
+  // Inline editing state for local visits/consultations
   const [editingLocalIndex, setEditingLocalIndex] = useState<number | null>(null);
+  const [editingLocalType, setEditingLocalType] = useState<'visitasGerais' | 'consultasGerais' | null>(null);
   const [editDate, setEditDate] = useState('');
   const [editSummary, setEditSummary] = useState('');
 
@@ -101,19 +102,59 @@ export function VisitasHistoricoSection({
     }));
   };
 
-  const handleStartEdit = (index: number, currentVisit: any) => {
+  const handleStartEdit = (type: 'visitasGerais' | 'consultasGerais', index: number, currentItem: any) => {
+    setEditingLocalType(type);
     setEditingLocalIndex(index);
-    setEditDate(currentVisit.date || '');
-    setEditSummary(currentVisit.summary || '');
+    setEditDate(currentItem.date || '');
+    setEditSummary(currentItem.summary || '');
   };
 
-  const handleSaveEdit = (index: number) => {
-    updateDateInList('root', 'visitasGerais', index, {
+  const handleSaveEdit = (type: 'visitasGerais' | 'consultasGerais', index: number) => {
+    if (!editDate) {
+      alert('Por favor, selecione uma data para salvar o registro.');
+      return;
+    }
+    updateDateInList('root', type, index, {
       date: editDate,
       summary: editSummary
     });
     setEditingLocalIndex(null);
+    setEditingLocalType(null);
   };
+
+  const handleCancelEdit = (type: 'visitasGerais' | 'consultasGerais', index: number) => {
+    const currentList = formData.clinicalData[type] || [];
+    const item = currentList[index];
+    if (item && !item.date) {
+      removeDateFromList('root', type, index);
+    }
+    setEditingLocalIndex(null);
+    setEditingLocalType(null);
+  };
+
+  // Efeito para ativar automaticamente o modo de edição ao adicionar um item sem data
+  useEffect(() => {
+    if (formData.clinicalData.consultasGerais) {
+      const emptyIdx = formData.clinicalData.consultasGerais.findIndex((c: any) => c && c.date === '');
+      if (emptyIdx !== -1) {
+        setEditingLocalType('consultasGerais');
+        setEditingLocalIndex(emptyIdx);
+        setEditDate('');
+        setEditSummary('');
+        return;
+      }
+    }
+    if (formData.clinicalData.visitasGerais) {
+      const emptyIdx = formData.clinicalData.visitasGerais.findIndex((v: any) => v && v.date === '');
+      if (emptyIdx !== -1) {
+        setEditingLocalType('visitasGerais');
+        setEditingLocalIndex(emptyIdx);
+        setEditDate('');
+        setEditSummary('');
+        return;
+      }
+    }
+  }, [formData.clinicalData.consultasGerais, formData.clinicalData.visitasGerais]);
 
   // Compile clinical milestones from different sources
   const getTimelineItems = (): TimelineItem[] => {
@@ -160,17 +201,17 @@ export function VisitasHistoricoSection({
     // 3. Local visits (visitasGerais)
     if (formData.clinicalData.visitasGerais) {
       formData.clinicalData.visitasGerais.forEach((v: any, index: number) => {
-        if (!v.date) return;
+        if (v.date === undefined) return;
         
         // Evitar duplicar se já existir na lista do banco de dados na mesma data
-        const isDup = dbVisits.some(dbV => dbV.date?.split('T')[0] === v.date && dbV.summary === v.summary);
+        const isDup = v.date ? dbVisits.some(dbV => dbV.date?.split('T')[0] === v.date && dbV.summary === v.summary) : false;
         if (!isDup) {
           items.push({
             id: `local-${index}`,
-            date: v.date,
+            date: v.date || '',
             type: 'visita_local',
             title: 'Visita Registrada (Legado)',
-            summary: v.summary || 'Sem observações detalhadas.',
+            summary: v.summary || '',
             status: 'Realizada',
             index
           });
@@ -287,8 +328,29 @@ export function VisitasHistoricoSection({
       });
     }
 
-    // Sort: most recent date first
-    return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // 7. General Patient Consultations (consultasGerais)
+    if (formData.clinicalData.consultasGerais) {
+      formData.clinicalData.consultasGerais.forEach((c: any, index: number) => {
+        if (c.date === undefined) return;
+        items.push({
+          id: `consulta-local-${index}`,
+          date: c.date || '',
+          type: 'consulta_geral',
+          title: 'Consulta Médica / Enfermagem',
+          summary: c.summary || '',
+          status: 'Realizada',
+          index
+        });
+      });
+    }
+
+    // Sort: items with no date first, then most recent date first
+    return items.sort((a, b) => {
+      if (!a.date && b.date) return -1;
+      if (a.date && !b.date) return 1;
+      if (!a.date && !b.date) return 0;
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
   };
 
   const allItems = getTimelineItems();
@@ -297,7 +359,7 @@ export function VisitasHistoricoSection({
   const filteredItems = allItems.filter(item => {
     // 1. Tab Filters
     if (filterType === 'visitas' && item.type !== 'visita_db' && item.type !== 'visita_local') return false;
-    if (filterType === 'consultas' && item.type !== 'consulta_puericultura' && item.type !== 'consulta_prenatal' && item.type !== 'puerperio') return false;
+    if (filterType === 'consultas' && item.type !== 'consulta_puericultura' && item.type !== 'consulta_prenatal' && item.type !== 'puerperio' && item.type !== 'consulta_geral') return false;
     
     // 2. Text Search
     if (searchTerm.trim() !== '') {
@@ -315,7 +377,7 @@ export function VisitasHistoricoSection({
   const counts = {
     todos: allItems.length,
     visitas: allItems.filter(i => i.type === 'visita_db' || i.type === 'visita_local').length,
-    consultas: allItems.filter(i => i.type === 'consulta_puericultura' || i.type === 'consulta_prenatal' || i.type === 'puerperio').length
+    consultas: allItems.filter(i => i.type === 'consulta_puericultura' || i.type === 'consulta_prenatal' || i.type === 'puerperio' || i.type === 'consulta_geral').length
   };
 
   // Helper for type-specific styling
@@ -369,6 +431,14 @@ export function VisitasHistoricoSection({
           border: 'border-teal-100 dark:border-teal-900/40',
           iconBg: 'bg-teal-500 text-white',
           text: 'text-teal-700 dark:text-teal-400',
+          icon: Stethoscope
+        };
+      case 'consulta_geral':
+        return {
+          bg: 'bg-indigo-50 dark:bg-indigo-950/20',
+          border: 'border-indigo-100 dark:border-indigo-900/40',
+          iconBg: 'bg-indigo-500 text-white',
+          text: 'text-indigo-700 dark:text-indigo-400',
           icon: Stethoscope
         };
       case 'marco_gestacional':
@@ -474,6 +544,17 @@ export function VisitasHistoricoSection({
             >
               <Plus className="w-3.5 h-3.5" />
               Nova Visita Hoje
+            </button>
+          )}
+
+          {!isReadOnly && (
+            <button 
+              type="button"
+              onClick={() => addDateToList('root', 'consultasGerais')}
+              className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-bold uppercase transition-all tracking-tight flex items-center gap-1.5 shadow-sm"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              + Registrar Consulta
             </button>
           )}
 
@@ -656,22 +737,24 @@ export function VisitasHistoricoSection({
                     <div className={`bg-slate-50 dark:bg-slate-900 border ${style.border} rounded-xl p-4.5 shadow-sm hover:shadow-md hover:translate-x-0.5 transition-all duration-300 ${
                       isFirst && !formData.visitDate ? 'ring-2 ring-primary/5 dark:ring-primary/10' : ''
                     }`}>
-                      {/* Editing panel if it is a local visit in edit mode */}
-                      {editingLocalIndex === item.index ? (
+                      {/* Editing panel if it is a local visit/consultation in edit mode */}
+                      {editingLocalIndex === item.index && editingLocalType === (item.type === 'visita_local' ? 'visitasGerais' : 'consultasGerais') ? (
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
-                            <h5 className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Editando Visita Antiga</h5>
+                            <h5 className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                              {item.type === 'visita_local' ? 'Editando Visita Antiga' : 'Editando Consulta Registrada'}
+                            </h5>
                             <div className="flex gap-2">
                               <button
                                 type="button"
-                                onClick={() => handleSaveEdit(item.index!)}
+                                onClick={() => handleSaveEdit(item.type === 'visita_local' ? 'visitasGerais' : 'consultasGerais', item.index!)}
                                 className="p-1.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 rounded-md hover:scale-105 transition-all"
                               >
                                 <Save className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setEditingLocalIndex(null)}
+                                onClick={() => handleCancelEdit(item.type === 'visita_local' ? 'visitasGerais' : 'consultasGerais', item.index!)}
                                 className="p-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md hover:scale-105 transition-all"
                               >
                                 <X className="w-3.5 h-3.5" />
@@ -719,21 +802,31 @@ export function VisitasHistoricoSection({
                               <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider whitespace-nowrap bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 px-2 py-0.5 rounded-lg shadow-sm">
                                 {formatDate(item.date)}
                               </span>
-
-                              {/* Action buttons for Local Visits */}
-                              {item.type === 'visita_local' && !isReadOnly && (
+ 
+                              {/* Action buttons for Local Visits/Consultations */}
+                              {(item.type === 'visita_local' || item.type === 'consulta_geral') && !isReadOnly && (
                                 <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
                                   <button
                                     type="button"
-                                    onClick={() => handleStartEdit(item.index!, item.originalData || { date: item.date, summary: item.summary })}
+                                    onClick={() => handleStartEdit(
+                                      item.type === 'visita_local' ? 'visitasGerais' : 'consultasGerais', 
+                                      item.index!, 
+                                      item.originalData || { date: item.date, summary: item.summary }
+                                    )}
                                     className="p-1 hover:text-primary transition-colors text-slate-400"
+                                    title="Editar"
                                   >
                                     <Edit2 className="w-3.5 h-3.5" />
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => removeDateFromList('root', 'visitasGerais', item.index!)}
+                                    onClick={() => removeDateFromList(
+                                      'root', 
+                                      item.type === 'visita_local' ? 'visitasGerais' : 'consultasGerais', 
+                                      item.index!
+                                    )}
                                     className="p-1 hover:text-red-500 transition-colors text-slate-400"
+                                    title="Excluir"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
