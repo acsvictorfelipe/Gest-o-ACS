@@ -72,6 +72,7 @@ export function VisitasHistoricoSection({
   const [editingLocalType, setEditingLocalType] = useState<'visitasGerais' | 'consultasGerais' | null>(null);
   const [editDate, setEditDate] = useState('');
   const [editSummary, setEditSummary] = useState('');
+  const [editType, setEditType] = useState('Rotina');
 
   // Fetch real visits from Supabase visits table
   useEffect(() => {
@@ -107,6 +108,7 @@ export function VisitasHistoricoSection({
     setEditingLocalIndex(index);
     setEditDate(currentItem.date || '');
     setEditSummary(currentItem.summary || '');
+    setEditType(currentItem.type || 'Rotina');
   };
 
   const handleSaveEdit = (type: 'visitasGerais' | 'consultasGerais', index: number) => {
@@ -116,7 +118,8 @@ export function VisitasHistoricoSection({
     }
     updateDateInList('root', type, index, {
       date: editDate,
-      summary: editSummary
+      summary: editSummary,
+      ...(type === 'visitasGerais' ? { type: editType } : {})
     });
     setEditingLocalIndex(null);
     setEditingLocalType(null);
@@ -147,10 +150,12 @@ export function VisitasHistoricoSection({
     if (formData.clinicalData.visitasGerais) {
       const emptyIdx = formData.clinicalData.visitasGerais.findIndex((v: any) => v && v.date === '');
       if (emptyIdx !== -1) {
+        const item = formData.clinicalData.visitasGerais[emptyIdx];
         setEditingLocalType('visitasGerais');
         setEditingLocalIndex(emptyIdx);
         setEditDate('');
         setEditSummary('');
+        setEditType(item?.type || 'Rotina');
         return;
       }
     }
@@ -210,9 +215,10 @@ export function VisitasHistoricoSection({
             id: `local-${index}`,
             date: v.date || '',
             type: 'visita_local',
-            title: 'Visita Registrada (Legado)',
+            title: `Visita Registrada (${v.type || 'Rotina'})`,
             summary: v.summary || '',
-            status: 'Realizada',
+            status: v.type === 'Ausente' ? 'Ausente' : 'Realizada',
+            originalData: v,
             index
           });
         }
@@ -770,6 +776,23 @@ export function VisitasHistoricoSection({
                               className="bg-white dark:bg-slate-800 border border-border dark:border-slate-800 rounded px-2 py-1 text-xs font-bold w-full focus:ring-2 focus:ring-primary/20"
                             />
                           </div>
+                          {item.type === 'visita_local' && (
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Tipo de Visita</label>
+                              <select
+                                value={editType}
+                                onChange={e => setEditType(e.target.value)}
+                                className="bg-white dark:bg-slate-800 border border-border dark:border-slate-800 rounded px-2 py-1 text-xs font-semibold w-full focus:ring-2 focus:ring-primary/20 text-slate-800 dark:text-white"
+                              >
+                                <option value="Rotina">Rotina</option>
+                                <option value="Acompanhamento">Acompanhamento</option>
+                                <option value="Urgência">Urgência</option>
+                                <option value="Pós-Parto">Pós-Parto</option>
+                                <option value="Recém-Nascido">Recém-Nascido</option>
+                                <option value="Ausente">Ausente (Cidadão Ausente)</option>
+                              </select>
+                            </div>
+                          )}
                           <div className="space-y-1">
                             <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Descrição Clínica</label>
                             <textarea

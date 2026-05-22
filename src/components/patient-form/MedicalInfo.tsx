@@ -98,7 +98,11 @@ export function MedicalInfo({ formData, setFormData, id, isReadOnly }: MedicalIn
       const newData = { ...prev.clinicalData };
       if (category === 'root') {
         const currentList = (newData as any)[list] || [];
-        (newData as any)[list] = (list === 'visitasGerais' || list === 'consultasGerais') ? [...currentList, { date: '', summary: '' }] : [...currentList, ''];
+        (newData as any)[list] = (list === 'visitasGerais')
+          ? [...currentList, { date: '', summary: '', type: 'Rotina' }]
+          : (list === 'consultasGerais')
+            ? [...currentList, { date: '', summary: '' }]
+            : [...currentList, ''];
       } else {
         const currentList = ((newData as any)[category] as any)[list] || [];
         ((newData as any)[category] as any)[list] = [...currentList, ''];
