@@ -177,19 +177,17 @@ export function PatientList({ user }: { user: any }) {
   }).filter(Boolean))).sort();
 
   const sortPatientsByAddressNumber = (a: any, b: any) => {
-    const addrA = getPatientAddress(a);
-    const addrB = getPatientAddress(b);
-    
-    if (!selectedStreet) {
-      const streetComp = (addrA.address || '').localeCompare(addrB.address || '');
-      if (streetComp !== 0) return streetComp;
+    // When a specific street is selected, sort by house number within that street
+    if (selectedStreet) {
+      const addrA = getPatientAddress(a);
+      const addrB = getPatientAddress(b);
+      const numA = parseInt((addrA.number || '').replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt((addrB.number || '').replace(/\D/g, ''), 10) || 0;
+      if (numA !== numB) return numA - numB;
+      return (addrA.number || '').localeCompare(addrB.number || '');
     }
-    
-    const numA = parseInt((addrA.number || '').replace(/\D/g, ''), 10) || 0;
-    const numB = parseInt((addrB.number || '').replace(/\D/g, ''), 10) || 0;
-    
-    if (numA !== numB) return numA - numB;
-    return (addrA.number || '').localeCompare(addrB.number || '');
+    // Default: sort alphabetically by name
+    return (a.name || '').localeCompare(b.name || '', 'pt-BR', { sensitivity: 'base' });
   };
 
   const filteredPatients = patients.filter(p => {
@@ -224,6 +222,8 @@ export function PatientList({ user }: { user: any }) {
       if (!isChild || !p.birth_date) return false;
       const ageInMonths = getAgeInMonths(p.birth_date);
       if (ageInMonths > 6) return false;
+      // If the 6-month visit was already recorded in the clinical form, do not alert
+      if (p.clinical_data?.crianca?.visita6meses) return false;
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;

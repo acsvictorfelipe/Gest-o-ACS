@@ -93,6 +93,8 @@ export function Layout({
           if (!p.categories?.includes('Criança') || !p.birth_date) return false;
           const age = getAgeInMonths(p.birth_date);
           if (age > 6) return false;
+          // If the 6-month visit was already recorded in the clinical form, do not alert
+          if (p.clinical_data?.crianca?.visita6meses) return false;
           const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
           return !lastVisit || lastVisit < thirtyDaysAgo;
         });

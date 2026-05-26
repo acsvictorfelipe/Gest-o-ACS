@@ -209,9 +209,12 @@ export function useDashboard(user: any) {
           }
 
           if (p.birth_date && ageInMonths <= 6 && categories.includes('Criança')) {
-            const isAtrazo = !lastVisit || lastVisit < thirtyDaysAgo;
-            if (isAtrazo) {
-              newStats.childVisitAlerts++;
+            // If visita6meses was recorded in clinical form, don't count as alert
+            if (!clinical.crianca?.visita6meses) {
+              const isAtrazo = !lastVisit || lastVisit < thirtyDaysAgo;
+              if (isAtrazo) {
+                newStats.childVisitAlerts++;
+              }
             }
           }
 
