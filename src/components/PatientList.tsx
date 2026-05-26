@@ -646,6 +646,25 @@ export function PatientList({ user }: { user: any }) {
                               }
                               return null;
                             })()}
+
+                            {/* Indicador de Visita de 6 Meses para Bebês */}
+                            {(() => {
+                              if (!p.categories?.includes('Criança') || !p.birth_date) return null;
+                              const ageInMonths = getAgeInMonths(p.birth_date);
+                              if (ageInMonths > 6) return null;
+                              const tem6m = !!p.clinical_data?.crianca?.visita6meses;
+                              return (
+                                <span
+                                  className={`px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-tight border ${
+                                    tem6m
+                                      ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                      : 'bg-amber-50 text-amber-600 border-amber-100 animate-pulse'
+                                  }`}
+                                >
+                                  {tem6m ? '6m Realizada' : '6m Pendente'}
+                                </span>
+                              );
+                            })()}
                           </div>
                         </td>
                         <td className="px-8 py-5">
@@ -879,6 +898,25 @@ export function PatientList({ user }: { user: any }) {
                     {!p.last_visit_at && (
                       <span className="px-1.5 py-0.5 bg-red-50 text-red-600 border border-red-100 rounded text-[9px] font-semibold uppercase whitespace-nowrap">Visita Pendente</span>
                     )}
+
+                    {/* Indicador de Visita de 6 Meses para Bebês (mobile) */}
+                    {(() => {
+                      if (!p.categories?.includes('Criança') || !p.birth_date) return null;
+                      const ageInMonths = getAgeInMonths(p.birth_date);
+                      if (ageInMonths > 6) return null;
+                      const tem6m = !!p.clinical_data?.crianca?.visita6meses;
+                      return (
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase whitespace-nowrap border ${
+                            tem6m
+                              ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                              : 'bg-amber-50 text-amber-600 border-amber-100 animate-pulse'
+                          }`}
+                        >
+                          {tem6m ? '6m ✓' : '6m Pendente'}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
               ))
