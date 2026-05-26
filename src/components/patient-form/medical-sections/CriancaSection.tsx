@@ -1,5 +1,5 @@
 import React from 'react';
-import { Smile, Plus, Trash2, CheckCircle2, Stethoscope, MapPin } from 'lucide-react';
+import { Smile, Plus, Trash2, CheckCircle2, Stethoscope, MapPin, Baby, Clock } from 'lucide-react';
 import { calculateAge } from '../../../lib/dateUtils';
 
 interface CriancaSectionProps {
@@ -121,6 +121,118 @@ export function CriancaSection({
             {(!data.visitasAcs || data.visitasAcs.length === 0) && (
               <p className="col-span-full text-[10px] text-text-muted italic py-2">Nenhuma visita registrada.</p>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Visitas Especiais de Bebê (apenas para crianças de até 6 meses aproximadamente) */}
+      <div className="bg-amber-50 dark:bg-amber-950/20 rounded-xl p-4 border border-amber-200 dark:border-amber-900/40 space-y-3">
+        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+          <Baby className="w-4 h-4" />
+          <h4 className="text-[10px] font-black uppercase tracking-widest">Visitas de Acompanhamento do Bebê</h4>
+        </div>
+        <p className="text-[10px] text-amber-600 dark:text-amber-500 font-medium">
+          Registre as datas das visitas obrigatórias de acompanhamento nos primeiros 6 meses de vida.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Visita do 1º Mês */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              {data.visita30dias
+                ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                : <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              }
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                Visita do 1º Mês (30 dias)
+              </label>
+            </div>
+            <div className={`flex items-center gap-2 rounded-lg px-3 py-2 border ${
+              data.visita30dias
+                ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40'
+                : 'bg-white dark:bg-slate-800 border-amber-200 dark:border-amber-800'
+            }`}>
+              <input
+                type="date"
+                disabled={isReadOnly}
+                value={data.visita30dias || ''}
+                onChange={e => setFormData((prev: any) => ({
+                  ...prev,
+                  clinicalData: {
+                    ...prev.clinicalData,
+                    crianca: {
+                      ...(prev.clinicalData?.crianca || {}),
+                      visita30dias: e.target.value
+                    }
+                  }
+                }))}
+                className="bg-transparent border-none text-xs font-bold text-text-primary dark:text-white w-full outline-none focus:ring-0 disabled:opacity-50"
+              />
+              {data.visita30dias && !isReadOnly && (
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev: any) => ({
+                    ...prev,
+                    clinicalData: {
+                      ...prev.clinicalData,
+                      crianca: { ...(prev.clinicalData?.crianca || {}), visita30dias: '' }
+                    }
+                  }))}
+                  className="text-slate-300 hover:text-red-500 transition-colors shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Visita do 6º Mês */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              {data.visita6meses
+                ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                : <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              }
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                Visita do 6º Mês
+              </label>
+            </div>
+            <div className={`flex items-center gap-2 rounded-lg px-3 py-2 border ${
+              data.visita6meses
+                ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40'
+                : 'bg-white dark:bg-slate-800 border-amber-200 dark:border-amber-800'
+            }`}>
+              <input
+                type="date"
+                disabled={isReadOnly}
+                value={data.visita6meses || ''}
+                onChange={e => setFormData((prev: any) => ({
+                  ...prev,
+                  clinicalData: {
+                    ...prev.clinicalData,
+                    crianca: {
+                      ...(prev.clinicalData?.crianca || {}),
+                      visita6meses: e.target.value
+                    }
+                  }
+                }))}
+                className="bg-transparent border-none text-xs font-bold text-text-primary dark:text-white w-full outline-none focus:ring-0 disabled:opacity-50"
+              />
+              {data.visita6meses && !isReadOnly && (
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev: any) => ({
+                    ...prev,
+                    clinicalData: {
+                      ...prev.clinicalData,
+                      crianca: { ...(prev.clinicalData?.crianca || {}), visita6meses: '' }
+                    }
+                  }))}
+                  className="text-slate-300 hover:text-red-500 transition-colors shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
