@@ -80,6 +80,7 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
   const [selectedMicroarea, setSelectedMicroarea] = useState('');
   const [selectedHouseholds, setSelectedHouseholds] = useState<string[]>([]);
   const [transferring, setTransferring] = useState(false);
+  const [householdSearch, setHouseholdSearch] = useState('');
 
   // Tab 5: Campaign Form
   const [campaignForm, setCampaignForm] = useState({
@@ -344,13 +345,24 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
         return;
       }
 
-      // Find patients under those households
-      const targetPatientIds = patients.filter(p => targetHouseholdIds.includes(p.household_id)).map(p => p.id);
+      // Find patients under those households or directly assigned to the source agent
+      let targetPatientIds: string[] = [];
+      if (transferType === 'all') {
+        targetPatientIds = patients.filter(p => p.agent_id === fromAgentId).map(p => p.id);
+      } else if (transferType === 'microarea') {
+        targetPatientIds = patients.filter(p => p.agent_id === fromAgentId && p.microarea === selectedMicroarea).map(p => p.id);
+      } else {
+        targetPatientIds = patients.filter(p => p.household_id && targetHouseholdIds.includes(p.household_id)).map(p => p.id);
+      }
 
-      // 1. Update households in Supabase
+      // 1. Update households in Supabase (updating agent, color, and new microarea)
       const { error: hError } = await supabase
         .from('households')
-        .update({ agent_id: toAgentId, area_color: targetAgent.color })
+        .update({ 
+          agent_id: toAgentId, 
+          area_color: targetAgent.color,
+          microarea: targetAgent.microarea 
+        })
         .in('id', targetHouseholdIds);
 
       if (hError) throw hError;
@@ -359,10 +371,23 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
       if (targetPatientIds.length > 0) {
         const { error: pError } = await supabase
           .from('patients')
-          .update({ agent_id: toAgentId, area_color: targetAgent.color })
+          .update({ 
+            agent_id: toAgentId, 
+            area_color: targetAgent.color,
+            microarea: targetAgent.microarea 
+          })
           .in('id', targetPatientIds);
 
         if (pError) throw pError;
+
+        // 3. Update visits under those patients to have the new area color and microarea
+        await supabase
+          .from('visits')
+          .update({ 
+            area_color: targetAgent.color,
+            microarea: targetAgent.microarea 
+          })
+          .in('patient_id', targetPatientIds);
       }
 
       // Log this major activity
@@ -380,6 +405,7 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
       setFromAgentId('');
       setToAgentId('');
       setSelectedHouseholds([]);
+      setHouseholdSearch('');
       fetchData();
     } catch (e: any) {
       console.error("Transfer error:", e);
@@ -574,6 +600,23 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
     if (!fromAgentId) return [];
     return households.filter(h => h.agent_id === fromAgentId);
   }, [fromAgentId, households]);
+
+  const filteredHouseholds = useMemo(() => {
+    if (!householdSearch.trim()) return sourceAgentHouseholds;
+    const query = householdSearch.toLowerCase();
+    return sourceAgentHouseholds.filter(h => {
+      const respName = (h.responsible_name || '').toLowerCase();
+      const address = (h.address || '').toLowerCase();
+      const num = (h.number || '').toLowerCase();
+      const microarea = (h.microarea || '').toLowerCase();
+      return (
+        respName.includes(query) ||
+        address.includes(query) ||
+        num.includes(query) ||
+        microarea.includes(query)
+      );
+    });
+  }, [sourceAgentHouseholds, householdSearch]);
 
   // Tab definitions
   const tabs = [
@@ -1088,6 +1131,7 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                   onChange={e => {
                     setFromAgentId(e.target.value);
                     setSelectedHouseholds([]);
+                    setHouseholdSearch('');
                   }}
                   className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-xl py-3 px-3.5 text-xs font-bold focus:ring-2 focus:ring-teal-600/20"
                 >
@@ -1172,10 +1216,60 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                 )}
 
                 {transferType === 'selected' && (
-                  <div className="bg-bg-secondary border border-border rounded-2xl overflow-hidden">
-                    <div className="p-3 border-b border-border text-[9px] font-black uppercase tracking-wider text-text-muted">Selecione os Domicílios para Transferência</div>
-                    <div className="max-h-[220px] overflow-y-auto divide-y divide-border/60 custom-scrollbar">
-                      {sourceAgentHouseholds.map(h => {
+                  <div className="bg-bg-secondary border border-border rounded-2xl overflow-hidden flex flex-col">
+                    <div className="p-3 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-bg-primary/10">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-text-muted">
+                        Selecione os Domicílios para Transferência ({selectedHouseholds.length} selecionados)
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const filteredIds = filteredHouseholds.map(h => h.id);
+                            setSelectedHouseholds(prev => {
+                              const newSelection = new Set([...prev, ...filteredIds]);
+                              return Array.from(newSelection);
+                            });
+                          }}
+                          className="px-2 py-1 bg-bg-secondary border border-border hover:bg-bg-primary text-[9px] font-black uppercase rounded-lg text-text-secondary hover:text-text-primary transition-all"
+                        >
+                          Selecionar Todos Filtrados
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedHouseholds([]);
+                          }}
+                          className="px-2 py-1 bg-bg-secondary border border-border hover:bg-red-50 dark:hover:bg-red-950/20 text-[9px] font-black uppercase rounded-lg text-text-muted hover:text-red-500 transition-all"
+                        >
+                          Limpar Seleção
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Campo de Pesquisa Rápida */}
+                    <div className="p-3 border-b border-border bg-bg-primary/5 flex items-center gap-2">
+                      <Search className="w-4 h-4 text-text-muted shrink-0" />
+                      <input
+                        type="text"
+                        placeholder="Pesquisar por responsável, rua, número ou microárea..."
+                        value={householdSearch}
+                        onChange={e => setHouseholdSearch(e.target.value)}
+                        className="w-full bg-transparent border-none p-0 text-xs font-semibold placeholder:text-text-muted/65 focus:ring-0"
+                      />
+                      {householdSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setHouseholdSearch('')}
+                          className="text-[10px] text-text-muted hover:text-text-primary font-bold px-1.5 py-0.5 rounded hover:bg-bg-primary"
+                        >
+                          Limpar
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="max-h-[260px] overflow-y-auto divide-y divide-border/60 custom-scrollbar">
+                      {filteredHouseholds.map(h => {
                         const isChecked = selectedHouseholds.includes(h.id);
                         return (
                           <div 
@@ -1200,6 +1294,11 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                           </div>
                         );
                       })}
+                      {filteredHouseholds.length === 0 && (
+                        <div className="p-6 text-center text-text-muted text-xs font-semibold uppercase">
+                          Nenhum domicílio encontrado para a pesquisa.
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
