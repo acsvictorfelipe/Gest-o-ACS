@@ -498,16 +498,11 @@ export function Dashboard({ user }: { user: any }) {
                       className="flex items-center justify-between p-2.5 rounded-2xl bg-bg-primary/40 dark:bg-slate-800/10 hover:bg-bg-primary dark:hover:bg-slate-800/30 border border-border/60 transition-colors cursor-pointer group" 
                       onClick={() => navigate(`/domicilio/${p.household_id || ''}`)}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8.5 h-8.5 rounded-xl flex items-center justify-center font-black text-[11px] shadow-sm shrink-0" style={getAvatarStyle(p.categories?.[0] || 'Outros')}>
-                          {p.name?.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[12px] font-black text-text-primary truncate uppercase leading-none tracking-tight">{p.name}</p>
-                          <p className="text-[9px] text-text-muted mt-1 font-bold truncate">
-                            CNS {p.cns || 'S/ CNS'} {p.birth_date && ` • ${calculateAge(p.birth_date)} anos`}
-                          </p>
-                        </div>
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-black text-text-primary truncate uppercase leading-none tracking-tight">{p.name}</p>
+                        <p className="text-[9px] text-text-muted mt-1 font-bold truncate">
+                          CNS {p.cns || 'S/ CNS'} {p.birth_date && ` • ${calculateAge(p.birth_date)} anos`}
+                        </p>
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
                         <span className="text-[9px] font-bold text-text-secondary">{p.last_visit_at ? formatDate(p.last_visit_at) : '--'}</span>
@@ -551,16 +546,11 @@ export function Dashboard({ user }: { user: any }) {
                     className="flex items-center justify-between p-2.5 rounded-2xl bg-bg-primary/40 dark:bg-slate-800/10 hover:bg-bg-primary dark:hover:bg-slate-800/30 border border-border/60 transition-colors cursor-pointer group" 
                     onClick={() => navigate(`/domicilio/${p.household_id || ''}`)}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8.5 h-8.5 rounded-xl flex items-center justify-center font-black text-[11px] shadow-sm shrink-0" style={getAvatarStyle(p.categories?.[0] || 'Outros')}>
-                        {p.name?.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[12px] font-black text-text-primary truncate uppercase leading-none tracking-tight">{p.name}</p>
-                        <p className="text-[9px] text-text-muted mt-1 font-bold truncate">
-                          CNS {p.cns || 'S/ CNS'} {p.birth_date && ` • ${calculateAge(p.birth_date)} anos`}
-                        </p>
-                      </div>
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-black text-text-primary truncate uppercase leading-none tracking-tight">{p.name}</p>
+                      <p className="text-[9px] text-text-muted mt-1 font-bold truncate">
+                        CNS {p.cns || 'S/ CNS'} {p.birth_date && ` • ${calculateAge(p.birth_date)} anos`}
+                      </p>
                     </div>
                     <div className="flex flex-col items-end shrink-0 ml-2">
                       <span className="text-[9px] font-bold text-text-secondary">{p.created_at ? formatDate(p.created_at) : '--'}</span>
