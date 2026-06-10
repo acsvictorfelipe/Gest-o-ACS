@@ -26,6 +26,11 @@ interface HealthChartProps {
 }
 
 export const HealthChart: React.FC<HealthChartProps> = ({ data }) => {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const chartData = [
     { name: 'Gestantes', value: data.gestantes, color: '#3B82F6' }, // blue-500
     { name: 'Crianças', value: data.criancas, color: '#10B981' }, // emerald-500
@@ -39,27 +44,29 @@ export const HealthChart: React.FC<HealthChartProps> = ({ data }) => {
     <div className="flex flex-col items-center">
       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-4 text-center">Proporção por Grupo</p>
       <div className="h-72 w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="50%"
-              innerRadius={70}
-              outerRadius={95}
-              paddingAngle={5}
-              dataKey="value"
-            >
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip 
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-            />
-            <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 600 }} />
-          </PieChart>
-        </ResponsiveContainer>
+        {mounted && (
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <PieChart>
+              <Pie
+                data={chartData}
+                cx="50%"
+                cy="50%"
+                innerRadius={70}
+                outerRadius={95}
+                paddingAngle={5}
+                dataKey="value"
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip 
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+              />
+              <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 600 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );

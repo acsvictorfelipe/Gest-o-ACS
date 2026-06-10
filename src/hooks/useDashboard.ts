@@ -26,6 +26,7 @@ export function useDashboard(user: any) {
     totalPatients: 0,
     totalHouseholds: 0,
     gestantes: 0,
+    gestantesPendentes: 0,
     criancas2y: 0,
     criancasTotal: 0,
     hipertensos: 0,
@@ -156,6 +157,7 @@ export function useDashboard(user: any) {
           totalPatients: patientsData.length,
           totalHouseholds: hCount || 0,
           gestantes: 0,
+          gestantesPendentes: 0,
           criancas2y: 0,
           criancasTotal: 0,
           hipertensos: 0,
@@ -224,7 +226,14 @@ export function useDashboard(user: any) {
           if (isDiabetico) newStats.diabeticos++;
           if (isHipertenso) newStats.hipertensos++;
 
-          if (categories.includes('Gestante')) newStats.gestantes++;
+          if (categories.includes('Gestante')) {
+            newStats.gestantes++;
+            const gConsultas = clinical.gestante?.consultas?.filter((c: string) => c && c.trim() !== '').length || 0;
+            const gVisitas = clinical.gestante?.visitasAcs?.filter((v: string) => v && v.trim() !== '').length || 0;
+            if (gConsultas < 9 || gVisitas < 3) {
+              newStats.gestantesPendentes++;
+            }
+          }
           if (categories.includes('AcamadoDomiciliado')) newStats.acamados++;
           if (categories.includes('Idoso') || categories.includes('Idosos')) newStats.idosos++;
           if (categories.includes('Adulto')) newStats.adultos++;
@@ -250,21 +259,23 @@ export function useDashboard(user: any) {
             }
           }
           
-          if (categories.includes('AcamadoDomiciliado') && clinical.acamadodomiciliado?.dataReceita && clinical.acamadodomiciliado?.validadeReceita) {
-            const dataReceita = new Date(clinical.acamadodomiciliado.dataReceita);
-            const validadeDias = parseInt(clinical.acamadodomiciliado.validadeReceita, 10);
-            if (!isNaN(dataReceita.getTime()) && !isNaN(validadeDias)) {
-              const dataVencimento = new Date(dataReceita);
-              dataVencimento.setDate(dataVencimento.getDate() + validadeDias);
+          const isMentalOrAcamado = categories.includes('SaudeMental') || categories.includes('AcamadoDomiciliado');
+          const recipes = isMentalOrAcamado ? (clinical.receitas || []) : [];
+          if (recipes.length > 0) {
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            
+            const isVencendoOuVencida = recipes.some((rec: any) => {
+              if (!rec.dataVencimento) return false;
+              const dateVencimento = new Date(rec.dataVencimento + 'T00:00:00');
+              if (isNaN(dateVencimento.getTime())) return false;
               
-              const dataAlerta = new Date(dataVencimento);
-              dataAlerta.setDate(dataAlerta.getDate() - 15);
-              
-              const hoje = new Date();
-              
-              if (hoje >= dataAlerta) {
-                newStats.receitasAVencer++;
-              }
+              const alertDate = new Date(dateVencimento);
+              alertDate.setDate(alertDate.getDate() - 15);
+              return hoje >= alertDate;
+            });
+            if (isVencendoOuVencida) {
+              newStats.receitasAVencer++;
             }
           }
         });

@@ -108,12 +108,32 @@ async function startServer() {
   // API Route for forcing profile update (migration)
   app.post('/api/admin/force-profile-update', async (req, res) => {
     const { email } = req.body;
-    if (email !== 'acsvictorfelipe@gmail.com') {
-      return res.status(403).json({ error: 'Acesso negado' });
+    const targetEmail = process.env.VITE_MIGRATION_EMAIL || 'acsvictorfelipe@gmail.com';
+    
+    if (!email || email.toLowerCase() !== targetEmail.toLowerCase()) {
+      return res.status(403).json({ error: 'Acesso negado: e-mail de destino incorreto' });
     }
 
+    // Validate Authorization header containing the Supabase user session token (JWT)
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Acesso negado: token de login ausente' });
+    }
+
+    const token = authHeader.substring(7);
+
     try {
-      console.log('Forcing profile update for:', email);
+      // Validate token with Supabase Authenticator
+      const { data: { user: authUser }, error: jwtVerifyError } = await supabaseAdmin.auth.getUser(token);
+      if (jwtVerifyError || !authUser) {
+        return res.status(401).json({ error: 'Acesso negado: sessão expirada ou inválida' });
+      }
+
+      if (authUser.email?.toLowerCase() !== targetEmail.toLowerCase()) {
+        return res.status(403).json({ error: 'Acesso negado: seu usuário não tem permissão para esta ação' });
+      }
+
+      console.log('Forcing profile update for authenticated user:', email);
       
       // 1. Find the user ID by email
       const { data: profiles, error: findError } = await supabaseAdmin

@@ -76,6 +76,13 @@ export function Dashboard({ user }: { user: any }) {
     return d;
   }, []);
 
+  const lastRegisteredPatients = React.useMemo(() => {
+    return [...allPatients]
+      .filter(p => p.created_at)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 4);
+  }, [allPatients]);
+
   const chartData = weeklyChartData;
 
   if (loading) return null;
@@ -431,6 +438,32 @@ export function Dashboard({ user }: { user: any }) {
                   </Badge>
                 </div>
               </div>
+
+              {/* Alerta 5: Pré-Natal / Visitas Gestante Pendentes */}
+              <div 
+                onClick={() => navigate('/pacientes?filter=gestantes')} 
+                className={`p-2.5 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
+                  (stats as any).gestantesPendentes > 0
+                    ? 'border-pink-100 dark:border-pink-950/30 bg-pink-50/10 hover:bg-pink-50/20'
+                    : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
+                }`}
+              >
+                <div className={`absolute top-0 left-0 w-[4px] h-full ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-500' : 'bg-emerald-500'}`} />
+                <div className={`w-8.5 h-8.5 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-500' : 'bg-emerald-500'}`}>
+                  {(stats as any).gestantesPendentes > 0 ? <Baby className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
+                </div>
+                <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                  <div className="min-w-0">
+                    <h5 className="text-[12px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
+                      {(stats as any).gestantesPendentes > 0 ? `${(stats as any).gestantesPendentes} gestações pendentes` : 'Gestações em Dia'}
+                    </h5>
+                    <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Metas de Consultas (9) & ACS (3)</p>
+                  </div>
+                  <Badge variant={(stats as any).gestantesPendentes > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300' : ''}`}>
+                    {(stats as any).gestantesPendentes > 0 ? 'ATENÇÃO' : 'COMPLETO'}
+                  </Badge>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -492,73 +525,49 @@ export function Dashboard({ user }: { user: any }) {
           </div>
         </div>
 
-        {/* Visitas nos Últimos 7 Dias */}
+        {/* Últimos Cadastros */}
         <div className="col-span-12 lg:col-span-4">
           <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
-            <div className="flex items-center justify-between mb-3 pb-1 shrink-0">
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800 shrink-0">
               <div>
-                <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Visitas / 7 Dias</h3>
-                <p className="text-[10px] text-text-secondary font-medium">Fluxo de visitas de campo</p>
+                <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Últimos Cadastros</h3>
+                <p className="text-[10px] text-text-secondary font-medium">Cidadãos adicionados recentemente</p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <p className="text-[16px] font-black text-teal-600 dark:text-teal-400 leading-none">{chartData.reduce((acc, curr) => acc + curr.visitas, 0)}</p>
-                  <p className="text-[8px] text-text-muted font-black uppercase tracking-wider mt-0.5">Total</p>
-                </div>
-                <div className="text-right border-l border-border/60 pl-2.5">
-                  <p className="text-[16px] font-black text-indigo-500 dark:text-indigo-400 leading-none">{(chartData.reduce((acc, curr) => acc + curr.visitas, 0) / 7).toFixed(1)}</p>
-                  <p className="text-[8px] text-text-muted font-black uppercase tracking-wider mt-0.5">Média/Dia</p>
-                </div>
+              <div className="text-right">
+                <p className="text-[16px] font-black text-emerald-600 dark:text-emerald-400 leading-none">+{stats.newCidadaos}</p>
+                <p className="text-[8px] text-text-muted font-black uppercase tracking-wider mt-0.5">Este Mês</p>
               </div>
             </div>
-            <div className="flex-1 w-full h-full min-h-0">
-              {weeklyChartData.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                   <p className="text-xs text-text-muted">Nenhum histórico recente.</p>
+            
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+              {lastRegisteredPatients.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                  <p className="text-xs text-text-muted">Nenhum cidadão cadastrado recentemente.</p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={weeklyChartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorVisitas" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#0d9488" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#0d9488" stopOpacity={0.0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.08)" />
-                    <XAxis 
-                      dataKey="name" 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: '600' }} 
-                    />
-                    <YAxis 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: '600' }} 
-                      allowDecimals={false}
-                    />
-                    <RechartsTooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'rgba(255, 255, 255, 0.96)', 
-                        border: '1px solid #e2e8f0', 
-                        borderRadius: '16px',
-                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.04)',
-                        fontSize: '11px'
-                      }}
-                      itemStyle={{ color: '#0d9488', fontWeight: 'bold' }}
-                      labelStyle={{ fontWeight: '800', color: '#1e293b' }}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="visitas" 
-                      stroke="#0d9488" 
-                      strokeWidth={3} 
-                      fillOpacity={1} 
-                      fill="url(#colorVisitas)" 
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                lastRegisteredPatients.map((p, i) => (
+                  <div 
+                    key={i} 
+                    className="flex items-center justify-between p-2.5 rounded-2xl bg-bg-primary/40 dark:bg-slate-800/10 hover:bg-bg-primary dark:hover:bg-slate-800/30 border border-border/60 transition-colors cursor-pointer group" 
+                    onClick={() => navigate(`/domicilio/${p.household_id || ''}`)}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8.5 h-8.5 rounded-xl flex items-center justify-center font-black text-[11px] shadow-sm shrink-0" style={getAvatarStyle(p.categories?.[0] || 'Outros')}>
+                        {p.name?.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-black text-text-primary truncate uppercase leading-none tracking-tight">{p.name}</p>
+                        <p className="text-[9px] text-text-muted mt-1 font-bold truncate">
+                          CNS {p.cns || 'S/ CNS'} {p.birth_date && ` • ${calculateAge(p.birth_date)} anos`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end shrink-0 ml-2">
+                      <span className="text-[9px] font-bold text-text-secondary">{p.created_at ? formatDate(p.created_at) : '--'}</span>
+                      <span className="text-[8px] text-teal-600 dark:text-teal-400 font-extrabold uppercase mt-0.5 tracking-wide">Novo</span>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           </div>
@@ -578,32 +587,30 @@ export function Dashboard({ user }: { user: any }) {
             ) : (
               <div className="flex-1 flex flex-row items-center justify-between gap-3 min-h-0">
                 <div className="relative w-[130px] h-[130px] shrink-0 flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={distribuicaoData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={56}
-                        paddingAngle={2.5}
-                        dataKey="value"
-                      >
-                        {distribuicaoData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'rgba(255, 255, 255, 0.96)', 
-                          border: '1px solid #e2e8f0', 
-                          borderRadius: '14px',
-                          fontSize: '11px',
-                          fontWeight: 'bold'
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <PieChart width={130} height={130}>
+                    <Pie
+                      data={distribuicaoData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={56}
+                      paddingAngle={2.5}
+                      dataKey="value"
+                    >
+                      {distribuicaoData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(255, 255, 255, 0.96)', 
+                        border: '1px solid #e2e8f0', 
+                        borderRadius: '14px',
+                        fontSize: '11px',
+                        fontWeight: 'bold'
+                      }}
+                    />
+                  </PieChart>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
                     <span className="text-[18px] font-black text-text-primary leading-none">{stats.totalPatients}</span>
                     <span className="text-[8px] text-text-muted font-black uppercase tracking-wider mt-0.5">Total</span>

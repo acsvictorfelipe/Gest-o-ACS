@@ -292,23 +292,8 @@ export function PatientList({ user }: { user: any }) {
     }
 
     if (activeFilter === 'receitas_vencendo') {
-      if (!p.categories?.includes('AcamadoDomiciliado')) return false;
-      const clinical = p.clinical_data || {};
-      if (clinical.acamadodomiciliado?.dataReceita && clinical.acamadodomiciliado?.validadeReceita) {
-        const dataReceita = new Date(clinical.acamadodomiciliado.dataReceita);
-        const validadeDias = parseInt(clinical.acamadodomiciliado.validadeReceita, 10);
-        if (!isNaN(dataReceita.getTime()) && !isNaN(validadeDias)) {
-          const dataVencimento = new Date(dataReceita);
-          dataVencimento.setDate(dataVencimento.getDate() + validadeDias);
-          
-          const dataAlerta = new Date(dataVencimento);
-          dataAlerta.setDate(dataAlerta.getDate() - 15);
-          
-          const hoje = new Date();
-          return matchesSearch && hoje >= dataAlerta;
-        }
-      }
-      return false;
+      const status = getPrescriptionStatus(p);
+      return matchesSearch && (status === 'vencida' || status === 'vencendo');
     }
 
     return matchesSearch;
@@ -402,6 +387,37 @@ export function PatientList({ user }: { user: any }) {
     if (categories?.includes('Hipertensos')) return <UI_CONFIG.categorias.hipertensos.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.hipertensos.primary }} />;
     if (categories?.includes('Diabéticos')) return <UI_CONFIG.categorias.diabeticos.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.diabeticos.primary }} />;
     return <UI_CONFIG.categorias.outros.icon className="w-4 h-4" style={{ color: UI_CONFIG.categorias.outros.primary }} />;
+  };
+
+  const getPrescriptionStatus = (p: any): 'vencida' | 'vencendo' | 'ok' => {
+    const isMentalOrAcamado = p.categories?.includes('SaudeMental') || p.categories?.includes('AcamadoDomiciliado');
+    if (!isMentalOrAcamado) return 'ok';
+
+    const recipes = p.clinical_data?.receitas || [];
+    if (recipes.length === 0) return 'ok';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let status: 'vencida' | 'vencendo' | 'ok' = 'ok';
+
+    for (const rec of recipes) {
+      if (!rec.dataVencimento) continue;
+      const expiry = new Date(rec.dataVencimento + 'T00:00:00');
+      if (isNaN(expiry.getTime())) continue;
+
+      if (expiry < today) {
+        status = 'vencida';
+        break; // Vencida sempre tem prioridade de alerta máxima
+      } else {
+        const alertDate = new Date(expiry);
+        alertDate.setDate(alertDate.getDate() - 15);
+        if (today >= alertDate) {
+          status = 'vencendo';
+        }
+      }
+    }
+
+    return status;
   };
 
   return (
@@ -524,12 +540,31 @@ export function PatientList({ user }: { user: any }) {
                           onClick={() => navigate(`/editar-paciente/${p.id}`)}
                         >
                           <td className="px-8 py-5">
-                            <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs group-hover:bg-teal-600 group-hover:text-white transition-all uppercase shadow-sm">
-                                {p.name?.substring(0, 2)}
-                              </div>
+                            <div>
                               <div>
-                                 <p className="text-[14px] font-semibold text-text-primary leading-tight group-hover:text-teal-600 transition-colors uppercase">{p.name}</p>
+                                 <div className="flex items-center gap-2 flex-wrap">
+                                   <p className="text-[14px] font-semibold text-text-primary leading-tight group-hover:text-teal-600 transition-colors uppercase">{p.name}</p>
+                                   {(() => {
+                                     const status = getPrescriptionStatus(p);
+                                     if (status === 'vencida') {
+                                       return (
+                                         <span className="flex items-center gap-1 px-2 py-0.5 bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/40 text-[9px] font-bold uppercase rounded-md animate-pulse shrink-0 tracking-wider">
+                                           <AlertCircle className="w-3 h-3 text-red-600 dark:text-red-400" />
+                                           Receita Vencida
+                                         </span>
+                                       );
+                                     }
+                                     if (status === 'vencendo') {
+                                       return (
+                                         <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40 text-[9px] font-bold uppercase rounded-md animate-pulse shrink-0 tracking-wider">
+                                           <AlertCircle className="w-3 h-3 text-amber-605 dark:text-amber-400" />
+                                           Receita Vencendo
+                                         </span>
+                                       );
+                                     }
+                                     return null;
+                                   })()}
+                                 </div>
                                  <div className="flex items-center gap-3 mt-1">
                                    <p className="text-[11px] text-text-muted font-medium">{p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}</p>
                                    {p.clinical_data?.contact && (
@@ -618,33 +653,25 @@ export function PatientList({ user }: { user: any }) {
                                 S. Mental
                               </span>
                             )}
+
+                            {/* Indicador de Pré-Natal e Visita ACS para Gestantes */}
                             {(() => {
-                              if (!p.categories?.includes('AcamadoDomiciliado')) return null;
-                              const clinical = p.clinical_data || {};
-                              if (clinical.acamadodomiciliado?.dataReceita && clinical.acamadodomiciliado?.validadeReceita) {
-                                const dataReceita = new Date(clinical.acamadodomiciliado.dataReceita);
-                                const validadeDias = parseInt(clinical.acamadodomiciliado.validadeReceita, 10);
-                                if (!isNaN(dataReceita.getTime()) && !isNaN(validadeDias)) {
-                                  const dataVencimento = new Date(dataReceita);
-                                  dataVencimento.setDate(dataVencimento.getDate() + validadeDias);
-                                  
-                                  const dataAlerta = new Date(dataVencimento);
-                                  dataAlerta.setDate(dataAlerta.getDate() - 15);
-                                  
-                                  const hoje = new Date();
-                                  if (hoje >= dataAlerta) {
-                                    return (
-                                      <span 
-                                        className="px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-tight text-white animate-pulse shadow-sm" 
-                                        style={{ backgroundColor: '#A855F7' }}
-                                      >
-                                        Receita Vencendo
-                                      </span>
-                                    );
-                                  }
-                                }
-                              }
-                              return null;
+                              if (!p.categories?.includes('Gestante')) return null;
+                              const g = p.clinical_data?.gestante || {};
+                              const validConsultas = g.consultas?.filter((c: string) => c && c.trim() !== '').length || 0;
+                              const validVisitas = g.visitasAcs?.filter((v: string) => v && v.trim() !== '').length || 0;
+                              const pctCol = validConsultas >= 9 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-pink-50 text-pink-600 border-pink-100 dark:bg-pink-950/20 dark:text-pink-400 dark:border-pink-900/35';
+                              const pctVis = validVisitas >= 3 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/35';
+                              return (
+                                <>
+                                  <span className={`px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-tight border ${pctCol}`}>
+                                    Pré-Natal: {validConsultas}/9
+                                  </span>
+                                  <span className={`px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-tight border ${pctVis}`}>
+                                    Visitas ACS: {validVisitas}/3
+                                  </span>
+                                </>
+                              );
                             })()}
 
                             {/* Indicador de Visita de 6 Meses para Bebês */}
@@ -744,10 +771,7 @@ export function PatientList({ user }: { user: any }) {
                   onClick={() => navigate(`/editar-paciente/${p.id}`)}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 font-semibold text-sm uppercase">
-                        {p.name.charAt(0)}
-                      </div>
+                    <div>
                       <div>
                         <h4 className="text-sm font-semibold text-text-primary dark:text-white leading-tight">{p.name}</h4>
                         <div className="flex flex-col gap-1 mt-1">
@@ -898,6 +922,26 @@ export function PatientList({ user }: { user: any }) {
                     {!p.last_visit_at && (
                       <span className="px-1.5 py-0.5 bg-red-50 text-red-600 border border-red-100 rounded text-[9px] font-semibold uppercase whitespace-nowrap">Visita Pendente</span>
                     )}
+
+                    {/* Indicador de Pré-Natal e Visita ACS para Gestantes (mobile) */}
+                    {(() => {
+                      if (!p.categories?.includes('Gestante')) return null;
+                      const g = p.clinical_data?.gestante || {};
+                      const validConsultas = g.consultas?.filter((c: string) => c && c.trim() !== '').length || 0;
+                      const validVisitas = g.visitasAcs?.filter((v: string) => v && v.trim() !== '').length || 0;
+                      const pctCol = validConsultas >= 9 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-pink-50 text-pink-600 border-pink-100 dark:bg-pink-950/20 dark:text-pink-400 dark:border-pink-900/35';
+                      const pctVis = validVisitas >= 3 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/35';
+                      return (
+                        <>
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase whitespace-nowrap border ${pctCol}`}>
+                            Pré-Natal: {validConsultas}/9
+                          </span>
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase whitespace-nowrap border ${pctVis}`}>
+                            ACS: {validVisitas}/3
+                          </span>
+                        </>
+                      );
+                    })()}
 
                     {/* Indicador de Visita de 6 Meses para Bebês (mobile) */}
                     {(() => {

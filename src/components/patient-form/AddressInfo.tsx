@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, MessageCircle, Phone } from 'lucide-react';
+import { Home, MessageCircle, Phone, Gift } from 'lucide-react';
 
 interface AddressInfoProps {
   formData: any;
@@ -46,7 +46,8 @@ export function AddressInfo({ formData, setFormData, isReadOnly, streets = [] }:
   }, []);
 
   return (
-    <section className="bg-bg-secondary dark:bg-slate-900 rounded-xl p-6 border border-border dark:border-slate-800 shadow-sm space-y-6">
+    <>
+      <section className="bg-bg-secondary dark:bg-slate-900 rounded-xl p-6 border border-border dark:border-slate-800 shadow-sm space-y-6">
       <div className="flex items-center gap-2 text-primary">
         <Home className="w-4 h-4" />
         <h3 className="text-sm font-bold uppercase tracking-tight">Endereço e Contato</h3>
@@ -174,5 +175,53 @@ export function AddressInfo({ formData, setFormData, isReadOnly, streets = [] }:
         </div>
       </div>
     </section>
-  );
+
+    {/* Seção de Benefícios Sociais */}
+    <section className="bg-bg-secondary dark:bg-slate-900 rounded-xl p-6 border border-border dark:border-slate-800 shadow-sm space-y-6">
+      <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+        <Gift className="w-4 h-4" />
+        <h3 className="text-sm font-bold uppercase tracking-tight">Benefícios Sociais</h3>
+      </div>
+
+      <div className="space-y-4">
+        <p className="text-[11px] text-text-muted font-medium">
+          Selecione abaixo os programas governamentais e benefícios sociais dos quais o cidadão é beneficiário:
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {['Bolsa Família', 'BPC-LOAS'].map(benefit => (
+            <label 
+              key={benefit} 
+              className="flex items-center justify-between p-3.5 bg-bg-primary dark:bg-slate-800 rounded-xl border border-border dark:border-slate-800 hover:border-green-500/30 hover:bg-green-50/5 dark:hover:bg-green-950/5 transition-all cursor-pointer group shadow-sm"
+            >
+              <div className="flex items-center gap-2.5">
+                <input 
+                  type="checkbox"
+                  disabled={isReadOnly}
+                  checked={formData.clinicalData?.socialBenefits?.includes(benefit) || false}
+                  onChange={e => {
+                    const current = formData.clinicalData?.socialBenefits || [];
+                    const next = e.target.checked 
+                      ? [...current, benefit] 
+                      : current.filter((b: string) => b !== benefit);
+                    setFormData((prev: any) => ({
+                      ...prev,
+                      clinicalData: {
+                        ...prev.clinicalData,
+                        socialBenefits: next
+                      }
+                    }));
+                  }}
+                  className="w-4 h-4 rounded border-border dark:border-slate-700 text-green-600 focus:ring-green-500/25 disabled:opacity-50"
+                />
+                <span className="text-[11px] font-bold text-text-secondary dark:text-slate-300 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors uppercase tracking-wider">
+                  {benefit}
+                </span>
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
+    </section>
+  </>
+);
 }

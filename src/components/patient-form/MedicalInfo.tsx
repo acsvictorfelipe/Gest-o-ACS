@@ -4,6 +4,7 @@ import { Baby, Smile, Bed, User, HeartPulse, Activity } from 'lucide-react';
 import { VACCINE_SCHEDULE } from '../../lib/dateUtils';
 
 import { VisitasHistoricoSection } from './medical-sections/VisitasHistoricoSection';
+import { ReceitasSection } from './medical-sections/ReceitasSection';
 import { RastreamentoSection } from './medical-sections/RastreamentoSection';
 import { SaudeMentalSection } from './medical-sections/SaudeMentalSection';
 import { ChronicSection } from './medical-sections/ChronicSection';
@@ -102,7 +103,9 @@ export function MedicalInfo({ formData, setFormData, id, isReadOnly }: MedicalIn
           ? [...currentList, { date: '', summary: '', type: 'Rotina' }]
           : (list === 'consultasGerais')
             ? [...currentList, { date: '', summary: '' }]
-            : [...currentList, ''];
+            : (list === 'receitas')
+              ? [...currentList, { dataEmissao: '', validade: '30', dataVencimento: '' }]
+              : [...currentList, ''];
       } else {
         const currentList = ((newData as any)[category] as any)[list] || [];
         ((newData as any)[category] as any)[list] = [...currentList, ''];
@@ -170,6 +173,16 @@ export function MedicalInfo({ formData, setFormData, id, isReadOnly }: MedicalIn
         updateDateInList={updateDateInList} 
         isReadOnly={isReadOnly}
       />
+
+      {!isReadOnly && (
+        <ReceitasSection
+          formData={formData}
+          setFormData={setFormData}
+          addDateToList={addDateToList}
+          removeDateFromList={removeDateFromList}
+          updateDateInList={updateDateInList}
+        />
+      )}
 
       <RastreamentoSection formData={formData} setFormData={setFormData} isReadOnly={isReadOnly} />
 

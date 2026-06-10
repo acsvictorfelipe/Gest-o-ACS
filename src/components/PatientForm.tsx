@@ -7,7 +7,8 @@ import {
   Download,
   Loader2,
   Home,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -72,6 +73,7 @@ export function PatientForm({ user }: { user: any }) {
       visitasGerais: [] as { date: string, summary: string }[],
       consultasGerais: [] as { date: string, summary: string }[],
       socialBenefits: [] as string[],
+      receitas: [] as { dataEmissao: string, validade: string, dataVencimento: string }[],
       saudeMental: {
         notes: ''
       },
@@ -1098,8 +1100,32 @@ export function PatientForm({ user }: { user: any }) {
     fetchHouseholdDetails();
   }, [showHouseholdDrawer, formData.householdId]);
 
+  const hasExpiredPrescription = () => {
+    const isMentalOrAcamado = formData.categories?.includes('SaudeMental') || formData.categories?.includes('AcamadoDomiciliado');
+    if (!isMentalOrAcamado) return false;
+
+    const recipes = formData.clinicalData?.receitas || [];
+    if (recipes.length === 0) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return recipes.some((rec: any) => {
+      if (!rec.dataVencimento) return false;
+      const expiry = new Date(rec.dataVencimento);
+      return expiry < today;
+    });
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom-2 duration-300">
+      {hasExpiredPrescription() && (
+        <div className="flex items-center gap-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-xl p-4 text-red-700 dark:text-red-400">
+          <AlertCircle className="w-5 h-5 shrink-0 text-red-600 dark:text-red-400 animate-pulse" />
+          <div className="text-xs font-semibold uppercase tracking-wider">
+            Atenção: Este paciente possui receita de medicamento vencida! Verifique e atualize os prazos na seção "Receitas".
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center bg-white dark:bg-slate-900 px-6 py-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <header className="flex flex-col gap-1">
           <h2 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white uppercase">{id ? 'Editar Cadastro' : 'Novo Cadastro'}</h2>

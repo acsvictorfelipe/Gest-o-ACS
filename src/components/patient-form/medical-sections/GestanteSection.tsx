@@ -22,6 +22,14 @@ export function GestanteSection({
 
   const data = formData.clinicalData?.gestante || {};
 
+  const validConsultas = data.consultas?.filter((c: string) => c && c.trim() !== '').length || 0;
+  const targetConsultas = 9;
+  const pctConsultas = Math.min(100, (validConsultas / targetConsultas) * 100);
+
+  const validVisitas = data.visitasAcs?.filter((v: string) => v && v.trim() !== '').length || 0;
+  const targetVisitas = 3;
+  const pctVisitas = Math.min(100, (validVisitas / targetVisitas) * 100);
+
   return (
     <section className="bg-bg-secondary dark:bg-slate-900 rounded-2xl p-8 shadow-sm border-l-4 border-blue-500 mb-8 animate-in fade-in slide-in-from-top-2">
       <h3 className="text-xl font-semibold text-blue-600 dark:text-blue-400 mb-8 font-headline flex items-center gap-2">
@@ -61,7 +69,25 @@ export function GestanteSection({
         </div>
 
         <div className="col-span-full space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col bg-bg-primary dark:bg-slate-800/40 p-4 rounded-xl border border-border dark:border-slate-800/80 gap-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Progresso do Pré-Natal</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 block font-medium">Meta mínima recomendada: {targetConsultas} consultas</span>
+              </div>
+              <span className="text-sm font-black text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 px-2.5 py-1 rounded-lg border border-blue-100 dark:border-blue-900/35">
+                {validConsultas} / {targetConsultas}
+              </span>
+            </div>
+            <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+              <div 
+                className="bg-blue-500 h-full rounded-full transition-all duration-350"
+                style={{ width: `${pctConsultas}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mt-2">
             <label className="block text-[10px] font-semibold uppercase text-text-muted">Consultas de Pré-Natal</label>
             <button 
               type="button"
@@ -93,7 +119,25 @@ export function GestanteSection({
         </div>
 
         <div className="col-span-full space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col bg-bg-primary dark:bg-slate-800/40 p-4 rounded-xl border border-border dark:border-slate-800/80 gap-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Progresso de Visitas ACS na Gestação</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 block font-medium">Meta recomendada: {targetVisitas} visitas (pode registrar mais)</span>
+              </div>
+              <span className="text-sm font-black text-pink-500 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/20 px-2.5 py-1 rounded-lg border border-pink-100 dark:border-pink-900/35">
+                {validVisitas} / {targetVisitas}
+              </span>
+            </div>
+            <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+              <div 
+                className="bg-pink-500 h-full rounded-full transition-all duration-350"
+                style={{ width: `${pctVisitas}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mt-2">
             <label className="block text-[10px] font-semibold uppercase text-text-muted">Visitas ACS na Gestação</label>
             <button 
               type="button"
