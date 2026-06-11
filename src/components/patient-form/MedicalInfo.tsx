@@ -107,8 +107,10 @@ export function MedicalInfo({ formData, setFormData, id, isReadOnly }: MedicalIn
               ? [...currentList, { dataEmissao: '', validade: '30', dataVencimento: '' }]
               : [...currentList, ''];
       } else {
-        const currentList = ((newData as any)[category] as any)[list] || [];
-        ((newData as any)[category] as any)[list] = [...currentList, ''];
+        const currentCategory = { ...(newData as any)[category] };
+        const currentList = currentCategory[list] || [];
+        currentCategory[list] = [...currentList, ''];
+        (newData as any)[category] = currentCategory;
       }
       return { ...prev, clinicalData: newData };
     });
@@ -121,8 +123,10 @@ export function MedicalInfo({ formData, setFormData, id, isReadOnly }: MedicalIn
         const currentList = (newData as any)[list] || [];
         (newData as any)[list] = currentList.filter((_: any, i: number) => i !== index);
       } else {
-        const currentList = ((newData as any)[category] as any)[list] || [];
-        ((newData as any)[category] as any)[list] = currentList.filter((_: any, i: number) => i !== index);
+        const currentCategory = { ...(newData as any)[category] };
+        const currentList = currentCategory[list] || [];
+        currentCategory[list] = currentList.filter((_: any, i: number) => i !== index);
+        (newData as any)[category] = currentCategory;
       }
       return { ...prev, clinicalData: newData };
     });
@@ -136,9 +140,11 @@ export function MedicalInfo({ formData, setFormData, id, isReadOnly }: MedicalIn
         currentList[index] = value;
         (newData as any)[list] = currentList;
       } else {
-        const currentList = [...(((newData as any)[category] as any)[list] || [])];
+        const currentCategory = { ...(newData as any)[category] };
+        const currentList = [...(currentCategory[list] || [])];
         currentList[index] = value;
-        ((newData as any)[category] as any)[list] = currentList;
+        currentCategory[list] = currentList;
+        (newData as any)[category] = currentCategory;
       }
       return { ...prev, clinicalData: newData };
     });

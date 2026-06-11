@@ -549,7 +549,7 @@ export function VisitasHistoricoSection({
               className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-[10px] font-bold uppercase transition-all tracking-tight shadow-sm"
             >
               <Plus className="w-3.5 h-3.5" />
-              Nova Visita Hoje
+              + Visita ACS
             </button>
           )}
 
@@ -563,16 +563,6 @@ export function VisitasHistoricoSection({
               + Registrar Consulta
             </button>
           )}
-
-          {!isReadOnly && (
-            <button 
-              type="button"
-              onClick={() => addDateToList('root', 'visitasGerais')}
-              className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 rounded-lg text-[10px] font-bold uppercase transition-all tracking-tight"
-            >
-              + Visita Antiga
-            </button>
-          )}
         </div>
       </div>
 
@@ -584,7 +574,7 @@ export function VisitasHistoricoSection({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary">Registrar Nova Visita Domiciliar</h4>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary">Registrar Visita ACS</h4>
                 </div>
                 <button
                   type="button"

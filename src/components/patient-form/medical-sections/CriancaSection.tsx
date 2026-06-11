@@ -35,39 +35,54 @@ export function CriancaSection({
       </div>
       
       {/* 1. Monitoring Section (Top) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="space-y-6">
         {/* Puericultura */}
-        <div className="bg-bg-primary dark:bg-slate-800/50 rounded-xl p-4 border border-border dark:border-slate-800 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-primary">
-              <Stethoscope className="w-4 h-4" />
-              <label className="text-[10px] font-bold uppercase tracking-widest">Consultas de Puericultura</label>
+        <div className="space-y-4">
+          <div className="flex flex-col bg-bg-primary dark:bg-slate-800/40 p-4 rounded-xl border border-border dark:border-slate-800/80 gap-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Progresso de Puericultura</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 block font-medium">Meta mínima recomendada: 9 consultas até completar 24 meses de idade</span>
+              </div>
+              <span className="text-sm font-black text-green-500 dark:text-green-400 bg-green-50 dark:bg-green-950/20 px-2.5 py-1 rounded-lg border border-green-100 dark:border-green-900/35">
+                {Math.min(9, data.consultas?.filter((c: string) => c && c.trim() !== '').length || 0)} / 9
+              </span>
             </div>
+            <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+              <div 
+                className="bg-green-500 h-full rounded-full transition-all duration-350"
+                style={{ width: `${Math.min(100, ((data.consultas?.filter((c: string) => c && c.trim() !== '').length || 0) / 9) * 100)}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mt-2">
+            <label className="block text-[10px] font-semibold uppercase text-text-muted">Consultas de Puericultura</label>
             {!isReadOnly && (
               <button 
                 type="button"
                 onClick={() => addDateToList('crianca', 'consultas')}
-                className="p-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+                className="text-primary hover:text-primary/80 transition-colors"
               >
                 <Plus className="w-4 h-4" />
               </button>
             )}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {data.consultas?.map((date: string, index: number) => (
-              <div key={index} className="group flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1.5 rounded-lg border border-border dark:border-slate-700 shadow-sm transition-all hover:border-primary/30">
+              <div key={index} className="flex items-center gap-2 bg-bg-primary dark:bg-slate-800 p-2 rounded-lg border border-border dark:border-slate-705">
                 <input 
                   type="date" 
                   disabled={isReadOnly}
                   value={date || ''}
                   onChange={e => updateDateInList('crianca', 'consultas', index, e.target.value)}
-                  className="bg-transparent border-none text-[10px] font-bold text-text-primary dark:text-white w-full outline-none focus:ring-0 disabled:opacity-50" 
+                  className="bg-transparent border-none text-[10px] font-semibold text-text-primary dark:text-white w-full outline-none focus:ring-0" 
                 />
                 {!isReadOnly && (
                   <button 
                     type="button"
                     onClick={() => removeDateFromList('crianca', 'consultas', index)}
-                    className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all"
+                    className="text-slate-300 hover:text-red-500 transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -81,37 +96,34 @@ export function CriancaSection({
         </div>
 
         {/* Visitas ACS */}
-        <div className="bg-bg-primary dark:bg-slate-800/50 rounded-xl p-4 border border-border dark:border-slate-800 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-primary">
-              <MapPin className="w-4 h-4" />
-              <label className="text-[10px] font-bold uppercase tracking-widest">Visitas ACS (Crescimento)</label>
-            </div>
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between mt-2">
+            <label className="block text-[10px] font-semibold uppercase text-text-muted">Visitas ACS (Crescimento & Desenvolvimento)</label>
             {!isReadOnly && (
               <button 
                 type="button"
                 onClick={() => addDateToList('crianca', 'visitasAcs')}
-                className="p-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+                className="text-primary hover:text-primary/80 transition-colors"
               >
                 <Plus className="w-4 h-4" />
               </button>
             )}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {data.visitasAcs?.map((date: string, index: number) => (
-              <div key={index} className="group flex items-center gap-2 bg-white dark:bg-slate-900 px-2 py-1.5 rounded-lg border border-border dark:border-slate-700 shadow-sm transition-all hover:border-primary/30">
+              <div key={index} className="flex items-center gap-2 bg-bg-primary dark:bg-slate-800 p-2 rounded-lg border border-border dark:border-slate-705">
                 <input 
                   type="date" 
                   disabled={isReadOnly}
                   value={date || ''}
                   onChange={e => updateDateInList('crianca', 'visitasAcs', index, e.target.value)}
-                  className="bg-transparent border-none text-[10px] font-bold text-text-primary dark:text-white w-full outline-none focus:ring-0 disabled:opacity-50" 
+                  className="bg-transparent border-none text-[10px] font-semibold text-text-primary dark:text-white w-full outline-none focus:ring-0" 
                 />
                 {!isReadOnly && (
                   <button 
                     type="button"
                     onClick={() => removeDateFromList('crianca', 'visitasAcs', index)}
-                    className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all"
+                    className="text-slate-300 hover:text-red-500 transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -119,7 +131,7 @@ export function CriancaSection({
               </div>
             ))}
             {(!data.visitasAcs || data.visitasAcs.length === 0) && (
-              <p className="col-span-full text-[10px] text-text-muted italic py-2">Nenhuma visita registrada.</p>
+              <p className="col-span-full text-[10px] text-text-muted italic py-2">Nenhuma visita de crescimento registrada.</p>
             )}
           </div>
         </div>
