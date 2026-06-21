@@ -39,11 +39,12 @@ import { UI_CONFIG } from '../constants';
 
 import { format, isSameDay } from 'date-fns';
 import { calculateAge, getAgeInMonths, getAgeNumber, VACCINE_SCHEDULE, formatDate, parseDate } from '../lib/dateUtils';
+import type { UserProfile, Patient } from '../types';
 
-export function PatientList({ user }: { user: any }) {
+export function PatientList({ user }: { user: UserProfile }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [patients, setPatients] = useState<any[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState(searchParams.get('filter') || 'all');

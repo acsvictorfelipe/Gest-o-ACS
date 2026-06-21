@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { supabase } from '../lib/supabase';
+import type { UserProfile, Patient } from '../types';
 import {
   Baby,
   Calendar as CalendarIcon,
@@ -21,7 +22,7 @@ export interface SyncItem {
   done: boolean;
 }
 
-export function useDashboard(user: any) {
+export function useDashboard(user: UserProfile) {
   const [stats, setStats] = React.useState({
     totalPatients: 0,
     totalHouseholds: 0,
@@ -50,8 +51,8 @@ export function useDashboard(user: any) {
     newAcamados: 0
   });
 
-  const [allPatients, setAllPatients] = React.useState<any[]>([]);
-  const [recentPatients, setRecentPatients] = React.useState<any[]>([]);
+  const [allPatients, setAllPatients] = React.useState<Patient[]>([]);
+  const [recentPatients, setRecentPatients] = React.useState<Patient[]>([]);
   const [weeklyChartData, setWeeklyChartData] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import type { UserProfile } from './types';
 import { supabase } from './lib/supabase';
 import { Layout } from './components/Layout';
 import { Login } from './components/Login';
@@ -16,12 +17,13 @@ import { ExportTool } from './components/ExportTool';
 import { syncService } from './lib/syncService';
 import { encryptionService } from './lib/encryption';
 
-// NOTE: In production, replace this with an env var or Supabase RLS policy.
-// Never rely solely on client-side role checks for access control.
-const ADMIN_EMAILS = ['victorfelipe2012@gmail.com'];
+// Lê de variável de ambiente; fallback para o email padrão se não configurado.
+const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || 'victorfelipe2012@gmail.com')
+  .split(',')
+  .map((e: string) => e.trim());
 
 export default function App() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -45,6 +47,7 @@ export default function App() {
       if (session) {
         fetchProfile(session.user);
       } else {
+        encryptionService.setKey('gestao_acs_fallback_key_2026');
         setLoading(false);
       }
     });
@@ -55,6 +58,7 @@ export default function App() {
         fetchProfile(session.user);
       } else {
         setUser(null);
+        encryptionService.setKey('gestao_acs_fallback_key_2026');
         setLoading(false);
       }
     });
@@ -78,13 +82,12 @@ export default function App() {
     return () => window.removeEventListener('online', handleOnline);
   }, []);
 
-  const fetchProfile = async (supabaseUser: any) => {
+  const fetchProfile = async (supabaseUser: { id: string; email?: string; user_metadata?: Record<string, any> }) => {
     try {
       if (supabaseUser?.id) {
         encryptionService.setKey(supabaseUser.id);
       }
       const { data, error } = await supabase
-
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)
@@ -108,7 +111,7 @@ export default function App() {
         
         // Ensure name fallback from metadata
         const name = updatedProfile.name || supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
-        setUser({ ...supabaseUser, ...updatedProfile, name });
+        setUser({ ...supabaseUser, ...updatedProfile, name } as UserProfile);
       } else {
         // Profile doesn't exist, check if it's a super admin to create it
         const name = supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
@@ -121,23 +124,24 @@ export default function App() {
               email: supabaseUser.email,
               name: name,
               role: 'Administrador',
-              color: '#64748b'
+              color: '#64748b',
+              microarea: ''
             })
             .select()
             .single();
           
           if (!createError && newProfile) {
-            setUser({ ...supabaseUser, ...newProfile });
+            setUser({ ...supabaseUser, ...newProfile } as UserProfile);
             return;
           }
         }
 
         console.error("Profile fetch error or not found:", error);
-        setUser({ ...supabaseUser, name });
+        setUser({ ...supabaseUser, name } as UserProfile);
       }
     } catch (err) {
       console.error("Profile fetch error:", err);
-      setUser(supabaseUser);
+      setUser(supabaseUser as unknown as UserProfile);
     } finally {
       setLoading(false);
     }

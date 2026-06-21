@@ -21,7 +21,9 @@ import { FormActions } from './patient-form/FormActions';
 
 
 
-export function PatientForm({ user }: { user: any }) {
+import type { UserProfile } from '../types';
+
+export function PatientForm({ user }: { user: UserProfile }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const location = useLocation();

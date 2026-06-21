@@ -17,7 +17,9 @@ import {
   X
 } from 'lucide-react';
 
-export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate?: () => void }) {
+import type { UserProfile } from '../types';
+
+export function Settings({ user, onProfileUpdate }: { user: UserProfile, onProfileUpdate?: () => void }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   

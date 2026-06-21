@@ -21,12 +21,14 @@ import {
   Eye
 } from 'lucide-react';
 
-export function HouseholdView({ user }: { user: any }) {
+import type { UserProfile, Household, Patient, Visit } from '../types';
+
+export function HouseholdView({ user }: { user: UserProfile }) {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [household, setHousehold] = useState<any>(null);
-  const [residents, setResidents] = useState<any[]>([]);
-  const [visits, setVisits] = useState<any[]>([]);
+  const [household, setHousehold] = useState<Household | null>(null);
+  const [residents, setResidents] = useState<Patient[]>([]);
+  const [visits, setVisits] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);

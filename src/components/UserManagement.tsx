@@ -35,6 +35,8 @@ import {
 import { getAgeInMonths, formatDate, calculateAge } from '../lib/dateUtils';
 import { motion, AnimatePresence } from 'motion/react';
 
+import type { UserProfile, Patient, Household, Visit } from '../types';
+
 // Helper to determine indicator success color and tag
 const getIndicatorStatus = (percentage: number, target: number) => {
   if (percentage >= target) return { label: 'Meta Atingida', color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20', fill: '#10b981' };
@@ -42,13 +44,13 @@ const getIndicatorStatus = (percentage: number, target: number) => {
   return { label: 'Abaixo da Meta', color: 'text-red-500 dark:text-red-400 bg-red-500/10 border-red-500/20', fill: '#ef4444' };
 };
 
-export function UserManagement({ currentUser }: { currentUser: any }) {
+export function UserManagement({ currentUser }: { currentUser: UserProfile }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('equipe');
-  const [users, setUsers] = useState<any[]>([]);
-  const [patients, setPatients] = useState<any[]>([]);
-  const [households, setHouseholds] = useState<any[]>([]);
-  const [visits, setVisits] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [households, setHouseholds] = useState<Household[]>([]);
+  const [visits, setVisits] = useState<Visit[]>([]);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [systemLogs, setSystemLogs] = useState<any[]>([]);
   

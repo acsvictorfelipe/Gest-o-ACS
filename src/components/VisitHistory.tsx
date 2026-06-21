@@ -45,16 +45,18 @@ function getPeriodStart(period: PeriodKey): string | null {
   return null; // 'todos' — sem filtro
 }
 
-export function VisitHistory({ user }: { user: any }) {
+import type { UserProfile, Visit } from '../types';
+
+export function VisitHistory({ user }: { user: UserProfile }) {
   const navigate = useNavigate();
-  const [visits, setVisits] = useState<any[]>([]);
+  const [visits, setVisits] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('Todas');
   const [period, setPeriod] = useState<PeriodKey>('30d');
 
   // Edit/delete visit states
-  const [editingVisit, setEditingVisit] = useState<any | null>(null);
+  const [editingVisit, setEditingVisit] = useState<Visit | null>(null);
   const [editDate, setEditDate] = useState('');
   const [editType, setEditType] = useState('');
   const [editSummary, setEditSummary] = useState('');

@@ -10,7 +10,9 @@ import {
   User
 } from 'lucide-react';
 
-export function SetupProfile({ user, onComplete }: { user: any, onComplete: () => void }) {
+import type { UserProfile } from '../types';
+
+export function SetupProfile({ user, onComplete }: { user: UserProfile, onComplete: () => void }) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: user.name || '',

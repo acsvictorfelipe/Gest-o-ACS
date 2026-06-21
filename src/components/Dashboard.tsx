@@ -33,8 +33,9 @@ import {
 import { UI_CONFIG } from '../constants';
 
 import { useDashboard } from '../hooks/useDashboard';
+import type { UserProfile } from '../types';
 
-export function Dashboard({ user }: { user: any }) {
+export function Dashboard({ user }: { user: UserProfile }) {
   const navigate = useNavigate();
   const {
     stats,

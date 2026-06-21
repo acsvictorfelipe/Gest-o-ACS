@@ -14,9 +14,11 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
-export function HouseholdList({ user }: { user: any }) {
+import type { UserProfile, Household } from '../types';
+
+export function HouseholdList({ user }: { user: UserProfile }) {
   const navigate = useNavigate();
-  const [households, setHouseholds] = useState<any[]>([]);
+  const [households, setHouseholds] = useState<Household[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);

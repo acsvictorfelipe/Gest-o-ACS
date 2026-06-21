@@ -19,9 +19,11 @@ import { UI_CONFIG } from '../constants';
 
 import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE, formatDate } from '../lib/dateUtils';
 
-export function Reports({ user }: { user: any }) {
-  const [patients, setPatients] = useState<any[]>([]);
-  const [households, setHouseholds] = useState<any[]>([]);
+import type { UserProfile, Patient, Household, Visit } from '../types';
+
+export function Reports({ user }: { user: UserProfile }) {
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [households, setHouseholds] = useState<Household[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('Todas');
