@@ -15,6 +15,7 @@ import {
 import { getAgeInMonths, VACCINE_SCHEDULE, getAgeNumber } from '../lib/dateUtils';
 import { UI_CONFIG } from '../constants';
 import { encryptionService } from '../lib/encryption';
+import { normalizeCategories } from '../lib/utils';
 
 export interface SyncItem {
   id: string;
@@ -152,10 +153,15 @@ export function useDashboard(user: UserProfile) {
           }
         }
 
-        setAllPatients(patientsData);
+        const normalizedPatientsData = patientsData.map((p: any) => ({
+          ...p,
+          categories: normalizeCategories(p.categories)
+        }));
+
+        setAllPatients(normalizedPatientsData);
 
         const newStats = {
-          totalPatients: patientsData.length,
+          totalPatients: normalizedPatientsData.length,
           totalHouseholds: hCount || 0,
           gestantes: 0,
           gestantesPendentes: 0,
@@ -182,7 +188,7 @@ export function useDashboard(user: UserProfile) {
           newAcamados: 0
         };
 
-        patientsData.forEach(p => {
+        normalizedPatientsData.forEach(p => {
           const clinical = p.clinical_data || {};
           const categories = p.categories || [];
 

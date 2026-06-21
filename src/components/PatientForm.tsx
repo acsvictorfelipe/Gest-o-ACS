@@ -22,6 +22,7 @@ import { FormActions } from './patient-form/FormActions';
 
 
 import type { UserProfile } from '../types';
+import { normalizeCategories } from '../lib/utils';
 
 export function PatientForm({ user }: { user: UserProfile }) {
   const navigate = useNavigate();
@@ -747,7 +748,7 @@ export function PatientForm({ user }: { user: UserProfile }) {
           birth_date: formData.birth_date || formData.birthDate,
           gender: formData.gender,
           household_id: householdId,
-          categories: finalCategories,
+          categories: normalizeCategories(finalCategories),
           microarea: user.microarea,
           area_color: user.color || '#00488d',
           agent_id: user.id,
@@ -866,7 +867,7 @@ export function PatientForm({ user }: { user: UserProfile }) {
         birth_date: formData.birthDate,
         gender: formData.gender,
         household_id: householdId,
-        categories: formData.categories,
+        categories: normalizeCategories(formData.categories),
         microarea: user.microarea,
         area_color: user.color || '#00488d',
         agent_id: user.id,

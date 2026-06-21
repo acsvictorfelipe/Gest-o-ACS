@@ -40,6 +40,7 @@ import { UI_CONFIG } from '../constants';
 import { format, isSameDay } from 'date-fns';
 import { calculateAge, getAgeInMonths, getAgeNumber, VACCINE_SCHEDULE, formatDate, parseDate } from '../lib/dateUtils';
 import type { UserProfile, Patient } from '../types';
+import { normalizeCategories } from '../lib/utils';
 
 export function PatientList({ user }: { user: UserProfile }) {
   const navigate = useNavigate();
@@ -150,7 +151,7 @@ export function PatientList({ user }: { user: UserProfile }) {
           }
         }
         
-        setPatients(allData);
+        setPatients(allData.map((p: any) => ({ ...p, categories: normalizeCategories(p.categories) })));
       } catch (error) {
         console.error("Error fetching patients:", error);
       } finally {
