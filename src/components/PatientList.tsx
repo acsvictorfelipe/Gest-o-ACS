@@ -127,10 +127,13 @@ export function PatientList({ user }: { user: UserProfile }) {
             .order('name', { ascending: true })
             .range(from, to);
 
+          const filterAgentId = searchParams.get('agent_id');
+
           if (user.role === 'Administrador') {
-            // No filters for Admin
+            if (filterAgentId) query = query.eq('agent_id', filterAgentId);
           } else if (user.role === 'Gestor') {
             query = query.eq('area_color', user.color);
+            if (filterAgentId) query = query.eq('agent_id', filterAgentId);
           } else {
             query = query.eq('agent_id', user.id);
           }

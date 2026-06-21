@@ -8,6 +8,7 @@ export interface UserProfile {
   role: UserRole | string;
   color: string;
   created_at?: string;
+  last_login?: string;
   streets?: string[];
 }
 

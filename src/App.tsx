@@ -111,6 +111,10 @@ export default function App() {
         
         // Ensure name fallback from metadata
         const name = updatedProfile.name || supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
+        
+        // Track last login
+        supabase.from('profiles').update({ last_login: new Date().toISOString() }).eq('id', supabaseUser.id).catch(() => {});
+        
         setUser({ ...supabaseUser, ...updatedProfile, name } as UserProfile);
       } else {
         // Profile doesn't exist, check if it's a super admin to create it
