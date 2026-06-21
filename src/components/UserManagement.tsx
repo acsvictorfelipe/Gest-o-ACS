@@ -216,9 +216,13 @@ export function UserManagement({ currentUser }: { currentUser: UserProfile }) {
         color: currentUser?.role === 'Gestor' ? currentUser.color : formData.color
       };
 
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/admin/create-user', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`
+        },
         body: JSON.stringify(payload),
       });
 
@@ -295,7 +299,13 @@ export function UserManagement({ currentUser }: { currentUser: UserProfile }) {
     }
 
     try {
-      const response = await fetch(`/api/admin/delete-user/${userId}`, { method: 'DELETE' });
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`/api/admin/delete-user/${userId}`, { 
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token || ''}`
+        }
+      });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Erro ao excluir usuário');
 
