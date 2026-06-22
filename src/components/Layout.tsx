@@ -31,7 +31,6 @@ import { supabase } from '../lib/supabase';
 import { getAgeInMonths } from '../lib/dateUtils';
 import { syncService } from '../lib/syncService';
 import { motion, AnimatePresence } from 'motion/react';
-import type { UserProfile } from '../types';
 
 export function Layout({ 
   user, 
@@ -39,7 +38,7 @@ export function Layout({
   theme, 
   toggleTheme 
 }: { 
-  user: UserProfile, 
+  user: any, 
   onProfileUpdate?: () => void,
   theme: 'light' | 'dark',
   toggleTheme: () => void

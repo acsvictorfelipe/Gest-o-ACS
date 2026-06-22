@@ -1,30 +1,7 @@
 import CryptoJS from 'crypto-js';
 
-// Lê sincronamente o ID do usuário Supabase do localStorage no boot do módulo.
-// Isso evita que a chave fallback seja usada temporariamente enquanto a sessão
-// assíncrona resolve, eliminando qualquer race condition.
-function getStoredUserId(): string | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
-        const value = localStorage.getItem(key);
-        if (value) {
-          const parsed = JSON.parse(value);
-          const userId = parsed?.user?.id;
-          if (userId) return userId;
-        }
-      }
-    }
-  } catch (e) {
-    console.error('Error reading Supabase session from localStorage:', e);
-  }
-  return null;
-}
-
 class EncryptionService {
-  private key: string = getStoredUserId() || 'gestao_acs_fallback_key_2026';
+  private key: string = 'gestao_acs_fallback_key_2026';
 
   setKey(newKey: string) {
     if (newKey) {

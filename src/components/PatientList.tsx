@@ -39,13 +39,11 @@ import { UI_CONFIG } from '../constants';
 
 import { format, isSameDay } from 'date-fns';
 import { calculateAge, getAgeInMonths, getAgeNumber, VACCINE_SCHEDULE, formatDate, parseDate } from '../lib/dateUtils';
-import type { UserProfile, Patient } from '../types';
-import { normalizeCategories } from '../lib/utils';
 
-export function PatientList({ user }: { user: UserProfile }) {
+export function PatientList({ user }: { user: any }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const [patients, setPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState(searchParams.get('filter') || 'all');
@@ -127,13 +125,10 @@ export function PatientList({ user }: { user: UserProfile }) {
             .order('name', { ascending: true })
             .range(from, to);
 
-          const filterAgentId = searchParams.get('agent_id');
-
           if (user.role === 'Administrador') {
-            if (filterAgentId) query = query.eq('agent_id', filterAgentId);
+            // No filters for Admin
           } else if (user.role === 'Gestor') {
             query = query.eq('area_color', user.color);
-            if (filterAgentId) query = query.eq('agent_id', filterAgentId);
           } else {
             query = query.eq('agent_id', user.id);
           }
@@ -154,7 +149,7 @@ export function PatientList({ user }: { user: UserProfile }) {
           }
         }
         
-        setPatients(allData.map((p: any) => ({ ...p, categories: normalizeCategories(p.categories) })));
+        setPatients(allData);
       } catch (error) {
         console.error("Error fetching patients:", error);
       } finally {

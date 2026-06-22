@@ -3,9 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Download, FileText, Loader2, Users } from 'lucide-react';
 import { formatDate } from '../lib/dateUtils';
 
-import type { UserProfile } from '../types';
-
-export function ExportTool({ user }: { user: UserProfile }) {
+export function ExportTool({ user }: { user: any }) {
   const [loading, setLoading] = useState(false);
   const [exportCount, setExportCount] = useState(0);
 

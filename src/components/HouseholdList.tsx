@@ -14,11 +14,9 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
-import type { UserProfile, Household } from '../types';
-
-export function HouseholdList({ user }: { user: UserProfile }) {
+export function HouseholdList({ user }: { user: any }) {
   const navigate = useNavigate();
-  const [households, setHouseholds] = useState<Household[]>([]);
+  const [households, setHouseholds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -38,7 +36,7 @@ export function HouseholdList({ user }: { user: UserProfile }) {
         while (hasMore && allHouseholds.length < 5000) {
           let query = supabase
             .from('households')
-            .select('*, patients(id)')
+            .select('*')
             .order('created_at', { ascending: false })
             .range(from, to);
 
@@ -255,61 +253,59 @@ export function HouseholdList({ user }: { user: UserProfile }) {
             </div>
           </aside>
 
-          {/* Household List */}
+          {/* Household Cards */}
           <div className="flex-1">
-            <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {filteredHouseholds.length > 0 ? (
                 filteredHouseholds.map((h) => (
                   <div 
                     key={h.id}
                     onClick={() => navigate(`/domicilio/${h.id}`)}
-                    className="bg-bg-secondary dark:bg-slate-900 p-4 rounded-xl border border-border dark:border-slate-800 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group flex items-center justify-between"
+                    className="bg-bg-secondary dark:bg-slate-900 p-4 rounded-xl border border-border dark:border-slate-800 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between min-h-[160px]"
                   >
-                    <div className="flex flex-col">
-                      <h4 className="text-base font-bold text-text-primary dark:text-white group-hover:text-primary transition-colors line-clamp-1">
-                        {h.responsible_name}
-                      </h4>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <MapPin className="w-3.5 h-3.5 text-text-muted" />
-                        <span className="text-xs sm:text-sm text-text-secondary truncate max-w-[200px] sm:max-w-md">
-                          {h.address}, {h.number}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 sm:gap-6 shrink-0">
-                      <div className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary rounded-full">
-                        <User className="w-3.5 h-3.5" />
-                        <span className="text-xs sm:text-sm font-bold whitespace-nowrap">{h.patients?.length || 0} moradores</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <span className="text-[10px] sm:text-xs text-text-muted font-bold uppercase tracking-tight hidden lg:block w-32 truncate">
-                          CNS: {h.responsible_cns}
-                        </span>
-                        
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div className="p-2 bg-bg-primary dark:bg-slate-800 rounded-lg text-text-muted dark:text-text-secondary group-hover:bg-primary/5 group-hover:text-primary transition-colors">
+                          <Home className="w-4 h-4" />
+                        </div>
                         {(user.role === 'Administrador' || (user.role === 'Agente' && h.agent_id === user.id)) && (
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
                               setDeleteConfirm(h.id);
                             }}
-                            className="p-2 text-text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            className="p-1.5 text-text-muted hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                             title="Excluir Domicílio"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
-                        <ChevronRight className="w-5 h-5 text-text-muted group-hover:text-primary group-hover:translate-x-1 transition-all hidden sm:block" />
                       </div>
+
+                      <div>
+                        <h4 className="text-sm font-bold text-text-primary dark:text-white line-clamp-1 leading-tight group-hover:text-primary transition-colors">{h.responsible_name}</h4>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <MapPin className="w-3 h-3 text-text-muted" />
+                          <span className="text-[10px] text-text-muted font-medium truncate">
+                            {h.address}, {h.number}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-border dark:border-slate-800 flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-text-muted font-bold uppercase tracking-tight truncate max-w-[120px]">CNS: {h.responsible_cns}</span>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-text-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="py-16 text-center bg-bg-primary/50 dark:bg-slate-800/20 rounded-xl border border-dashed border-border dark:border-slate-800">
+                <div className="col-span-full py-16 text-center bg-bg-primary/50 dark:bg-slate-800/20 rounded-xl border border-dashed border-border dark:border-slate-800">
                   <div className="max-w-[240px] mx-auto space-y-2">
                     <Home className="w-6 h-6 text-text-muted dark:text-slate-700 mx-auto" />
-                    <p className="text-sm font-medium text-text-muted">Nenhum domicílio encontrado.</p>
+                    <p className="text-xs font-medium text-text-muted">Nenhum domicílio encontrado.</p>
                   </div>
                 </div>
               )}

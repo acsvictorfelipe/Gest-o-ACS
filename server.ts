@@ -54,59 +54,15 @@ async function startServer() {
     }
   );
 
-  // Middleware to require Admin or Gestor role
-  const requireAdminOrGestor = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Acesso negado: token de login ausente' });
-    }
-
-    const token = authHeader.substring(7);
-
-    try {
-      const { data: { user: authUser }, error: jwtVerifyError } = await supabaseAdmin.auth.getUser(token);
-      if (jwtVerifyError || !authUser) {
-        return res.status(401).json({ error: 'Acesso negado: sessão expirada ou inválida' });
-      }
-
-      const { data: profile } = await supabaseAdmin
-        .from('profiles')
-        .select('role, color')
-        .eq('id', authUser.id)
-        .single();
-
-      if (!profile || (profile.role !== 'Administrador' && profile.role !== 'Gestor')) {
-        return res.status(403).json({ error: 'Acesso negado: permissão insuficiente' });
-      }
-      
-      (req as any).user = { ...authUser, ...profile };
-      next();
-    } catch (error) {
-      console.error('Middleware auth error:', error);
-      return res.status(500).json({ error: 'Erro interno de autenticação' });
-    }
-  };
-
   // API Route for creating users
   console.log('Registering POST /api/admin/create-user');
-  app.post('/api/admin/create-user', requireAdminOrGestor, async (req, res) => {
+  app.post('/api/admin/create-user', async (req, res) => {
     console.log('Received request to create user:', req.body.email);
     const { email, password, name, role, color, microarea } = req.body;
-    const reqUser = (req as any).user;
 
     // Basic validation
     if (!email || !password || !name || !role) {
       return res.status(400).json({ error: 'Missing required fields' });
-    }
-    
-    // Gestor can only create Agentes in their own area color
-    if (reqUser.role === 'Gestor') {
-      if (role !== 'Agente') {
-        return res.status(403).json({ error: 'Gestores só podem criar usuários com papel de Agente' });
-      }
-      if (color !== reqUser.color) {
-        return res.status(403).json({ error: 'Gestores só podem criar usuários para sua própria equipe (mesma cor)' });
-      }
     }
 
     try {
@@ -150,17 +106,30 @@ async function startServer() {
   });
 
   // API Route for forcing profile update (migration)
-  app.post('/api/admin/force-profile-update', requireAdminOrGestor, async (req, res) => {
+  app.post('/api/admin/force-profile-update', async (req, res) => {
     const { email } = req.body;
     const targetEmail = process.env.VITE_MIGRATION_EMAIL || 'acsvictorfelipe@gmail.com';
-    const reqUser = (req as any).user;
     
     if (!email || email.toLowerCase() !== targetEmail.toLowerCase()) {
       return res.status(403).json({ error: 'Acesso negado: e-mail de destino incorreto' });
     }
 
+    // Validate Authorization header containing the Supabase user session token (JWT)
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Acesso negado: token de login ausente' });
+    }
+
+    const token = authHeader.substring(7);
+
     try {
-      if (reqUser.email?.toLowerCase() !== targetEmail.toLowerCase()) {
+      // Validate token with Supabase Authenticator
+      const { data: { user: authUser }, error: jwtVerifyError } = await supabaseAdmin.auth.getUser(token);
+      if (jwtVerifyError || !authUser) {
+        return res.status(401).json({ error: 'Acesso negado: sessão expirada ou inválida' });
+      }
+
+      if (authUser.email?.toLowerCase() !== targetEmail.toLowerCase()) {
         return res.status(403).json({ error: 'Acesso negado: seu usuário não tem permissão para esta ação' });
       }
 
@@ -209,9 +178,8 @@ async function startServer() {
   });
 
   // API Route for deleting users
-  app.delete('/api/admin/delete-user/:id', requireAdminOrGestor, async (req, res) => {
+  app.delete('/api/admin/delete-user/:id', async (req, res) => {
     const { id } = req.params;
-    const reqUser = (req as any).user;
     console.log('Received request to delete user ID:', id);
     
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -221,25 +189,6 @@ async function startServer() {
     }
 
     try {
-      // Gestor verification: can only delete users with matching area color
-      if (reqUser.role === 'Gestor') {
-        const { data: targetProfile, error: targetError } = await supabaseAdmin
-          .from('profiles')
-          .select('color, role')
-          .eq('id', id)
-          .single();
-          
-        if (targetError || !targetProfile) {
-          return res.status(404).json({ error: 'Usuário não encontrado' });
-        }
-        
-        if (targetProfile.color !== reqUser.color) {
-          return res.status(403).json({ error: 'Gestores só podem excluir usuários da sua própria equipe (mesma cor)' });
-        }
-        if (targetProfile.role === 'Gestor' || targetProfile.role === 'Administrador') {
-          return res.status(403).json({ error: 'Gestores não podem excluir outros Gestores ou Administradores' });
-        }
-      }
       // 1. Delete dependent data first to satisfy foreign key constraints
       // We check for errors and throw to ensure the process stops if something fails
       
@@ -315,6 +264,19 @@ async function startServer() {
         const fs = await import('fs');
         let template = fs.readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf-8');
         template = await vite.transformIndexHtml(url, template);
+
+        // Inject dynamic runtime properties in <head>
+        const envScript = `
+          <script>
+            window.__SUPABASE_CONFIG__ = {
+              VITE_SUPABASE_URL: ${JSON.stringify(process.env.VITE_SUPABASE_URL || '')},
+              VITE_SUPABASE_ANON_KEY: ${JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY || '')},
+              VITE_ADMIN_EMAILS: ${JSON.stringify(process.env.VITE_ADMIN_EMAILS || '')}
+            };
+          </script>
+        `;
+        template = template.replace('<head>', `<head>${envScript}`);
+
         res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
       } catch (e) {
         next(e);
@@ -323,8 +285,32 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    app.get('*', async (req, res, next) => {
+      const url = req.originalUrl;
+      // Skip API requests and static resource/file requests
+      if (url.startsWith('/api') || url.includes('.')) {
+        return next();
+      }
+      try {
+        const fs = await import('fs');
+        let template = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+
+        // Inject dynamic runtime properties in <head>
+        const envScript = `
+          <script>
+            window.__SUPABASE_CONFIG__ = {
+              VITE_SUPABASE_URL: ${JSON.stringify(process.env.VITE_SUPABASE_URL || '')},
+              VITE_SUPABASE_ANON_KEY: ${JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY || '')},
+              VITE_ADMIN_EMAILS: ${JSON.stringify(process.env.VITE_ADMIN_EMAILS || '')}
+            };
+          </script>
+        `;
+        template = template.replace('<head>', `<head>${envScript}`);
+
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e) {
+        next(e);
+      }
     });
   }
 

@@ -35,8 +35,6 @@ import {
 import { getAgeInMonths, formatDate, calculateAge } from '../lib/dateUtils';
 import { motion, AnimatePresence } from 'motion/react';
 
-import type { UserProfile, Patient, Household, Visit } from '../types';
-
 // Helper to determine indicator success color and tag
 const getIndicatorStatus = (percentage: number, target: number) => {
   if (percentage >= target) return { label: 'Meta Atingida', color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20', fill: '#10b981' };
@@ -44,13 +42,13 @@ const getIndicatorStatus = (percentage: number, target: number) => {
   return { label: 'Abaixo da Meta', color: 'text-red-500 dark:text-red-400 bg-red-500/10 border-red-500/20', fill: '#ef4444' };
 };
 
-export function UserManagement({ currentUser }: { currentUser: UserProfile }) {
+export function UserManagement({ currentUser }: { currentUser: any }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('equipe');
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [households, setHouseholds] = useState<Household[]>([]);
-  const [visits, setVisits] = useState<Visit[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [patients, setPatients] = useState<any[]>([]);
+  const [households, setHouseholds] = useState<any[]>([]);
+  const [visits, setVisits] = useState<any[]>([]);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [systemLogs, setSystemLogs] = useState<any[]>([]);
   
@@ -216,13 +214,9 @@ export function UserManagement({ currentUser }: { currentUser: UserProfile }) {
         color: currentUser?.role === 'Gestor' ? currentUser.color : formData.color
       };
 
-      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/admin/create-user', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token || ''}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
@@ -299,13 +293,7 @@ export function UserManagement({ currentUser }: { currentUser: UserProfile }) {
     }
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`/api/admin/delete-user/${userId}`, { 
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session?.access_token || ''}`
-        }
-      });
+      const response = await fetch(`/api/admin/delete-user/${userId}`, { method: 'DELETE' });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Erro ao excluir usuário');
 

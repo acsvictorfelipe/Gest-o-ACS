@@ -19,8 +19,7 @@ import {
   Heart,
   Stethoscope,
   Users,
-  Megaphone,
-  Clock
+  Megaphone
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAgeInMonths, VACCINE_SCHEDULE, formatDate, calculateAge, getAgeNumber } from '../lib/dateUtils';
@@ -34,55 +33,8 @@ import {
 import { UI_CONFIG } from '../constants';
 
 import { useDashboard } from '../hooks/useDashboard';
-import type { UserProfile } from '../types';
 
-function AdminDashboard({ user }: { user: UserProfile }) {
-  const [agents, setAgents] = React.useState<UserProfile[]>([]);
-  const navigate = useNavigate();
-
-  React.useEffect(() => {
-    async function fetchAgents() {
-      const { data } = await supabase.from('profiles').select('*').in('role', ['Agente', 'Gestor']).order('name');
-      if (data) setAgents(data);
-    }
-    fetchAgents();
-  }, []);
-
-  return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-1">
-        <h2 className="text-2xl font-bold tracking-tight text-text-primary dark:text-white">Equipe de Agentes</h2>
-        <p className="text-sm text-text-secondary font-medium tracking-tight">Selecione um agente para ver seus cadastros.</p>
-      </header>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {agents.map(agent => (
-          <div 
-            key={agent.id}
-            onClick={() => navigate(`/pacientes?filter=all&agent_id=${agent.id}`)}
-            className="bg-bg-secondary dark:bg-slate-900 p-5 rounded-2xl border border-border dark:border-slate-800 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
-          >
-            <div className="flex items-start gap-4">
-               <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-inner shrink-0" style={{ backgroundColor: agent.color || '#0d9488' }}>
-                 {agent.name.charAt(0).toUpperCase()}
-               </div>
-               <div className="flex-1 min-w-0">
-                 <h3 className="font-bold text-text-primary dark:text-white truncate group-hover:text-primary transition-colors">{agent.name}</h3>
-                 <p className="text-xs text-text-muted">{agent.role} {agent.microarea ? `- Microárea ${agent.microarea}` : ''}</p>
-                 <div className="mt-3 text-[11px] text-text-secondary flex items-center gap-1.5 font-medium bg-bg-primary/50 dark:bg-slate-800/50 p-2 rounded-lg border border-border/50">
-                   <Clock className="w-3.5 h-3.5 text-text-muted" />
-                   {agent.last_login ? new Date(agent.last_login).toLocaleString('pt-BR') : 'Nunca acessou'}
-                 </div>
-               </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export function Dashboard({ user }: { user: UserProfile }) {
+export function Dashboard({ user }: { user: any }) {
   const navigate = useNavigate();
   const {
     stats,
@@ -134,10 +86,6 @@ export function Dashboard({ user }: { user: UserProfile }) {
   const chartData = weeklyChartData;
 
   if (loading) return null;
-
-  if (user.role === 'Administrador') {
-    return <AdminDashboard user={user} />;
-  }
 
   return (
     <div className="space-y-6 relative pb-8">

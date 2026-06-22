@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { supabase } from '../lib/supabase';
-import type { UserProfile, Patient } from '../types';
 import {
   Baby,
   Calendar as CalendarIcon,
@@ -15,7 +14,6 @@ import {
 import { getAgeInMonths, VACCINE_SCHEDULE, getAgeNumber } from '../lib/dateUtils';
 import { UI_CONFIG } from '../constants';
 import { encryptionService } from '../lib/encryption';
-import { normalizeCategories } from '../lib/utils';
 
 export interface SyncItem {
   id: string;
@@ -23,7 +21,7 @@ export interface SyncItem {
   done: boolean;
 }
 
-export function useDashboard(user: UserProfile) {
+export function useDashboard(user: any) {
   const [stats, setStats] = React.useState({
     totalPatients: 0,
     totalHouseholds: 0,
@@ -52,8 +50,8 @@ export function useDashboard(user: UserProfile) {
     newAcamados: 0
   });
 
-  const [allPatients, setAllPatients] = React.useState<Patient[]>([]);
-  const [recentPatients, setRecentPatients] = React.useState<Patient[]>([]);
+  const [allPatients, setAllPatients] = React.useState<any[]>([]);
+  const [recentPatients, setRecentPatients] = React.useState<any[]>([]);
   const [weeklyChartData, setWeeklyChartData] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -153,15 +151,10 @@ export function useDashboard(user: UserProfile) {
           }
         }
 
-        const normalizedPatientsData = patientsData.map((p: any) => ({
-          ...p,
-          categories: normalizeCategories(p.categories)
-        }));
-
-        setAllPatients(normalizedPatientsData);
+        setAllPatients(patientsData);
 
         const newStats = {
-          totalPatients: normalizedPatientsData.length,
+          totalPatients: patientsData.length,
           totalHouseholds: hCount || 0,
           gestantes: 0,
           gestantesPendentes: 0,
@@ -188,7 +181,7 @@ export function useDashboard(user: UserProfile) {
           newAcamados: 0
         };
 
-        normalizedPatientsData.forEach(p => {
+        patientsData.forEach(p => {
           const clinical = p.clinical_data || {};
           const categories = p.categories || [];
 
