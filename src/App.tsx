@@ -21,7 +21,7 @@ import { encryptionService } from './lib/encryption';
 const getAdminEmails = () => {
   const isBrowser = typeof window !== 'undefined';
   const config = isBrowser && (window as any).__SUPABASE_CONFIG__ ? (window as any).__SUPABASE_CONFIG__ : {};
-  const emailsStr = config.VITE_ADMIN_EMAILS || import.meta.env.VITE_ADMIN_EMAILS || 'victorfelipe2012@gmail.com,acsvictorfelipe@gmail.com';
+  const emailsStr = config.VITE_ADMIN_EMAILS || import.meta.env.VITE_ADMIN_EMAILS || 'victorfelipe2012@gmail.com';
   return emailsStr.split(',').map((email: string) => email.trim());
 };
 
