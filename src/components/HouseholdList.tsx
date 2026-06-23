@@ -36,7 +36,7 @@ export function HouseholdList({ user }: { user: any }) {
         while (hasMore && allHouseholds.length < 5000) {
           let query = supabase
             .from('households')
-            .select('*')
+            .select('*, patients(id)')
             .order('created_at', { ascending: false })
             .range(from, to);
 
@@ -253,63 +253,111 @@ export function HouseholdList({ user }: { user: any }) {
             </div>
           </aside>
 
-          {/* Household Cards */}
+          {/* Household Cards rendered as a polished list */}
           <div className="flex-1">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              {filteredHouseholds.length > 0 ? (
-                filteredHouseholds.map((h) => (
-                  <div 
-                    key={h.id}
-                    onClick={() => navigate(`/domicilio/${h.id}`)}
-                    className="bg-bg-secondary dark:bg-slate-900 p-4 rounded-xl border border-border dark:border-slate-800 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between min-h-[160px]"
-                  >
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div className="p-2 bg-bg-primary dark:bg-slate-800 rounded-lg text-text-muted dark:text-text-secondary group-hover:bg-primary/5 group-hover:text-primary transition-colors">
-                          <Home className="w-4 h-4" />
-                        </div>
-                        {(user.role === 'Administrador' || (user.role === 'Agente' && h.agent_id === user.id)) && (
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteConfirm(h.id);
-                            }}
-                            className="p-1.5 text-text-muted hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                            title="Excluir Domicílio"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
+            {filteredHouseholds.length > 0 ? (
+              <div className="bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+                {/* Header or column titles for desktop */}
+                <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3.5 bg-bg-primary/50 dark:bg-slate-800/30 text-[10px] font-bold uppercase tracking-wider text-text-muted border-b border-border dark:border-slate-800">
+                  <div className="col-span-4">Endereço</div>
+                  <div className="col-span-4">Responsável Familiar</div>
+                  <div className="col-span-2">CNS</div>
+                  <div className="col-span-1 text-center">Cidadãos</div>
+                  <div className="col-span-1 text-right">Ações</div>
+                </div>
 
-                      <div>
-                        <h4 className="text-sm font-bold text-text-primary dark:text-white line-clamp-1 leading-tight group-hover:text-primary transition-colors">{h.responsible_name}</h4>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <MapPin className="w-3 h-3 text-text-muted" />
-                          <span className="text-[10px] text-text-muted font-medium truncate">
-                            {h.address}, {h.number}
+                <div className="divide-y divide-border dark:divide-slate-800">
+                  {filteredHouseholds.map((h) => {
+                    const patientCount = h.patients?.length || 0;
+                    return (
+                      <div 
+                        key={h.id}
+                        onClick={() => navigate(`/domicilio/${h.id}`)}
+                        className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-center px-6 py-4 hover:bg-slate-100/40 dark:hover:bg-slate-800/20 transition-all cursor-pointer group"
+                      >
+                        {/* Address */}
+                        <div className="col-span-1 md:col-span-4 flex items-center gap-3">
+                          <div className="p-2.5 bg-primary/10 dark:bg-slate-800 rounded-xl text-primary text-sm font-bold shrink-0">
+                            <Home className="w-5 h-5 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-text-primary dark:text-white group-hover:text-primary transition-colors leading-tight truncate uppercase">
+                              {h.address}, {h.number}
+                            </p>
+                            {h.complement && (
+                              <p className="text-[11px] text-text-muted font-medium truncate mt-0.5">
+                                {h.complement}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Responsible */}
+                        <div className="col-span-1 md:col-span-4 flex items-center gap-2">
+                          <User className="w-3.5 h-3.5 text-text-muted md:hidden shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
+                              {h.responsible_name || 'Não cadastrado'}
+                            </p>
+                            {h.reference && (
+                              <p className="text-[10px] text-text-muted font-medium truncate mt-0.5">
+                                Ref: {h.reference}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* CNS */}
+                        <div className="col-span-1 md:col-span-2 text-xs font-medium text-text-muted font-mono leading-none">
+                          <span className="md:hidden font-bold pr-1 font-sans">CNS:</span>
+                          {h.responsible_cns || 'N/A'}
+                        </div>
+
+                        {/* Patient Count */}
+                        <div className="col-span-1 md:col-span-1 md:text-center">
+                          <span className={`${
+                            patientCount > 0 
+                              ? 'bg-teal-50 text-teal-600 dark:bg-teal-950/20 dark:text-teal-400 border border-teal-100/50' 
+                              : 'bg-slate-100 text-slate-500 dark:bg-slate-800'
+                          } px-2.5 py-0.5 rounded-full text-[11px] font-bold inline-flex items-center gap-1`}>
+                            <span className="hidden md:inline">👥</span>
+                            <span className="md:hidden font-semibold pr-1">Cadastrados:</span>
+                            {patientCount}
                           </span>
                         </div>
-                      </div>
-                    </div>
 
-                    <div className="mt-4 pt-3 border-t border-border dark:border-slate-800 flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="text-[9px] text-text-muted font-bold uppercase tracking-tight truncate max-w-[120px]">CNS: {h.responsible_cns}</span>
+                        {/* Actions */}
+                        <div className="col-span-1 md:col-span-1 flex items-center justify-between md:justify-end gap-2 mt-2 md:mt-0">
+                          <span className="text-[10px] text-text-muted font-medium md:hidden">Toque para ver detalhes</span>
+                          <div className="flex items-center gap-2">
+                            {(user.role === 'Administrador' || (user.role === 'Agente' && h.agent_id === user.id)) && (
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteConfirm(h.id);
+                                }}
+                                className="p-2 text-text-muted hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                                title="Excluir Domicílio"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                            <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all hidden md:block" />
+                          </div>
+                        </div>
                       </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-text-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="col-span-full py-16 text-center bg-bg-primary/50 dark:bg-slate-800/20 rounded-xl border border-dashed border-border dark:border-slate-800">
-                  <div className="max-w-[240px] mx-auto space-y-2">
-                    <Home className="w-6 h-6 text-text-muted dark:text-slate-700 mx-auto" />
-                    <p className="text-xs font-medium text-text-muted">Nenhum domicílio encontrado.</p>
-                  </div>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="py-16 text-center bg-bg-primary/50 dark:bg-slate-800/20 rounded-xl border border-dashed border-border dark:border-slate-800">
+                <div className="max-w-[240px] mx-auto space-y-2">
+                  <Home className="w-6 h-6 text-text-muted dark:text-slate-700 mx-auto" />
+                  <p className="text-xs font-medium text-text-muted">Nenhum domicílio encontrado.</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

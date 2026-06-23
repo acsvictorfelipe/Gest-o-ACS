@@ -256,8 +256,11 @@ async function startServer() {
     // Explicit SPA routing fallback for development
     app.get('*', async (req, res, next) => {
       const url = req.originalUrl;
+      const cleanPath = req.path;
       // Skip API requests and static resource/file requests
-      if (url.startsWith('/api') || url.includes('.')) {
+      // A resource is considered static if it has an extension and does not end with .html
+      const isStaticAsset = path.extname(cleanPath) !== '' && !cleanPath.endsWith('.html');
+      if (cleanPath.startsWith('/api') || isStaticAsset) {
         return next();
       }
       try {
@@ -284,11 +287,14 @@ async function startServer() {
     });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, { index: false }));
     app.get('*', async (req, res, next) => {
       const url = req.originalUrl;
+      const cleanPath = req.path;
       // Skip API requests and static resource/file requests
-      if (url.startsWith('/api') || url.includes('.')) {
+      // A resource is considered static if it has an extension and does not end with .html
+      const isStaticAsset = path.extname(cleanPath) !== '' && !cleanPath.endsWith('.html');
+      if (cleanPath.startsWith('/api') || isStaticAsset) {
         return next();
       }
       try {

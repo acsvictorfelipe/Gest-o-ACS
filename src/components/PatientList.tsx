@@ -38,7 +38,7 @@ import {
 import { UI_CONFIG } from '../constants';
 
 import { format, isSameDay } from 'date-fns';
-import { calculateAge, getAgeInMonths, getAgeNumber, VACCINE_SCHEDULE, formatDate, parseDate } from '../lib/dateUtils';
+import { calculateAge, getAgeInMonths, getAgeNumber, VACCINE_SCHEDULE, formatDate, parseDate, getPatientLastVisitAt } from '../lib/dateUtils';
 
 export function PatientList({ user }: { user: any }) {
   const navigate = useNavigate();
@@ -149,6 +149,68 @@ export function PatientList({ user }: { user: any }) {
           }
         }
         
+        // HEALING LOGIC: SINCERELY UPDATE LATENCY AND RECENT VISITS
+        try {
+          let visitsDataQuery = supabase.from('visits').select('patient_id, date, type');
+          if (user.role === 'Gestor') {
+            visitsDataQuery = visitsDataQuery.eq('area_color', user.color);
+          } else if (user.role !== 'Administrador') {
+            visitsDataQuery = visitsDataQuery.eq('agent_id', user.id);
+          }
+          
+          const { data: allVisitsData } = await visitsDataQuery;
+          
+          const visitsMap: Record<string, string> = {};
+          if (allVisitsData) {
+            allVisitsData.forEach((v: any) => {
+              if (v.patient_id && v.date) {
+                const currentDate = visitsMap[v.patient_id];
+                const cleanDate = v.date.split('T')[0];
+                if (!currentDate || cleanDate > currentDate) {
+                  visitsMap[v.patient_id] = cleanDate;
+                }
+              }
+            });
+          }
+
+          allData = allData.map(p => {
+            const clinicalVisitMax = getPatientLastVisitAt({ ...p, last_visit_at: null });
+            const dbVisitMax = visitsMap[p.id] || null;
+            
+            let trueAcsVisitDateStr = p.last_visit_at ? p.last_visit_at.split('T')[0] : null;
+            
+            if (clinicalVisitMax) {
+              const cleanClinical = clinicalVisitMax.split('T')[0];
+              if (!trueAcsVisitDateStr || cleanClinical > trueAcsVisitDateStr) {
+                trueAcsVisitDateStr = cleanClinical;
+              }
+            }
+            
+            if (dbVisitMax) {
+              if (!trueAcsVisitDateStr || dbVisitMax > trueAcsVisitDateStr) {
+                trueAcsVisitDateStr = dbVisitMax;
+              }
+            }
+
+            if (trueAcsVisitDateStr && trueAcsVisitDateStr !== (p.last_visit_at ? p.last_visit_at.split('T')[0] : null)) {
+              supabase.from('patients')
+                .update({ last_visit_at: trueAcsVisitDateStr })
+                .eq('id', p.id)
+                .then(({ error }) => {
+                  if (error) console.error(`Error syncing last_visit_at for patient ${p.id}:`, error);
+                });
+
+              return {
+                ...p,
+                last_visit_at: trueAcsVisitDateStr
+              };
+            }
+            return p;
+          });
+        } catch (syncErr) {
+          console.error("Error healing patient visit dates:", syncErr);
+        }
+
         setPatients(allData);
       } catch (error) {
         console.error("Error fetching patients:", error);
@@ -171,9 +233,26 @@ export function PatientList({ user }: { user: any }) {
     };
   };
 
+  const isPatientSemDomicilio = (p: any) => {
+    if (!p.household_id) return true;
+    
+    const isResp = p.is_family_responsible;
+    const hasRespCns = p.clinical_data?.responsible_cns && p.clinical_data.responsible_cns.trim();
+    
+    if (!isResp && !hasRespCns) {
+      return true;
+    }
+    
+    if (p.cns && p.cns === p.clinical_data?.responsible_cns && !isResp) {
+      return true;
+    }
+    
+    return false;
+  };
+
   const availableStreets = Array.from(new Set(patients.map(p => {
     const addr = getPatientAddress(p);
-    return addr.address ? addr.address.trim() : '';
+    return addr.address ? addr.address.trim().toUpperCase() : '';
   }).filter(Boolean))).sort();
 
   const sortPatientsByAddressNumber = (a: any, b: any) => {
@@ -191,17 +270,19 @@ export function PatientList({ user }: { user: any }) {
   };
 
   const filteredPatients = patients.filter(p => {
+    const addr = getPatientAddress(p);
     const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         p.cns?.includes(searchTerm);
+                         p.cns?.includes(searchTerm) ||
+                         (addr.address && addr.address.toLowerCase().includes(searchTerm.toLowerCase()));
     
     if (selectedStreet) {
-      const addr = getPatientAddress(p);
-      if (addr.address !== selectedStreet) return false;
+      if ((addr.address || '').trim().toUpperCase() !== selectedStreet) return false;
     }
     
     if (activeFilter === 'date' && searchParams.get('date')) {
       const targetDate = new Date(searchParams.get('date')!);
-      const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
+      const realLastVisitStr = getPatientLastVisitAt(p);
+      const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
       if (!lastVisit) return false;
       const dueDate = new Date(lastVisit);
       dueDate.setDate(dueDate.getDate() + 30);
@@ -212,7 +293,8 @@ export function PatientList({ user }: { user: any }) {
     if (activeFilter === 'visitas_atrasadas') {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
+      const realLastVisitStr = getPatientLastVisitAt(p);
+      const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
       return matchesSearch && (!lastVisit || lastVisit < thirtyDaysAgo);
     }
 
@@ -226,7 +308,8 @@ export function PatientList({ user }: { user: any }) {
       if (p.clinical_data?.crianca?.visita6meses) return false;
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
+      const realLastVisitStr = getPatientLastVisitAt(p);
+      const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
       return matchesSearch && (!lastVisit || lastVisit < thirtyDaysAgo);
     }
 
@@ -514,7 +597,67 @@ export function PatientList({ user }: { user: any }) {
           <p className="text-sm font-medium">Carregando dados...</p>
         </div>
       ) : (
-        <div className="bg-bg-secondary rounded-3xl border border-border overflow-hidden shadow-sm shadow-slate-100">
+        <div className="space-y-4">
+          {/* Dynamic Search/Filter Stats */}
+          {(searchTerm || selectedStreet) && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-teal-50/45 dark:bg-emerald-950/10 border border-teal-100 dark:border-emerald-900/30 p-4 rounded-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center gap-2 text-teal-800 dark:text-teal-300">
+                <Search className="w-4 h-4 text-teal-600 shrink-0" />
+                <p className="text-xs font-semibold">
+                  Filtrando por: <span className="font-bold text-teal-700 dark:text-teal-400">
+                    {selectedStreet ? `Rua: ${selectedStreet}` : ''}
+                    {selectedStreet && searchTerm ? ' + ' : ''}
+                    {searchTerm ? `Termo: "${searchTerm}"` : ''}
+                  </span>
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-100 dark:border-slate-800">
+                  Resultado: {filteredPatients.length} {filteredPatients.length === 1 ? 'paciente' : 'pacientes'}
+                </span>
+                {(() => {
+                  const householdsCount = (() => {
+                    if (selectedStreet) {
+                      return Object.values(householdsMap).filter((h: any) => 
+                        (h.address || '').trim().toUpperCase() === selectedStreet
+                      ).length;
+                    }
+                    if (searchTerm) {
+                      const term = searchTerm.toLowerCase();
+                      return Object.values(householdsMap).filter((h: any) => 
+                        (h.address || '').toLowerCase().includes(term)
+                      ).length;
+                    }
+                    return 0;
+                  })();
+                  
+                  if (householdsCount === 0 && !selectedStreet) return null;
+                  
+                  return (
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#0284c7] bg-sky-50 dark:bg-sky-950/20 dark:text-sky-400 border border-sky-100 dark:border-sky-900/30 px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                      <Home className="w-3.5 h-3.5" />
+                      Domicílios: {householdsCount}
+                    </span>
+                  );
+                })()}
+                {(() => {
+                  const semDomicilioCount = filteredPatients.filter(isPatientSemDomicilio).length;
+                  return (
+                    <span className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg border flex items-center gap-1.5 ${
+                      semDomicilioCount > 0 
+                        ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/35' 
+                        : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                    }`}>
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      Sem Domicílio: {semDomicilioCount} {semDomicilioCount === 1 ? 'pessoa' : 'pessoas'}
+                    </span>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
+          <div className="bg-bg-secondary rounded-3xl border border-border overflow-hidden shadow-sm shadow-slate-100">
           {/* Desktop Table View */}
           <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -532,14 +675,15 @@ export function PatientList({ user }: { user: any }) {
                   [...filteredPatients]
                     .sort(sortPatientsByAddressNumber)
                     .map((p) => {
-                      const isAtraso = !p.last_visit_at || new Date(p.last_visit_at) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                      const realVisitAt = getPatientLastVisitAt(p);
+                      const isAtraso = !realVisitAt || new Date(realVisitAt) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
                       return (
                         <tr 
                           key={p.id} 
                           className="hover:bg-slate-50 transition-all cursor-pointer group"
                           onClick={() => navigate(`/editar-paciente/${p.id}`)}
                         >
-                          <td className="px-8 py-5">
+                          <td className={`px-8 py-5 border-l-[6px] ${isPatientSemDomicilio(p) ? 'border-l-red-500' : 'border-l-emerald-500'}`}>
                             <div>
                               <div>
                                  <div className="flex items-center gap-2 flex-wrap">
@@ -698,13 +842,16 @@ export function PatientList({ user }: { user: any }) {
                            <span className="text-[12px] font-semibold text-slate-600">{p.birth_date ? `${calculateAge(p.birth_date)}` : 'N/A'}</span>
                         </td>
                         <td className="px-8 py-5 text-center">
-                          <span className={`px-2.5 py-1 text-[10px] font-bold uppercase rounded-md border ${
-                            !isAtraso 
-                              ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
-                              : 'bg-orange-50 text-orange-600 border-orange-100'
-                          }`}>
-                            {!isAtraso ? 'Em dia' : 'Atraso'}
-                          </span>
+                          {isAtraso ? (
+                            <span 
+                              className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-500 text-white font-extrabold text-sm shadow-sm" 
+                              title="Visita em Atraso"
+                            >
+                              !
+                            </span>
+                          ) : (
+                            <span className="block w-6 h-6 mx-auto" aria-hidden="true" />
+                          )}
                         </td>
                         <td className="px-8 py-5 text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -719,24 +866,7 @@ export function PatientList({ user }: { user: any }) {
                             >
                               <CheckSquare className="w-4.5 h-4.5" />
                             </button>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (p.household_id) {
-                                  navigate(`/domicilio/${p.household_id}`);
-                                }
-                              }}
-                              className={`p-2 rounded-lg transition-all ${
-                                !p.household_id || (p.cns === p.clinical_data?.responsible_cns && !p.is_family_responsible)
-                                  ? 'text-red-600 bg-red-50 hover:bg-red-100 ring-2 ring-red-600/30' 
-                                  : p.is_family_responsible
-                                    ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100 ring-2 ring-emerald-600/30'
-                                    : 'text-text-muted hover:text-teal-600 bg-slate-50 hover:bg-teal-50 dark:bg-slate-800/40 dark:hover:bg-slate-800'
-                              }`}
-                              title={!p.household_id ? "Sem Domicílio" : p.is_family_responsible ? "Responsável Familiar" : "Membro da Família"}
-                            >
-                              <Home className={`w-4.5 h-4.5 ${(!p.household_id || (p.cns === p.clinical_data?.responsible_cns && !p.is_family_responsible)) ? 'animate-pulse' : ''}`} />
-                            </button>
+
                             <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 group-hover:text-teal-600 transition-colors">
                               <ChevronRight className="w-5 h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
                             </div>
@@ -767,13 +897,29 @@ export function PatientList({ user }: { user: any }) {
                 .map((p) => (
                 <div 
                   key={p.id} 
-                  className="p-4 space-y-3 active:bg-slate-50 transition-colors"
+                  className={`p-4 space-y-3 border-l-[6px] active:bg-slate-50 transition-colors ${
+                    isPatientSemDomicilio(p) ? 'border-l-red-500' : 'border-l-emerald-500'
+                  }`}
                   onClick={() => navigate(`/editar-paciente/${p.id}`)}
                 >
                   <div className="flex items-center justify-between">
                     <div>
                       <div>
-                        <h4 className="text-sm font-semibold text-text-primary dark:text-white leading-tight">{p.name}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-semibold text-text-primary dark:text-white leading-tight">{p.name}</h4>
+                          {(() => {
+                            const realVisitAtMobile = getPatientLastVisitAt(p);
+                            const isAtrasoMobile = !realVisitAtMobile || new Date(realVisitAtMobile) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                            return isAtrasoMobile ? (
+                              <span 
+                                className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white font-black text-[10px] shadow-sm shrink-0" 
+                                title="Visita em Atraso"
+                              >
+                                !
+                              </span>
+                            ) : null;
+                          })()}
+                        </div>
                         <div className="flex flex-col gap-1 mt-1">
                           <div className="flex items-center gap-2">
                             <p className="text-[10px] text-text-muted font-medium uppercase tracking-tight">CNS: {p.cns}</p>
@@ -828,24 +974,7 @@ export function PatientList({ user }: { user: any }) {
                       >
                         <CheckSquare className="w-4 h-4" />
                       </button>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (p.household_id) {
-                            navigate(`/domicilio/${p.household_id}`);
-                          }
-                        }}
-                        className={`p-2 rounded-lg transition-all ${
-                          !p.household_id || (p.cns === p.clinical_data?.responsible_cns && !p.is_family_responsible)
-                            ? 'text-red-600 bg-red-50 ring-2 ring-red-500/30' 
-                            : p.is_family_responsible
-                              ? 'text-emerald-600 bg-emerald-50 ring-2 ring-emerald-600/30'
-                              : 'text-teal-600 bg-teal-50'
-                        }`}
-                        title={!p.household_id ? "Sem Domicílio" : p.is_family_responsible ? "Responsável" : "Membro"}
-                      >
-                        <Home className={`w-4 h-4 ${(!p.household_id || (p.cns === p.clinical_data?.responsible_cns && !p.is_family_responsible)) ? 'animate-pulse' : ''}`} />
-                      </button>
+
                       <ChevronRight className="w-4 h-4 text-slate-300" />
                     </div>
                   </div>
@@ -919,7 +1048,7 @@ export function PatientList({ user }: { user: any }) {
                       </span>
                     )}
 
-                    {!p.last_visit_at && (
+                    {!getPatientLastVisitAt(p) && (
                       <span className="px-1.5 py-0.5 bg-red-50 text-red-600 border border-red-100 rounded text-[9px] font-semibold uppercase whitespace-nowrap">Visita Pendente</span>
                     )}
 
@@ -971,6 +1100,7 @@ export function PatientList({ user }: { user: any }) {
             )}
           </div>
         </div>
+      </div>
       )}
 
       {/* Delete Confirmation Modal */}

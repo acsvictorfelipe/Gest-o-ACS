@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import { format, subDays, startOfDay, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { getPatientLastVisitAt } from '../lib/dateUtils';
 
 interface MonitoringChartsProps {
   patients: any[];
@@ -31,8 +32,9 @@ export const MonitoringCharts: React.FC<MonitoringChartsProps> = ({ patients, st
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const date = subDays(startOfDay(new Date()), 6 - i);
       const count = patients.filter(p => {
-        if (!p.last_visit_at) return false;
-        return isSameDay(new Date(p.last_visit_at), date);
+        const realVisitAt = getPatientLastVisitAt(p);
+        if (!realVisitAt) return false;
+        return isSameDay(new Date(realVisitAt), date);
       }).length;
       
       return {

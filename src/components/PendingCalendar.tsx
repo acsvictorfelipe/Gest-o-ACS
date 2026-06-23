@@ -6,6 +6,7 @@ import { ptBR } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, User, X, MapPin, Calendar as CalendarIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UI_CONFIG, CATEGORY_PALETTE } from '../constants';
+import { getPatientLastVisitAt } from '../lib/dateUtils';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface PendingCalendarProps {
@@ -21,7 +22,8 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ patients }) =>
   
   const getPendingForDate = (date: Date) => {
     return patients.filter(p => {
-      const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
+      const realLastVisitStr = getPatientLastVisitAt(p);
+      const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
       if (!lastVisit) return false;
       
       const dueDate = new Date(lastVisit);
@@ -151,6 +153,40 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ patients }) =>
         .react-calendar__navigation {
           display: none !important;
         }
+        @media (min-width: 1024px) {
+          .react-calendar {
+            height: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          .react-calendar__viewContainer {
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          .react-calendar__month-view {
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          .react-calendar__month-view > div {
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          .react-calendar__month-view__days {
+            flex: 1 !important;
+            display: grid !important;
+            grid-template-columns: repeat(7, 1fr) !important;
+            grid-auto-rows: 1fr !important;
+          }
+          .react-calendar__tile {
+            height: 100% !important;
+            min-height: 48px !important;
+            justify-content: space-between !important;
+            padding: 4px 2px !important;
+          }
+        }
       `}</style>
       
       {/* Custom Header - Highly Compact Single Row */}
@@ -239,14 +275,19 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ patients }) =>
                 {modalPatients.map((p, idx) => (
                   <div 
                     key={idx}
-                    onClick={() => {
-                      navigate(`/pacientes?search=${p.name}`);
-                      setIsModalOpen(false);
-                    }}
-                    className="p-3 rounded-xl border border-border hover:border-teal-100 dark:hover:border-teal-900/30 hover:bg-teal-50/30 dark:hover:bg-teal-900/10 transition-all cursor-pointer group"
+                    className="p-3 rounded-xl border border-border bg-bg-secondary transition-all"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[13px] font-black text-text-primary group-hover:text-teal-600 truncate max-w-[150px]">{p.name}</span>
+                      <button
+                        onClick={() => {
+                          navigate(`/editar-paciente/${p.id}`);
+                          setIsModalOpen(false);
+                        }}
+                        className="text-[13px] font-black text-teal-600 dark:text-teal-450 hover:text-teal-700 dark:hover:text-teal-300 hover:underline transition-colors text-left truncate max-w-[190px]"
+                        title="Acessar perfil do paciente"
+                      >
+                        {p.name}
+                      </button>
                       <div className="flex gap-1">
                         {p.categories?.slice(0, 1).map((cat: string) => {
                           const categoryKey = cat.toLowerCase().includes('criança') ? 'criancas' :

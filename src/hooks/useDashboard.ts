@@ -11,9 +11,10 @@ import {
   ShieldAlert,
   Users
 } from 'lucide-react';
-import { getAgeInMonths, VACCINE_SCHEDULE, getAgeNumber } from '../lib/dateUtils';
+import { getAgeInMonths, VACCINE_SCHEDULE, getAgeNumber, getPatientLastVisitAt } from '../lib/dateUtils';
 import { UI_CONFIG } from '../constants';
 import { encryptionService } from '../lib/encryption';
+import { visitRequestService } from '../lib/visitRequests';
 
 export interface SyncItem {
   id: string;
@@ -22,6 +23,9 @@ export interface SyncItem {
 }
 
 export function useDashboard(user: any) {
+  const [visitRequests, setVisitRequests] = React.useState<any[]>([]);
+  const [requestsRefreshTrigger, setRequestsRefreshTrigger] = React.useState(0);
+
   const [stats, setStats] = React.useState({
     totalPatients: 0,
     totalHouseholds: 0,
@@ -85,8 +89,39 @@ export function useDashboard(user: any) {
     saveAgenda(dailyAgenda.filter(item => item.id !== patientId));
   };
 
-  const handleToggleAgenda = (patientId: string) => {
-    saveAgenda(dailyAgenda.map(item => item.id === patientId ? { ...item, done: !item.done } : item));
+  const handleToggleAgenda = async (patientId: string) => {
+    const item = dailyAgenda.find(i => i.id === patientId);
+    if (!item) return;
+    const nextValue = !item.done;
+
+    saveAgenda(dailyAgenda.map(it => it.id === patientId ? { ...it, done: nextValue } : it));
+
+    if (nextValue) {
+      try {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const newId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+        
+        await supabase.from('visits').insert({
+          id: newId,
+          patient_id: patientId,
+          agent_id: user.id,
+          date: todayStr,
+          type: 'Rotina',
+          summary: 'Visita de rotina registrada via roteiro diário do painel.',
+          microarea: user.microarea,
+          area_color: user.color || '#00488d'
+        });
+
+        const nowISO = new Date().toISOString();
+        await supabase.from('patients')
+          .update({ last_visit_at: nowISO })
+          .eq('id', patientId);
+
+        setAllPatients(prev => prev.map(p => p.id === patientId ? { ...p, last_visit_at: nowISO } : p));
+      } catch (err) {
+        console.error('Erro ao marcar visita concluída pelo roteiro:', err);
+      }
+    }
   };
 
   React.useEffect(() => {
@@ -151,6 +186,68 @@ export function useDashboard(user: any) {
           }
         }
 
+        // HEALING LOGIC: SINCERELY UPDATE LATENCY AND RECENT VISITS
+        try {
+          let visitsDataQuery = supabase.from('visits').select('patient_id, date, type');
+          if (user.role === 'Gestor') {
+            visitsDataQuery = visitsDataQuery.eq('area_color', user.color);
+          } else if (user.role !== 'Administrador') {
+            visitsDataQuery = visitsDataQuery.eq('agent_id', user.id);
+          }
+          
+          const { data: allVisitsData } = await visitsDataQuery;
+          
+          const visitsMap: Record<string, string> = {};
+          if (allVisitsData) {
+            allVisitsData.forEach((v: any) => {
+              if (v.patient_id && v.date) {
+                const currentDate = visitsMap[v.patient_id];
+                const cleanDate = v.date.split('T')[0];
+                if (!currentDate || cleanDate > currentDate) {
+                  visitsMap[v.patient_id] = cleanDate;
+                }
+              }
+            });
+          }
+
+          patientsData = patientsData.map(p => {
+            const clinicalVisitMax = getPatientLastVisitAt({ ...p, last_visit_at: null });
+            const dbVisitMax = visitsMap[p.id] || null;
+            
+            let trueAcsVisitDateStr = p.last_visit_at ? p.last_visit_at.split('T')[0] : null;
+            
+            if (clinicalVisitMax) {
+              const cleanClinical = clinicalVisitMax.split('T')[0];
+              if (!trueAcsVisitDateStr || cleanClinical > trueAcsVisitDateStr) {
+                trueAcsVisitDateStr = cleanClinical;
+              }
+            }
+            
+            if (dbVisitMax) {
+              if (!trueAcsVisitDateStr || dbVisitMax > trueAcsVisitDateStr) {
+                trueAcsVisitDateStr = dbVisitMax;
+              }
+            }
+
+            if (trueAcsVisitDateStr && trueAcsVisitDateStr !== (p.last_visit_at ? p.last_visit_at.split('T')[0] : null)) {
+              supabase.from('patients')
+                .update({ last_visit_at: trueAcsVisitDateStr })
+                .eq('id', p.id)
+                .then(({ error }) => {
+                  if (error) console.error(`Error syncing last_visit_at for patient ${p.id}:`, error);
+                });
+
+              return {
+                ...p,
+                last_visit_at: trueAcsVisitDateStr
+              };
+            }
+            return p;
+          });
+        } catch (syncErr) {
+          console.error("Error healing patient visit dates:", syncErr);
+        }
+
         setAllPatients(patientsData);
 
         const newStats = {
@@ -185,7 +282,8 @@ export function useDashboard(user: any) {
           const clinical = p.clinical_data || {};
           const categories = p.categories || [];
 
-          const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
+          const realLastVisitStr = getPatientLastVisitAt(p);
+          const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
           if (!lastVisit || lastVisit < thirtyDaysAgo) {
             newStats.pendingVisits++;
           }
@@ -281,7 +379,11 @@ export function useDashboard(user: any) {
         });
 
         setStats(newStats);
-        setRecentPatients(patientsData.sort((a, b) => new Date(b.last_visit_at || 0).getTime() - new Date(a.last_visit_at || 0).getTime()).slice(0, 5));
+        setRecentPatients(patientsData.sort((a, b) => {
+          const aVisit = getPatientLastVisitAt(a);
+          const bVisit = getPatientLastVisitAt(b);
+          return new Date(bVisit || 0).getTime() - new Date(aVisit || 0).getTime();
+        }).slice(0, 5));
 
         // Fetch real weekly visit data
         const sevenDaysAgo = new Date();
@@ -470,6 +572,63 @@ export function useDashboard(user: any) {
     return { backgroundColor: cat.primary, color: '#fff' };
   };
 
+  React.useEffect(() => {
+    if (!user?.id) return;
+    const loadRequests = async () => {
+      try {
+        const reqs = await visitRequestService.fetchAll();
+        const pendedAndAssigned = reqs.filter(r => r.agent_id === user.id);
+        setVisitRequests(pendedAndAssigned);
+      } catch (visErr) {
+        console.warn("Error fetching agent visit requests:", visErr);
+      }
+    };
+    loadRequests();
+  }, [user?.id, requestsRefreshTrigger]);
+
+  const handleUpdateVisitRequestStatus = async (requestId: string, status: 'pending' | 'accepted' | 'done' | 'dismissed', notes?: string) => {
+    try {
+      const ok = await visitRequestService.updateStatus(requestId, status, notes);
+      if (ok) {
+        const req = visitRequests.find(r => r.id === requestId);
+        
+        // If accepted, add to agenda immediately
+        if (status === 'accepted') {
+          if (req && req.patient_id) {
+            handleAddToAgenda(req.patient_id);
+          }
+        } else if (status === 'done') {
+          // If done, create real visit row and set last_visit_at
+          if (req && req.patient_id) {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const newId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+            
+            await supabase.from('visits').insert({
+              id: newId,
+              patient_id: req.patient_id,
+              agent_id: user.id,
+              date: todayStr,
+              type: 'Solicitada',
+              summary: notes || req.reason || 'Visita solicitada marcada como concluída.',
+              microarea: user.microarea,
+              area_color: user.color || '#00488d'
+            });
+
+            const nowISO = new Date().toISOString();
+            await supabase.from('patients')
+              .update({ last_visit_at: nowISO })
+              .eq('id', req.patient_id);
+
+            setAllPatients(prev => prev.map(p => p.id === req.patient_id ? { ...p, last_visit_at: nowISO } : p));
+          }
+        }
+        setRequestsRefreshTrigger(prev => prev + 1);
+      }
+    } catch (e) {
+      console.error('Error updating visit request status:', e);
+    }
+  };
+
   return {
     stats,
     allPatients,
@@ -483,6 +642,8 @@ export function useDashboard(user: any) {
     statCards,
     distribuicaoData,
     getCategoryStyle,
-    getAvatarStyle
+    getAvatarStyle,
+    visitRequests,
+    handleUpdateVisitRequestStatus
   };
 }

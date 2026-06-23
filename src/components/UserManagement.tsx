@@ -32,7 +32,7 @@ import {
   ArrowRight,
   Calendar
 } from 'lucide-react';
-import { getAgeInMonths, formatDate, calculateAge } from '../lib/dateUtils';
+import { getAgeInMonths, formatDate, calculateAge, getPatientLastVisitAt } from '../lib/dateUtils';
 import { motion, AnimatePresence } from 'motion/react';
 
 // Helper to determine indicator success color and tag
@@ -482,13 +482,17 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
       const thisMonthVisits = visits.filter(v => v.agent_id === agent.id && new Date(v.date).getMonth() === new Date().getMonth() && new Date(v.date).getFullYear() === new Date().getFullYear());
 
       // Late patients (last_visit_at is null or older than 30 days)
-      const lateVisits = agentPatients.filter(p => !p.last_visit_at || new Date(p.last_visit_at) < thirtyDaysAgo).length;
+      const lateVisits = agentPatients.filter(p => {
+        const realLastVisitStr = getPatientLastVisitAt(p);
+        return !realLastVisitStr || new Date(realLastVisitStr) < thirtyDaysAgo;
+      }).length;
 
       // Active alert count
       const activeAlerts = agentPatients.filter(p => {
         const ageMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 999;
         const isBaby = p.categories?.includes('Criança') && ageMonths <= 6;
-        const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
+        const realLastVisitStr = getPatientLastVisitAt(p);
+        const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
         const isLate = !lastVisit || lastVisit < thirtyDaysAgo;
         return isBaby && isLate;
       }).length;
@@ -727,7 +731,8 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
                       ? Math.round(((patients.length - patients.filter(p => {
                           const thirtyDaysAgo = new Date();
                           thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                          return !p.last_visit_at || new Date(p.last_visit_at) < thirtyDaysAgo;
+                          const realLastVisitStr = getPatientLastVisitAt(p);
+                          return !realLastVisitStr || new Date(realLastVisitStr) < thirtyDaysAgo;
                         }).length) / patients.length) * 100)
                       : 100}%
                   </h4>

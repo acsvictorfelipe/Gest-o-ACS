@@ -202,3 +202,73 @@ export const validateCNS = (cns: string): boolean => {
   return false;
 };
 
+export function getPatientLastVisitAt(p: any): string | null {
+  if (!p) return null;
+  let latestDate: Date | null = p.last_visit_at ? new Date(p.last_visit_at) : null;
+
+  const checkDate = (dStr: any) => {
+    if (!dStr) return;
+    const d = new Date(dStr);
+    if (!isNaN(d.getTime())) {
+      if (!latestDate || d > latestDate) {
+        latestDate = d;
+      }
+    }
+  };
+
+  const clinical = p.clinical_data || {};
+
+  // Check general visits (ACS visits only, general consultations are excluded)
+  if (Array.isArray(clinical.visitasGerais)) {
+    clinical.visitasGerais.forEach((v: any) => {
+      if (typeof v === 'string') checkDate(v);
+      else if (v && typeof v === 'object') checkDate(v.date);
+    });
+  }
+
+  // Check child milestones (only ACS visits are included; clinical.crianca.consultas are excluded)
+  if (clinical.crianca) {
+    if (Array.isArray(clinical.crianca.visitasAcs)) {
+      clinical.crianca.visitasAcs.forEach((d: any) => checkDate(d));
+    }
+    checkDate(clinical.crianca.visita30dias);
+    checkDate(clinical.crianca.visita6meses);
+  }
+
+  // Check gestante milestones (only ACS visits are included; clinical.gestante.consultas and puerperioConsulta are excluded)
+  if (clinical.gestante) {
+    if (Array.isArray(clinical.gestante.visitasAcs)) {
+      clinical.gestante.visitasAcs.forEach((d: any) => checkDate(d));
+    }
+    checkDate(clinical.gestante.puerperioVisita);
+  }
+
+  // Check visits under other categories (including chronic)
+  const categoriesWithDiabetesAndHypertension = ['gestante', 'acamadodomiciliado', 'adulto', 'idoso', 'chronic'];
+  categoriesWithDiabetesAndHypertension.forEach(cat => {
+    const section = clinical[cat];
+    if (section) {
+      if (Array.isArray(section.visitasAcsDiabetes)) {
+        section.visitasAcsDiabetes.forEach((d: any) => checkDate(d));
+      }
+      if (section.diabetesData) {
+        checkDate(section.diabetesData.visitaAcs1);
+        checkDate(section.diabetesData.visitaAcs2);
+      }
+      if (section.hipertensaoData) {
+        checkDate(section.hipertensaoData.visitaAcs1);
+        checkDate(section.hipertensaoData.visitaAcs2);
+      }
+    }
+  });
+
+  // Check special idoso milestones (only ACS visits are included; consultaMedicaAnualData is excluded)
+  if (clinical.idoso) {
+    checkDate(clinical.idoso.visitaAcs1);
+    checkDate(clinical.idoso.visitaAcs2);
+  }
+
+  return latestDate ? latestDate.toISOString() : null;
+}
+
+

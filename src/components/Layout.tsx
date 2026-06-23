@@ -28,7 +28,7 @@ import {
   WifiOff
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { getAgeInMonths } from '../lib/dateUtils';
+import { getAgeInMonths, getPatientLastVisitAt } from '../lib/dateUtils';
 import { syncService } from '../lib/syncService';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -95,7 +95,8 @@ export function Layout({
           if (age > 6) return false;
           // If the 6-month visit was already recorded in the clinical form, do not alert
           if (p.clinical_data?.crianca?.visita6meses) return false;
-          const lastVisit = p.last_visit_at ? new Date(p.last_visit_at) : null;
+          const realLastVisitStr = getPatientLastVisitAt(p);
+          const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
           return !lastVisit || lastVisit < thirtyDaysAgo;
         });
         setCriticalAlerts(pending);
@@ -111,13 +112,13 @@ export function Layout({
 
   const menuItems = [
     { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard, path: '/' },
-    { id: 'pacientes', label: 'Pacientes', icon: Users, path: '/pacientes' },
-    { id: 'gestantes', label: 'Gestantes', icon: Heart, path: '/pacientes?filter=gestantes' },
-    { id: 'criancas', label: 'Crianças', icon: Baby, path: '/pacientes?filter=criancas' },
-    { id: 'idosos', label: 'Idosos', icon: User, path: '/pacientes?filter=idosos' },
-    { id: 'acamados', label: 'Acamados', icon: Activity, path: '/pacientes?filter=acamados' },
-    { id: 'domicilios', label: 'Domicílios', icon: Home, path: '/domicilios' },
-  ];
+    { id: 'pacientes', label: 'Pacientes', icon: Users, path: '/pacientes', hideForAdmin: true },
+    { id: 'gestantes', label: 'Gestantes', icon: Heart, path: '/pacientes?filter=gestantes', hideForAdmin: true },
+    { id: 'criancas', label: 'Crianças', icon: Baby, path: '/pacientes?filter=criancas', hideForAdmin: true },
+    { id: 'idosos', label: 'Idosos', icon: User, path: '/pacientes?filter=idosos', hideForAdmin: true },
+    { id: 'acamados', label: 'Acamados', icon: Activity, path: '/pacientes?filter=acamados', hideForAdmin: true },
+    { id: 'domicilios', label: 'Domicílios', icon: Home, path: '/domicilios', hideForAdmin: true },
+  ].filter(item => !((user?.role === 'Administrador' || user?.role === 'Gestor') && item.hideForAdmin));
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-bg-secondary border-r border-border">
@@ -164,34 +165,51 @@ export function Layout({
           );
         })}
 
-        <div className="mt-8 mb-4 px-4 text-[11px] font-bold text-text-muted uppercase tracking-widest">Relatórios & Exportação</div>
-        <button 
-          onClick={() => navigate('/relatorios')}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
-            location.pathname === '/relatorios' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
-          }`}
-        >
-          <PieChart className={`w-5 h-5 transition-colors ${location.pathname === '/relatorios' ? 'text-primary' : 'text-text-muted group-hover:text-text-secondary'}`} />
-          <span className={`text-[14px] font-semibold ${location.pathname === '/relatorios' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Indicadores</span>
-        </button>
-        <button 
-          onClick={() => navigate('/historico')}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
-            location.pathname === '/historico' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
-          }`}
-        >
-          <History className={`w-5 h-5 transition-colors ${location.pathname === '/historico' ? 'text-primary' : 'text-text-muted group-hover:text-text-secondary'}`} />
-          <span className={`text-[14px] font-semibold ${location.pathname === '/historico' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Histórico de Visitas</span>
-        </button>
-        <button 
-          onClick={() => navigate('/exportar')}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
-            location.pathname === '/exportar' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
-          }`}
-        >
-          <FileText className={`w-5 h-5 transition-colors ${location.pathname === '/exportar' ? 'text-primary' : 'text-text-muted group-hover:text-text-secondary'}`} />
-          <span className={`text-[14px] font-semibold ${location.pathname === '/exportar' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Exportar Dados</span>
-        </button>
+        {(user?.role !== 'Administrador' && user?.role !== 'Gestor') ? (
+          <>
+            <div className="mt-8 mb-4 px-4 text-[11px] font-bold text-text-muted uppercase tracking-widest">Relatórios & Exportação</div>
+            <button 
+              onClick={() => navigate('/relatorios')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
+                location.pathname === '/relatorios' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
+              }`}
+            >
+              <PieChart className={`w-5 h-5 transition-colors ${location.pathname === '/relatorios' ? 'text-primary' : 'text-text-muted group-hover:text-text-secondary'}`} />
+              <span className={`text-[14px] font-semibold ${location.pathname === '/relatorios' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Indicadores</span>
+            </button>
+            <button 
+              onClick={() => navigate('/historico')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
+                location.pathname === '/historico' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
+              }`}
+            >
+              <History className={`w-5 h-5 transition-colors ${location.pathname === '/historico' ? 'text-primary' : 'text-text-muted group-hover:text-text-secondary'}`} />
+              <span className={`text-[14px] font-semibold ${location.pathname === '/historico' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Histórico de Visitas</span>
+            </button>
+            <button 
+              onClick={() => navigate('/exportar')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
+                location.pathname === '/exportar' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
+              }`}
+            >
+              <FileText className={`w-5 h-5 transition-colors ${location.pathname === '/exportar' ? 'text-primary' : 'text-text-muted group-hover:text-text-secondary'}`} />
+              <span className={`text-[14px] font-semibold ${location.pathname === '/exportar' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Exportar Dados</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="mt-8 mb-4 px-4 text-[11px] font-bold text-text-muted uppercase tracking-widest">Ações & Exportação</div>
+            <button 
+              onClick={() => navigate('/exportar')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
+                location.pathname === '/exportar' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
+              }`}
+            >
+              <FileText className={`w-5 h-5 transition-colors ${location.pathname === '/exportar' ? 'text-primary' : 'text-text-muted group-hover:text-text-secondary'}`} />
+              <span className={`text-[14px] font-semibold ${location.pathname === '/exportar' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Exportar Dados</span>
+            </button>
+          </>
+        )}
 
         <div className="mt-8 mb-4 px-4 text-[11px] font-bold text-text-muted uppercase tracking-widest">Configurações</div>
         {(user?.role === 'Administrador' || user?.role === 'Gestor') && (
@@ -432,12 +450,19 @@ export function Layout({
 
       {/* Premium Mobile Bottom Navigation */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 h-[68px] bg-bg-secondary/90 backdrop-blur-lg border-t border-border flex items-center justify-around px-4 pb-safe-bottom z-40 shadow-[0_-8px_24px_rgba(0,0,0,0.04)] dark:shadow-none">
-        {[
-          { id: 'dashboard', label: 'Geral', icon: LayoutDashboard, path: '/' },
-          { id: 'pacientes', label: 'Pacientes', icon: Users, path: '/pacientes' },
-          { id: 'domicilios', label: 'Casas', icon: Home, path: '/domicilios' },
-          { id: 'configuracoes', label: 'Ajustes', icon: Settings, path: '/configuracoes' }
-        ].map((item) => {
+        {(user?.role === 'Administrador'
+          ? [
+              { id: 'dashboard', label: 'Geral', icon: LayoutDashboard, path: '/' },
+              { id: 'usuarios', label: 'Painel', icon: ShieldCheck, path: '/usuarios' },
+              { id: 'configuracoes', label: 'Ajustes', icon: Settings, path: '/configuracoes' }
+            ]
+          : [
+              { id: 'dashboard', label: 'Geral', icon: LayoutDashboard, path: '/' },
+              { id: 'pacientes', label: 'Pacientes', icon: Users, path: '/pacientes' },
+              { id: 'domicilios', label: 'Casas', icon: Home, path: '/domicilios' },
+              { id: 'configuracoes', label: 'Ajustes', icon: Settings, path: '/configuracoes' }
+            ]
+        ).map((item) => {
           const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
           return (
             <button

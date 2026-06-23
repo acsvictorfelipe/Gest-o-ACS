@@ -79,6 +79,21 @@ export function CommonSections({ formData, setFormData, isReadOnly }: CommonSect
               />
             </div>
           </div>
+          <div className="space-y-4 mt-6">
+            <label className="block text-[10px] font-bold uppercase text-text-muted">Anotações Gerais</label>
+            <textarea 
+              value={formData.clinicalData?.idoso?.notes || ''}
+              onChange={e => setFormData(prev => ({
+                ...prev, 
+                clinicalData: { 
+                  ...prev.clinicalData, 
+                  idoso: { ...(prev.clinicalData?.idoso || {}), notes: e.target.value } 
+                }
+              }))}
+              className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-xl p-4 text-sm text-on-surface min-h-[100px]"
+              placeholder="Descreva observações relevantes..."
+            />
+          </div>
         </section>
       )}
     </>

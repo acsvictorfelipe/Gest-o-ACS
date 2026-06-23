@@ -13,7 +13,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { calculateAge, getAgeNumber, getAgeInMonths, vaccineLabels, formatDate, parseDate, validateCNS } from '../lib/dateUtils';
+import { calculateAge, getAgeNumber, getAgeInMonths, vaccineLabels, formatDate, parseDate, validateCNS, getPatientLastVisitAt } from '../lib/dateUtils';
 import { PersonalInfo } from './patient-form/PersonalInfo';
 import { AddressInfo } from './patient-form/AddressInfo';
 import { MedicalInfo } from './patient-form/MedicalInfo';
@@ -26,6 +26,7 @@ export function PatientForm({ user }: { user: any }) {
   const { id } = useParams();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
+  const [originalLastVisitAt, setOriginalLastVisitAt] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -250,6 +251,7 @@ export function PatientForm({ user }: { user: any }) {
         if (error) throw error;
 
         if (data) {
+          setOriginalLastVisitAt(data.last_visit_at || null);
           const hData = data.households || {};
           
           setFormData({
@@ -759,8 +761,26 @@ export function PatientForm({ user }: { user: any }) {
             address_number: formData.number,
             address_complement: formData.complement
           },
-          last_visit_at: formData.visitDate ? new Date().toISOString() : undefined
+          last_visit_at: originalLastVisitAt as any
         };
+
+        // Determine latest visit across original state/form visit and clinical data
+        let computedLastVisitAt = originalLastVisitAt;
+        if (formData.visitDate) {
+          const formVisitDate = new Date(formData.visitDate);
+          if (!isNaN(formVisitDate.getTime())) {
+            const isoVisitStr = new Date(formData.visitDate + 'T12:00:00').toISOString();
+            if (!computedLastVisitAt || new Date(isoVisitStr) > new Date(computedLastVisitAt)) {
+              computedLastVisitAt = isoVisitStr;
+            }
+          }
+        }
+        patientData.last_visit_at = computedLastVisitAt;
+
+        const latestVisitDate = getPatientLastVisitAt(patientData);
+        if (latestVisitDate) {
+          patientData.last_visit_at = latestVisitDate;
+        }
 
         await syncService.addToQueue('patients', id ? 'UPDATE' : 'INSERT', patientData);
         
@@ -876,12 +896,26 @@ export function PatientForm({ user }: { user: any }) {
           address: formData.address,
           address_number: formData.number,
           address_complement: formData.complement
-        }
+        },
+        last_visit_at: originalLastVisitAt as any
       };
 
-      // Only update last_visit_at if a visit date was provided
+      // Determine latest visit across original state/form visit and clinical data
+      let computedLastVisitAt = originalLastVisitAt;
       if (formData.visitDate) {
-        (patientData as any).last_visit_at = new Date().toISOString();
+        const formVisitDate = new Date(formData.visitDate);
+        if (!isNaN(formVisitDate.getTime())) {
+          const isoVisitStr = new Date(formData.visitDate + 'T12:00:00').toISOString();
+          if (!computedLastVisitAt || new Date(isoVisitStr) > new Date(computedLastVisitAt)) {
+            computedLastVisitAt = isoVisitStr;
+          }
+        }
+      }
+      patientData.last_visit_at = computedLastVisitAt;
+
+      const latestVisitDate = getPatientLastVisitAt(patientData);
+      if (latestVisitDate) {
+        patientData.last_visit_at = latestVisitDate;
       }
 
       let finalPatientId = id;
@@ -1135,9 +1169,12 @@ export function PatientForm({ user }: { user: any }) {
           {formData.householdId && (
             <button 
               type="button" 
-              onClick={() => setShowHouseholdDrawer(true)}
+              onClick={() => {
+                if (isDirty && !window.confirm('Há alterações não salvas. Deseja sair sem salvar para acessar o cadastro do domicílio?')) return;
+                navigate(`/domicilio/${formData.householdId}`);
+              }}
               className="p-2 text-slate-500 hover:text-primary dark:hover:text-teal-400 transition-colors bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center gap-1.5 text-xs font-semibold"
-              title="Visualizar Domicílio"
+              title="Acessar Cadastro do Domicílio"
             >
               <Home className="w-4 h-4" />
               <span className="hidden sm:inline">Ver Domicílio</span>

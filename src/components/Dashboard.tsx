@@ -22,7 +22,7 @@ import {
   Megaphone
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getAgeInMonths, VACCINE_SCHEDULE, formatDate, calculateAge, getAgeNumber } from '../lib/dateUtils';
+import { getAgeInMonths, VACCINE_SCHEDULE, formatDate, calculateAge, getAgeNumber, getPatientLastVisitAt } from '../lib/dateUtils';
 import { Badge } from './Badge';
 import { PendingCalendar } from './PendingCalendar';
 import { motion } from 'motion/react';
@@ -33,9 +33,15 @@ import {
 import { UI_CONFIG } from '../constants';
 
 import { useDashboard } from '../hooks/useDashboard';
+import { AdminDashboard } from './AdminDashboard';
 
 export function Dashboard({ user }: { user: any }) {
   const navigate = useNavigate();
+
+  if (user?.role === 'Administrador' || user?.role === 'Gestor') {
+    return <AdminDashboard user={user} />;
+  }
+
   const {
     stats,
     allPatients,
@@ -47,7 +53,9 @@ export function Dashboard({ user }: { user: any }) {
     getAvatarStyle,
     dailyAgenda,
     handleRemoveFromAgenda,
-    handleToggleAgenda
+    handleToggleAgenda,
+    visitRequests,
+    handleUpdateVisitRequestStatus
   } = useDashboard(user);
 
   const [activeCampaigns, setActiveCampaigns] = React.useState<any[]>([]);
@@ -124,6 +132,112 @@ export function Dashboard({ user }: { user: any }) {
               </div>
             </motion.div>
           ))}
+        </div>
+      )}
+
+      {/* Coordinated Visit Requests Alerts for Agents */}
+      {visitRequests && visitRequests.filter(r => r.status === 'pending' || r.status === 'accepted').length > 0 && (
+        <div className="space-y-3">
+          {visitRequests.filter(r => r.status === 'pending' || r.status === 'accepted').map((req, i) => {
+            const isPending = req.status === 'pending';
+            const priorityColors = {
+              low: 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20',
+              medium: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20',
+              high: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20',
+              urgent: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20 animate-pulse'
+            };
+
+            return (
+              <motion.div
+                key={req.id}
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className={`backdrop-blur-md border rounded-[28px] p-5 shadow-lg relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+                  req.priority === 'urgent' 
+                    ? 'bg-gradient-to-r from-red-500/15 via-pink-500/5 to-red-500/5 border-red-500/30'
+                    : req.priority === 'high' 
+                      ? 'bg-gradient-to-r from-orange-500/15 via-yellow-500/5 to-orange-500/5 border-orange-500/30'
+                      : 'bg-bg-secondary border-border'
+                }`}
+              >
+                <div className="flex gap-4 items-start flex-1 min-w-0">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner ${
+                    req.priority === 'urgent' 
+                      ? 'bg-red-500/15 text-red-600 dark:text-red-400' 
+                      : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                  }`}>
+                    <ShieldAlert className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-black bg-teal-600/15 text-teal-700 dark:text-teal-400 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        Solicitação de Visita
+                      </span>
+                      <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${priorityColors[req.priority] || priorityColors.medium}`}>
+                        Prioridade: {req.priority === 'low' ? 'Baixa' : req.priority === 'medium' ? 'Média' : req.priority === 'high' ? 'Alta' : 'URGENTE'}
+                      </span>
+                      <span className="text-[9px] text-text-muted font-bold">
+                        Enviado por {req.sender_name}
+                      </span>
+                    </div>
+
+                    <h3 className="text-sm font-black text-text-primary uppercase tracking-tight leading-snug">
+                      Paciente: {req.patient_name}
+                    </h3>
+                    
+                    <div className="p-3 bg-bg-secondary/45 border border-border/40 rounded-xl max-w-2xl">
+                      <p className="text-[12px] text-text-secondary leading-relaxed font-semibold">
+                        "{req.reason}"
+                      </p>
+                    </div>
+
+                    {req.patient_address && (
+                      <p className="text-[10px] text-text-muted font-bold uppercase truncate max-w-xl">
+                        Endereço: {req.patient_address}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 w-full sm:w-auto md:w-56 items-stretch md:items-end pt-2 md:pt-0">
+                  {isPending ? (
+                    <>
+                      <button
+                        onClick={() => handleUpdateVisitRequestStatus(req.id, 'accepted')}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-[11px] font-black shadow-md shadow-teal-600/10 active:scale-98 transition-all"
+                      >
+                        ✓ Aceitar & Incluir no Roteiro
+                      </button>
+                      <button
+                        onClick={() => {
+                          const note = prompt('Motivo da recusa/dispensa (opcional):');
+                          handleUpdateVisitRequestStatus(req.id, 'dismissed', note || '');
+                        }}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-transparent hover:bg-slate-500/10 text-text-secondary hover:text-text-primary rounded-xl text-[11px] font-black border border-border/80 transition-all"
+                      >
+                        Dispensar Alerta
+                      </button>
+                    </>
+                  ) : (
+                    <div className="space-y-2 w-full flex flex-col">
+                      <div className="bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 text-[10px] font-black uppercase tracking-wider text-center py-1.5 rounded-xl">
+                        ✓ Roteiro de Hoje Ativo
+                      </div>
+                      <button
+                        onClick={() => {
+                          const note = prompt('Relatório final / observações para o Gestor (opcional):');
+                          handleUpdateVisitRequestStatus(req.id, 'done', note || '');
+                        }}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-black shadow-md shadow-emerald-500/10 active:scale-98 transition-all"
+                      >
+                        ✓ Marcar Visita Concluída
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       )}
 
@@ -491,7 +605,8 @@ export function Dashboard({ user }: { user: any }) {
                 </div>
               ) : (
                 recentPatients.slice(0, 4).map((p, i) => {
-                  const isAtrazo = !(p.last_visit_at && new Date(p.last_visit_at) > thirtyDaysAgo);
+                  const realVisitAt = getPatientLastVisitAt(p);
+                  const isAtrazo = !(realVisitAt && new Date(realVisitAt) > thirtyDaysAgo);
                   return (
                     <div 
                       key={i} 
@@ -505,7 +620,7 @@ export function Dashboard({ user }: { user: any }) {
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
-                        <span className="text-[9px] font-bold text-text-secondary">{p.last_visit_at ? formatDate(p.last_visit_at) : '--'}</span>
+                        <span className="text-[9px] font-bold text-text-secondary">{realVisitAt ? formatDate(realVisitAt) : '--'}</span>
                         <span className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide border ${!isAtrazo ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30' : 'bg-orange-50 text-orange-600 border-orange-100 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30'}`}>
                           {!isAtrazo ? 'Em dia' : 'Atraso'}
                         </span>
