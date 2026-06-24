@@ -25,6 +25,10 @@ export function HouseholdList({ user }: { user: any }) {
 
   useEffect(() => {
     const fetchHouseholds = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
       if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
       setLoading(true);
       try {
@@ -72,7 +76,7 @@ export function HouseholdList({ user }: { user: any }) {
       }
     };
     fetchHouseholds();
-  }, [user.microarea, user.id, user.role, user.color]);
+  }, [user?.microarea, user?.id, user?.role, user?.color]);
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
@@ -137,7 +141,7 @@ export function HouseholdList({ user }: { user: any }) {
   };
 
   const streetStats = React.useMemo(() => {
-    const configStreets = (user.streets || []).slice().sort((a: string, b: string) => a.localeCompare(b));
+    const configStreets = (user?.streets || []).slice().sort((a: string, b: string) => a.localeCompare(b));
     
     const stats: Record<string, number> = {};
     // Initialize stats with config streets
@@ -158,7 +162,7 @@ export function HouseholdList({ user }: { user: any }) {
     });
     
     return Object.entries(stats);
-  }, [households, user.streets]);
+  }, [households, user?.streets]);
 
   const filteredHouseholds = households.filter(h => {
     const matchesSearch = h.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -171,7 +175,7 @@ export function HouseholdList({ user }: { user: any }) {
     const hStreet = h.address?.trim().toUpperCase();
     
     // Check if the street is in the configuration list
-    const configStreets = (user.streets || []).map((s: string) => s.trim().toUpperCase());
+    const configStreets = (user?.streets || []).map((s: string) => s.trim().toUpperCase());
     const isInConfig = configStreets.includes(hStreet || '');
     
     const matchesStreet = !selectedStreet || hStreet === selectedStreet.trim().toUpperCase();

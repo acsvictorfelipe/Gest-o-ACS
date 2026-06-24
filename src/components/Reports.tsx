@@ -33,6 +33,10 @@ export function Reports({ user }: { user: any }) {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
       if (!user.microarea && user.role !== 'Administrador') return;
       setLoading(true);
       try {
@@ -103,12 +107,16 @@ export function Reports({ user }: { user: any }) {
       }
     };
     fetchData();
-  }, [user.microarea, user.id, user.role, user.color]);
+  }, [user?.microarea, user?.id, user?.role, user?.color]);
 
   useEffect(() => {
     if (categoryFilter !== 'Produção Mensal') return;
     
     const fetchVisitsForMonth = async () => {
+      if (!user) {
+        setFetchingVisits(false);
+        return;
+      }
       setFetchingVisits(true);
       try {
         let allVisits: any[] = [];
@@ -176,7 +184,7 @@ export function Reports({ user }: { user: any }) {
     };
     
     fetchVisitsForMonth();
-  }, [categoryFilter, selectedMonth, selectedYear, user.id, user.role, user.color]);
+  }, [categoryFilter, selectedMonth, selectedYear, user?.id, user?.role, user?.color]);
 
   const filteredPatients = patients.filter(p => {
     const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || p.cns?.includes(searchTerm);

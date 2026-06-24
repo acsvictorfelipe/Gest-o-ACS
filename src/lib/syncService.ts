@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
 import { encryptionService } from './encryption';
+import { generateUUID } from './utils';
+import { safeStorage } from './safeStorage';
 
 interface SyncItem {
   id: string;
@@ -69,7 +71,7 @@ class SyncService {
   }
 
   private getQueue(): SyncItem[] {
-    const queue = localStorage.getItem(this.queueKey);
+    const queue = safeStorage.getItem(this.queueKey);
     if (!queue) return [];
     try {
       const decoded = this.deobfuscate(queue);
@@ -87,14 +89,14 @@ class SyncService {
   private saveQueue(queue: SyncItem[]) {
     const serialized = JSON.stringify(queue);
     const obfuscated = this.obfuscate(serialized);
-    localStorage.setItem(this.queueKey, obfuscated);
+    safeStorage.setItem(this.queueKey, obfuscated);
     this.notifyListeners();
   }
 
   async addToQueue(table: string, action: 'INSERT' | 'UPDATE' | 'DELETE', data: any) {
     const queue = this.getQueue();
     const newItem: SyncItem = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       table,
       action,
       data,

@@ -36,6 +36,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { UI_CONFIG } from '../constants';
+import { safeStorage } from '../lib/safeStorage';
 
 import { format, isSameDay } from 'date-fns';
 import { calculateAge, getAgeInMonths, getAgeNumber, VACCINE_SCHEDULE, formatDate, parseDate, getPatientLastVisitAt } from '../lib/dateUtils';
@@ -54,7 +55,7 @@ export function PatientList({ user }: { user: any }) {
   const [dailyAgenda, setDailyAgenda] = useState<any[]>([]);
 
   useEffect(() => {
-    const saved = localStorage.getItem('gestao_acs_daily_agenda');
+    const saved = safeStorage.getItem('gestao_acs_daily_agenda');
     if (saved) {
       try {
         const decrypted = encryptionService.decrypt(saved);
@@ -77,7 +78,7 @@ export function PatientList({ user }: { user: any }) {
     setDailyAgenda(newAgenda);
     const serialized = JSON.stringify(newAgenda);
     const encrypted = encryptionService.encrypt(serialized);
-    localStorage.setItem('gestao_acs_daily_agenda', encrypted);
+    safeStorage.setItem('gestao_acs_daily_agenda', encrypted);
   };
 
   useEffect(() => {
@@ -93,6 +94,10 @@ export function PatientList({ user }: { user: any }) {
 
   useEffect(() => {
     const fetchPatients = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
       if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
       setLoading(true);
       try {
@@ -219,7 +224,7 @@ export function PatientList({ user }: { user: any }) {
       }
     };
     fetchPatients();
-  }, [user.microarea, user.id, user.role, user.color]);
+  }, [user?.microarea, user?.id, user?.role, user?.color]);
 
   const getPatientAddress = (p: any) => {
     if (p.household_id && householdsMap[p.household_id]) {

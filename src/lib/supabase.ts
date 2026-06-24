@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { safeStorage } from './safeStorage';
 
 const getSupabaseConfig = () => {
   const isBrowser = typeof window !== 'undefined';
@@ -17,6 +18,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(
-  supabaseUrl,
-  supabaseAnonKey
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-key',
+  {
+    auth: {
+      storage: safeStorage,
+      persistSession: true,
+      detectSessionInUrl: true
+    }
+  }
 );

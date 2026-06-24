@@ -79,27 +79,32 @@ export function Layout({
   React.useEffect(() => {
     const fetchAlerts = async () => {
       if (!user) return;
-      let alertQuery = supabase.from('patients').select('*');
-      if (user.role === 'Gestor') {
-        alertQuery = alertQuery.eq('area_color', user.color);
-      } else if (user.role !== 'Administrador') {
-        alertQuery = alertQuery.eq('agent_id', user.id);
-      }
-      const { data } = await alertQuery;
-      if (data) {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const pending = data.filter(p => {
-          if (!p.categories?.includes('Criança') || !p.birth_date) return false;
-          const age = getAgeInMonths(p.birth_date);
-          if (age > 6) return false;
-          // If the 6-month visit was already recorded in the clinical form, do not alert
-          if (p.clinical_data?.crianca?.visita6meses) return false;
-          const realLastVisitStr = getPatientLastVisitAt(p);
-          const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
-          return !lastVisit || lastVisit < thirtyDaysAgo;
-        });
-        setCriticalAlerts(pending);
+      try {
+        let alertQuery = supabase.from('patients').select('*');
+        if (user.role === 'Gestor') {
+          alertQuery = alertQuery.eq('area_color', user.color);
+        } else if (user.role !== 'Administrador') {
+          alertQuery = alertQuery.eq('agent_id', user.id);
+        }
+        const { data, error } = await alertQuery;
+        if (error) throw error;
+        if (data) {
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          const pending = data.filter(p => {
+            if (!p.categories?.includes('Criança') || !p.birth_date) return false;
+            const age = getAgeInMonths(p.birth_date);
+            if (age > 6) return false;
+            // If the 6-month visit was already recorded in the clinical form, do not alert
+            if (p.clinical_data?.crianca?.visita6meses) return false;
+            const realLastVisitStr = getPatientLastVisitAt(p);
+            const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
+            return !lastVisit || lastVisit < thirtyDaysAgo;
+          });
+          setCriticalAlerts(pending);
+        }
+      } catch (err) {
+        console.warn('Silent fallback for patients fetch in layout (missing/unconfigured Supabase keys):', err);
       }
     };
     fetchAlerts();

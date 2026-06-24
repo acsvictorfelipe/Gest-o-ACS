@@ -62,6 +62,10 @@ export function VisitHistory({ user }: { user: any }) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const fetchVisits = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     if (!user.microarea && user.role !== 'Administrador') return;
     setLoading(true);
     try {
@@ -110,7 +114,7 @@ export function VisitHistory({ user }: { user: any }) {
 
   useEffect(() => {
     fetchVisits();
-  }, [user.id, user.role, user.color, user.microarea, period]);
+  }, [user?.id, user?.role, user?.color, user?.microarea, period]);
 
   const handleOpenEdit = (v: any) => {
     setEditingVisit(v);

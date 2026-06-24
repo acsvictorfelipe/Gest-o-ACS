@@ -15,6 +15,7 @@ import { VisitHistory } from './components/VisitHistory';
 import { ExportTool } from './components/ExportTool';
 import { syncService } from './lib/syncService';
 import { encryptionService } from './lib/encryption';
+import { safeStorage } from './lib/safeStorage';
 
 // NOTE: In production, replace this with an env var or Supabase RLS policy.
 // Never rely solely on client-side role checks for access control.
@@ -32,16 +33,23 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    const saved = localStorage.getItem('theme');
+    const saved = safeStorage.getItem('theme');
     if (saved === 'light' || saved === 'dark') return saved;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    try {
+      if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+    } catch (e) {
+      console.warn('Failed to access matchMedia:', e);
+    }
+    return 'light';
   });
 
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
-    localStorage.setItem('theme', theme);
+    safeStorage.setItem('theme', theme);
   }, [theme]);
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
@@ -54,6 +62,9 @@ export default function App() {
       } else {
         setLoading(false);
       }
+    }).catch(err => {
+      console.warn('Silent fallback for missing/unconfigured Supabase keys:', err);
+      setLoading(false);
     });
 
     // 2. Listen for auth changes

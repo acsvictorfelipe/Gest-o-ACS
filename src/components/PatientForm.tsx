@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { syncService } from '../lib/syncService';
+import { generateUUID } from '../lib/utils';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { 
   X, 
@@ -703,7 +704,7 @@ export function PatientForm({ user }: { user: any }) {
         const existingHouseholdId = formData.householdId;
         // Only generate a new household ID if both CNS and Address are present
         if (targetCns && formData.address && !existingHouseholdId) {
-          householdId = crypto.randomUUID();
+          householdId = generateUUID();
           const householdData = {
             id: householdId,
             address: formData.address,
@@ -740,7 +741,7 @@ export function PatientForm({ user }: { user: any }) {
         }
 
         const patientData = {
-          id: id || crypto.randomUUID(),
+          id: id || generateUUID(),
           name: formData.name,
           cns: formData.cns,
           is_family_responsible: formData.isFamilyResponsible,
@@ -786,7 +787,7 @@ export function PatientForm({ user }: { user: any }) {
         
         if (formData.visitDate) {
           await syncService.addToQueue('visits', 'INSERT', {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             patient_id: patientData.id,
             agent_id: user.id,
             date: formData.visitDate,

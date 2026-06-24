@@ -12,9 +12,11 @@ import {
   Users
 } from 'lucide-react';
 import { getAgeInMonths, VACCINE_SCHEDULE, getAgeNumber, getPatientLastVisitAt } from '../lib/dateUtils';
+import { generateUUID } from '../lib/utils';
 import { UI_CONFIG } from '../constants';
 import { encryptionService } from '../lib/encryption';
 import { visitRequestService } from '../lib/visitRequests';
+import { safeStorage } from '../lib/safeStorage';
 
 export interface SyncItem {
   id: string;
@@ -61,7 +63,7 @@ export function useDashboard(user: any) {
 
   // Roteiro do Dia (Checklist de visitas planejadas para hoje)
   const [dailyAgenda, setDailyAgenda] = React.useState<SyncItem[]>(() => {
-    const saved = localStorage.getItem('gestao_acs_daily_agenda');
+    const saved = safeStorage.getItem('gestao_acs_daily_agenda');
     if (!saved) return [];
     const decrypted = encryptionService.decrypt(saved);
     try {
@@ -75,7 +77,7 @@ export function useDashboard(user: any) {
     setDailyAgenda(newAgenda);
     const serialized = JSON.stringify(newAgenda);
     const encrypted = encryptionService.encrypt(serialized);
-    localStorage.setItem('gestao_acs_daily_agenda', encrypted);
+    safeStorage.setItem('gestao_acs_daily_agenda', encrypted);
   };
 
   const handleAddToAgenda = (patientId: string) => {
@@ -99,7 +101,7 @@ export function useDashboard(user: any) {
     if (nextValue) {
       try {
         const todayStr = new Date().toISOString().split('T')[0];
-        const newId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+        const newId = generateUUID();
         
         await supabase.from('visits').insert({
           id: newId,
@@ -126,6 +128,10 @@ export function useDashboard(user: any) {
 
   React.useEffect(() => {
     const fetchData = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
       if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') {
         setLoading(false);
         return;
@@ -601,7 +607,7 @@ export function useDashboard(user: any) {
           // If done, create real visit row and set last_visit_at
           if (req && req.patient_id) {
             const todayStr = new Date().toISOString().split('T')[0];
-            const newId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+            const newId = generateUUID();
             
             await supabase.from('visits').insert({
               id: newId,

@@ -1,4 +1,6 @@
 import { supabase } from './supabase';
+import { generateUUID } from './utils';
+import { safeStorage } from './safeStorage';
 
 export interface VisitRequest {
   id: string;
@@ -21,7 +23,7 @@ const LOCAL_STORAGE_KEY = 'gestao_acs_visit_requests';
 // Get local requests fallback
 const getLocalRequests = (): VisitRequest[] => {
   try {
-    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    const saved = safeStorage.getItem(LOCAL_STORAGE_KEY);
     return saved ? JSON.parse(saved) : [];
   } catch (e) {
     console.error('Error parsing local visit requests:', e);
@@ -32,7 +34,7 @@ const getLocalRequests = (): VisitRequest[] => {
 // Save local requests fallback
 const saveLocalRequests = (requests: VisitRequest[]) => {
   try {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(requests));
+    safeStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(requests));
   } catch (e) {
     console.error('Error saving local visit requests:', e);
   }
@@ -63,7 +65,7 @@ export const visitRequestService = {
   async create(request: Omit<VisitRequest, 'id' | 'created_at' | 'status'>): Promise<VisitRequest> {
     const newRequest: VisitRequest = {
       ...request,
-      id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2),
+      id: generateUUID(),
       status: 'pending',
       created_at: new Date().toISOString()
     };
