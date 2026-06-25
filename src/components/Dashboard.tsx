@@ -34,8 +34,9 @@ import { UI_CONFIG } from '../constants';
 
 import { useDashboard } from '../hooks/useDashboard';
 import { AdminDashboard } from './AdminDashboard';
+import { AppUser } from '../types';
 
-export function Dashboard({ user }: { user: any }) {
+export function Dashboard({ user }: { user: AppUser | null }) {
   const navigate = useNavigate();
 
   if (user?.role === 'Administrador' || user?.role === 'Gestor') {
@@ -469,7 +470,7 @@ export function Dashboard({ user }: { user: any }) {
                     </h5>
                     <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Acompanhamento até 6m</p>
                   </div>
-                  <Badge variant={stats.childVisitAlerts > 0 ? 'error' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0">
+                  <Badge variant={stats.childVisitAlerts > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0">
                     {stats.childVisitAlerts > 0 ? 'PENDENTE' : 'EM DIA'}
                   </Badge>
                 </div>
@@ -521,7 +522,7 @@ export function Dashboard({ user }: { user: any }) {
                     </h5>
                     <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Crianças menores de 2 anos</p>
                   </div>
-                  <Badge variant={stats.lateVaccines > 0 ? 'error' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0">
+                  <Badge variant={stats.lateVaccines > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0">
                     {stats.lateVaccines > 0 ? 'ATRASO' : 'COMPLETO'}
                   </Badge>
                 </div>

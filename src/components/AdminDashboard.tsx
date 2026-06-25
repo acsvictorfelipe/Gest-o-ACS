@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, fetchAllRows } from '../lib/supabase';
 import {
   Users,
   MapPin,
@@ -81,40 +81,11 @@ export function AdminDashboard({ user }: { user: any }) {
       }
       setProfiles(loadedProfiles);
 
-      // Helper function to paginate tables safely
-      const fetchAllTableData = async (tableName: string) => {
-        let allRows: any[] = [];
-        let from = 0;
-        let to = 999;
-        let hasMore = true;
-        
-        while (hasMore) {
-          const { data, error } = await supabase
-            .from(tableName)
-            .select('*')
-            .range(from, to);
-          
-          if (error) throw error;
-          if (data && data.length > 0) {
-            allRows = [...allRows, ...data];
-            if (data.length < 1000) {
-              hasMore = false;
-            } else {
-              from += 1000;
-              to += 1000;
-            }
-          } else {
-            hasMore = false;
-          }
-        }
-        return allRows;
-      };
-
       // 2. Fetch Patients, Households, and Visits
       const [allPats, allHouses, allVis] = await Promise.all([
-        fetchAllTableData('patients'),
-        fetchAllTableData('households'),
-        fetchAllTableData('visits')
+        fetchAllRows<any>('patients'),
+        fetchAllRows<any>('households'),
+        fetchAllRows<any>('visits')
       ]);
 
       let filteredPats = allPats;

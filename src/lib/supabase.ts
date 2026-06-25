@@ -28,3 +28,96 @@ export const supabase = createClient(
     }
   }
 );
+
+export async function fetchAllRows<T>(
+  tableName: string,
+  options?: {
+    select?: string;
+    orderBy?: { column: string; ascending?: boolean };
+    limit?: number;
+  }
+): Promise<T[]> {
+  const selectQuery = options?.select || '*';
+  let allData: T[] = [];
+  let hasMore = true;
+  let page = 0;
+  const pageSize = 1000;
+
+  while (hasMore && allData.length < (options?.limit || 10000)) {
+    let query = supabase
+      .from(tableName)
+      .select(selectQuery)
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+
+    if (options?.orderBy) {
+      query = query.order(options.orderBy.column, { ascending: options.orderBy.ascending ?? true });
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error(`Error fetching all rows from ${tableName}:`, error);
+      throw error;
+    }
+
+    if (data && data.length > 0) {
+      allData = [...allData, ...(data as unknown as T[])];
+      if (data.length < pageSize) {
+        hasMore = false;
+      } else {
+        page++;
+      }
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return allData;
+}
+
+export async function fetchTableWithFilters<T>(
+  tableName: string,
+  user: any,
+  options?: { select?: string }
+): Promise<T[]> {
+  const selectQuery = options?.select || '*';
+  let allData: T[] = [];
+  let hasMore = true;
+  let page = 0;
+  const pageSize = 1000;
+
+  while (hasMore && allData.length < 10000) {
+    let query = supabase
+      .from(tableName)
+      .select(selectQuery)
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+
+    if (user) {
+      if (user.role === 'Administrador' || user.role === 'admin') {
+        // No filter
+      } else if (user.role === 'Gestor') {
+        query = query.eq('area_color', user.color);
+      } else {
+        query = query.eq('agent_id', user.id);
+      }
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error(`Error fetching table ${tableName} with filters:`, error);
+      throw error;
+    }
+
+    if (data && data.length > 0) {
+      allData = [...allData, ...(data as unknown as T[])];
+      if (data.length < pageSize) {
+        hasMore = false;
+      } else {
+        page++;
+      }
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return allData;
+}

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase, fetchTableWithFilters } from '../lib/supabase';
 import { logActivity } from '../lib/auditLogger';
+import { AppUser, UserProfile, Patient, Household, Visit, Campaign, SystemLog } from '../types';
 import { 
   UserPlus, 
   Trash2, 
@@ -34,6 +35,8 @@ import {
 } from 'lucide-react';
 import { getAgeInMonths, formatDate, calculateAge, getPatientLastVisitAt } from '../lib/dateUtils';
 import { motion, AnimatePresence } from 'motion/react';
+import { EquipeTab } from './user-management/EquipeTab';
+import { PrevineTab } from './user-management/PrevineTab';
 
 // Helper to determine indicator success color and tag
 const getIndicatorStatus = (percentage: number, target: number) => {
@@ -42,15 +45,15 @@ const getIndicatorStatus = (percentage: number, target: number) => {
   return { label: 'Abaixo da Meta', color: 'text-red-500 dark:text-red-400 bg-red-500/10 border-red-500/20', fill: '#ef4444' };
 };
 
-export function UserManagement({ currentUser }: { currentUser: any }) {
+export function UserManagement({ currentUser }: { currentUser: AppUser | null }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('equipe');
-  const [users, setUsers] = useState<any[]>([]);
-  const [patients, setPatients] = useState<any[]>([]);
-  const [households, setHouseholds] = useState<any[]>([]);
-  const [visits, setVisits] = useState<any[]>([]);
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [systemLogs, setSystemLogs] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [households, setHouseholds] = useState<Household[]>([]);
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -65,7 +68,7 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
     color: currentUser?.role === 'Gestor' ? currentUser.color : '#0d9488',
     microarea: ''
   });
-  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [editFormData, setEditFormData] = useState({
     name: '',
     role: '',
@@ -103,42 +106,6 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Helper function to fetch all rows paginated in chunks of 1000
-      const fetchAllFromTable = async (
-        tableName: string,
-        orderCol?: string,
-        ascending = false,
-        areaColorFilter?: string
-      ) => {
-        let allData: any[] = [];
-        let from = 0;
-        let to = 999;
-        let hasMore = true;
-        while (hasMore) {
-          let query = supabase.from(tableName).select('*').range(from, to);
-          if (areaColorFilter) {
-            query = query.eq('area_color', areaColorFilter);
-          }
-          if (orderCol) {
-            query = query.order(orderCol, { ascending });
-          }
-          const { data, error } = await query;
-          if (error) throw error;
-          if (data && data.length > 0) {
-            allData = [...allData, ...data];
-            if (data.length < 1000) {
-              hasMore = false;
-            } else {
-              from += 1000;
-              to += 1000;
-            }
-          } else {
-            hasMore = false;
-          }
-        }
-        return allData;
-      };
-
       // 1. Fetch profiles
       const { data: pData } = await supabase.from('profiles').select('*').order('name');
       let loadedUsers = pData || [];
@@ -147,18 +114,16 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
       }
       setUsers(loadedUsers);
 
-      const areaColorFilter = currentUser?.role === 'Gestor' ? currentUser.color : undefined;
-
       // 2. Fetch all patients
-      const loadedPatients = await fetchAllFromTable('patients', undefined, false, areaColorFilter);
+      const loadedPatients = await fetchTableWithFilters<Patient>('patients', currentUser);
       setPatients(loadedPatients);
 
       // 3. Fetch all households
-      const loadedHouseholds = await fetchAllFromTable('households', undefined, false, areaColorFilter);
+      const loadedHouseholds = await fetchTableWithFilters<Household>('households', currentUser);
       setHouseholds(loadedHouseholds);
 
       // 4. Fetch all visits
-      const loadedVisits = await fetchAllFromTable('visits', 'date', false, areaColorFilter);
+      const loadedVisits = await fetchTableWithFilters<Visit>('visits', currentUser);
       setVisits(loadedVisits);
 
       // 5. Fetch campaigns (try-catch in case table not yet created)
@@ -214,9 +179,16 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
         color: currentUser?.role === 'Gestor' ? currentUser.color : formData.color
       };
 
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch('/api/admin/create-user', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(payload),
       });
 
@@ -293,7 +265,17 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
     }
 
     try {
-      const response = await fetch(`/api/admin/delete-user/${userId}`, { method: 'DELETE' });
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`/api/admin/delete-user/${userId}`, { 
+        method: 'DELETE',
+        headers
+      });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Erro ao excluir usuário');
 
@@ -684,179 +666,12 @@ export function UserManagement({ currentUser }: { currentUser: any }) {
       <div className="min-h-[400px]">
         {/* ABA 1: ACS & EQUIPE */}
         {activeTab === 'equipe' && (
-          <div className="space-y-6">
-            {/* Quick stats grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-bg-secondary border border-border p-4 rounded-3xl flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0">
-                  <Users className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="text-[20px] font-black text-text-primary leading-none">{users.filter(u => u.role === 'Agente').length}</h4>
-                  <p className="text-[9px] text-text-muted font-black uppercase mt-1 tracking-wider">Agentes Ativos</p>
-                </div>
-              </div>
-
-              <div className="bg-bg-secondary border border-border p-4 rounded-3xl flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
-                  <User className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="text-[20px] font-black text-text-primary leading-none">{patients.length}</h4>
-                  <p className="text-[9px] text-text-muted font-black uppercase mt-1 tracking-wider">Cidadãos Totais</p>
-                </div>
-              </div>
-
-              <div className="bg-bg-secondary border border-border p-4 rounded-3xl flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-                  <Activity className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="text-[20px] font-black text-text-primary leading-none">
-                    {users.filter(u => u.role === 'Agente').length > 0 
-                      ? Math.round(patients.length / users.filter(u => u.role === 'Agente').length)
-                      : 0}
-                  </h4>
-                  <p className="text-[9px] text-text-muted font-black uppercase mt-1 tracking-wider">Pacientes / Agente</p>
-                </div>
-              </div>
-
-              <div className="bg-bg-secondary border border-border p-4 rounded-3xl flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-                  <TrendingUp className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="text-[20px] font-black text-text-primary leading-none">
-                    {patients.length > 0 
-                      ? Math.round(((patients.length - patients.filter(p => {
-                          const thirtyDaysAgo = new Date();
-                          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                          const realLastVisitStr = getPatientLastVisitAt(p);
-                          return !realLastVisitStr || new Date(realLastVisitStr) < thirtyDaysAgo;
-                        }).length) / patients.length) * 100)
-                      : 100}%
-                  </h4>
-                  <p className="text-[9px] text-text-muted font-black uppercase mt-1 tracking-wider">Eficiência de Cobertura</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Performance Table */}
-            <div className="bg-bg-secondary border border-border rounded-3xl p-5 shadow-sm">
-              <h3 className="text-xs font-black text-text-primary uppercase tracking-wider mb-4">Relatório de Produtividade dos Agentes</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-border/60 text-[9px] text-text-muted font-black uppercase tracking-wider">
-                      <th className="pb-3 pl-2">Agente</th>
-                      <th className="pb-3 text-center">Microárea</th>
-                      <th className="pb-3 text-center">Domicílios</th>
-                      <th className="pb-3 text-center">Cidadãos</th>
-                      <th className="pb-3 text-center">Visitas (Mês)</th>
-                      <th className="pb-3 text-center">Atrasados (+30d)</th>
-                      <th className="pb-3 text-right pr-2">Cobertura Ativa</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/40">
-                    {acsPerformance.map((agent, i) => (
-                      <tr key={agent.id} className="hover:bg-bg-primary/20 transition-colors text-[12px] font-semibold text-text-secondary">
-                        <td className="py-3.5 pl-2 flex items-center gap-2.5">
-                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: agent.color }} />
-                          <span className="font-bold text-text-primary uppercase tracking-tight">{agent.name}</span>
-                        </td>
-                        <td className="py-3.5 text-center font-bold">{agent.microarea || '--'}</td>
-                        <td className="py-3.5 text-center font-black text-text-primary">{agent.totalDomicilios}</td>
-                        <td className="py-3.5 text-center font-black text-text-primary">{agent.totalCidadaos}</td>
-                        <td className="py-3.5 text-center font-black text-teal-600 dark:text-teal-400">{agent.visitsThisMonth}</td>
-                        <td className="py-3.5 text-center font-bold text-red-500">{agent.lateVisits}</td>
-                        <td className="py-3.5 text-right pr-2">
-                          <div className="flex items-center justify-end gap-2">
-                            <span className={`text-[10px] font-extrabold ${agent.coverageRatio >= 80 ? 'text-emerald-600' : agent.coverageRatio >= 60 ? 'text-amber-500' : 'text-red-500'}`}>{agent.coverageRatio}%</span>
-                            <div className="w-16 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shrink-0">
-                              <div className={`h-full rounded-full ${agent.coverageRatio >= 80 ? 'bg-emerald-500' : agent.coverageRatio >= 60 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${agent.coverageRatio}%` }} />
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {acsPerformance.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className="text-center py-10 font-bold text-text-muted">Nenhum agente cadastrado no sistema.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          <EquipeTab users={users} patients={patients} acsPerformance={acsPerformance} />
         )}
 
         {/* ABA 2: PREVINE BRASIL */}
         {activeTab === 'previne' && (
-          <div className="space-y-6">
-            <div className="bg-gradient-to-r from-teal-500/10 to-indigo-500/10 p-5 rounded-3xl border border-teal-500/10 flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-teal-500/20 text-teal-600 flex items-center justify-center shrink-0">
-                  <Award className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Monitor Previne Brasil</h3>
-                  <p className="text-[10px] text-text-secondary font-medium">Indicadores calculados em tempo real de acordo com as fichas de atendimento.</p>
-                </div>
-              </div>
-              <span className="text-[9px] font-extrabold bg-teal-600 text-white px-3 py-1 rounded-full uppercase tracking-wider">Metas do Quadrimestre</span>
-            </div>
-
-            {/* Indicators Ring Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {Object.keys(previneBrasilStats).map((key) => {
-                const item = (previneBrasilStats as any)[key];
-                const status = getIndicatorStatus(item.pct, item.target);
-                const strokeDash = 2 * Math.PI * 34; // Radius is 34
-                const strokeOffset = strokeDash - (item.pct / 100) * strokeDash;
-
-                return (
-                  <div key={key} className="bg-bg-secondary border border-border rounded-3xl p-5 flex items-start gap-5 shadow-sm hover:shadow-md transition-shadow">
-                    {/* Ring SVG container */}
-                    <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
-                      <svg className="w-full h-full transform -rotate-90">
-                        <circle cx="40" cy="40" r="34" className="stroke-slate-100 dark:stroke-slate-800" strokeWidth="6" fill="transparent" />
-                        <circle 
-                          cx="40" 
-                          cy="40" 
-                          r="34" 
-                          stroke={status.fill} 
-                          strokeWidth="6" 
-                          fill="transparent" 
-                          strokeDasharray={strokeDash}
-                          strokeDashoffset={strokeOffset}
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-[14px] font-black text-text-primary">{item.pct}%</span>
-                      </div>
-                    </div>
-
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <h4 className="text-[13px] font-black text-text-primary uppercase tracking-tight truncate max-w-[200px]">{item.label}</h4>
-                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full border ${status.color}`}>
-                          {status.label}
-                        </span>
-                      </div>
-                      <p className="text-[9px] text-text-secondary leading-normal">{item.desc}</p>
-                      
-                      <div className="flex justify-between items-center text-[9px] font-extrabold uppercase mt-2 pt-2 border-t border-border/40">
-                        <span className="text-text-muted">Amostra: {item.num}/{item.den}</span>
-                        <span className="text-teal-600 dark:text-teal-400">Meta: &gt;={item.target}%</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <PrevineTab previneBrasilStats={previneBrasilStats} />
         )}
 
         {/* ABA 3: GERENCIAR USUÁRIOS */}

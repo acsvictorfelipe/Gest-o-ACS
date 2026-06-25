@@ -68,6 +68,7 @@ export function PatientForm({ user }: { user: any }) {
     number: '',
     complement: '',
     contact: '',
+    contact2: '',
     messageContact: '',
     householdId: '',
     categories: [] as string[],
@@ -745,7 +746,7 @@ export function PatientForm({ user }: { user: any }) {
           name: formData.name,
           cns: formData.cns,
           is_family_responsible: formData.isFamilyResponsible,
-          birth_date: formData.birth_date || formData.birthDate,
+          birth_date: formData.birthDate,
           gender: formData.gender,
           household_id: householdId,
           categories: finalCategories,
@@ -993,7 +994,7 @@ export function PatientForm({ user }: { user: any }) {
         const nextVisitStr = nextVisit.toISOString().split('T')[0];
         
         if (!formData.clinicalData?.crianca?.proximaVisitaSugerida) {
-          setFormData(prev => ({
+          setFormData((prev: any) => ({
             ...prev,
             clinicalData: {
               ...prev.clinicalData,
@@ -1031,7 +1032,7 @@ export function PatientForm({ user }: { user: any }) {
           const dppStr = `${y}-${m}-${d}`;
           
           if (formData.clinicalData.gestante.dpp !== dppStr) {
-            setFormData(prev => ({
+            setFormData((prev: any) => ({
               ...prev,
               clinicalData: {
                 ...prev.clinicalData,

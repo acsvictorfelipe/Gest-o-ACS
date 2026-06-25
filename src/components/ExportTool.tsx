@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, fetchTableWithFilters } from '../lib/supabase';
 import { Download, FileText, Loader2, Users } from 'lucide-react';
 import { formatDate } from '../lib/dateUtils';
 
@@ -10,39 +10,9 @@ export function ExportTool({ user }: { user: any }) {
   const exportData = async () => {
     setLoading(true);
     try {
-      let data: any[] = [];
-      let from = 0;
-      let to = 999;
-      let hasMore = true;
-
-      while (hasMore) {
-        let query = supabase
-          .from('patients')
-          .select('*, households(address, number, complement, microarea)')
-          .range(from, to);
-
-        if (user.role === 'Gestor') {
-          query = query.eq('area_color', user.color);
-        } else if (user.role !== 'Administrador') {
-          query = query.eq('agent_id', user.id);
-        }
-
-        const { data: chunkData, error } = await query;
-
-        if (error) throw error;
-
-        if (chunkData && chunkData.length > 0) {
-          data = [...data, ...chunkData];
-          if (chunkData.length < 1000) {
-            hasMore = false;
-          } else {
-            from += 1000;
-            to += 1000;
-          }
-        } else {
-          hasMore = false;
-        }
-      }
+      const data = await fetchTableWithFilters<any>('patients', user, {
+        select: '*, households(address, number, complement, microarea)'
+      });
 
       if (!data || data.length === 0) {
         alert('Nenhum dado encontrado para exportação.');

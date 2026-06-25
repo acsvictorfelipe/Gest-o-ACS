@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, fetchTableWithFilters } from '../lib/supabase';
 import { syncService } from '../lib/syncService';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -32,41 +32,7 @@ export function HouseholdList({ user }: { user: any }) {
       if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
       setLoading(true);
       try {
-        let allHouseholds: any[] = [];
-        let from = 0;
-        let to = 999;
-        let hasMore = true;
-
-        while (hasMore && allHouseholds.length < 5000) {
-          let query = supabase
-            .from('households')
-            .select('*, patients(id)')
-            .order('created_at', { ascending: false })
-            .range(from, to);
-
-          if (user.role === 'Administrador') {
-            // No filters for Admin
-          } else if (user.role === 'Gestor') {
-            query = query.eq('area_color', user.color);
-          } else {
-            query = query.eq('agent_id', user.id);
-          }
-
-          const { data, error } = await query;
-          if (error) throw error;
-          
-          if (data && data.length > 0) {
-            allHouseholds = [...allHouseholds, ...data];
-            if (data.length < 1000) {
-              hasMore = false;
-            } else {
-              from += 1000;
-              to += 1000;
-            }
-          } else {
-            hasMore = false;
-          }
-        }
+        let allHouseholds: any[] = await fetchTableWithFilters<any>('households', user, { select: '*, patients(id)' });
         
         setHouseholds(allHouseholds);
       } catch (error) {

@@ -16,3 +16,37 @@ export function generateUUID(): string {
     return v.toString(16);
   });
 }
+
+export function normalizeCategories(raw: string): string[] {
+  if (!raw) return [];
+  const categories: string[] = [];
+  const normalized = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  if (normalized.includes('gestante') || normalized.includes('gravida') || normalized.includes('gestacao')) {
+    categories.push('Gestante');
+  }
+  if (normalized.includes('crianca') || normalized.includes('bebe') || normalized.includes('infantil') || normalized.includes('pediatrico')) {
+    categories.push('Criança');
+  }
+  if (normalized.includes('acamado') || normalized.includes('domiciliado') || normalized.includes('acamada')) {
+    categories.push('AcamadoDomiciliado');
+  }
+  if (normalized.includes('adulto') || normalized.includes('jovem')) {
+    categories.push('Adulto');
+  }
+  if (normalized.includes('saude mental') || normalized.includes('psiquiatrico') || normalized.includes('psicologico')) {
+    categories.push('SaudeMental');
+  }
+  if (normalized.includes('idoso') || normalized.includes('idosa') || normalized.includes('terceira idade') || normalized.includes('senil')) {
+    categories.push('Idoso');
+  }
+  if (normalized.includes('hipertenso') || normalized.includes('hipertensao') || normalized.includes('pressao alta')) {
+    categories.push('Hipertenso');
+  }
+  if (normalized.includes('diabetico') || normalized.includes('diabetica') || normalized.includes('diabetes')) {
+    categories.push('Diabético');
+  }
+
+  return Array.from(new Set(categories));
+}
+

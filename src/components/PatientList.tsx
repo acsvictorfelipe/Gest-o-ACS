@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, fetchTableWithFilters } from '../lib/supabase';
 import { syncService } from '../lib/syncService';
 import { encryptionService } from '../lib/encryption';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -118,41 +118,7 @@ export function PatientList({ user }: { user: any }) {
           setHouseholdsMap(map);
         }
 
-        let allData: any[] = [];
-        let from = 0;
-        let to = 999;
-        let hasMore = true;
-
-        while (hasMore && allData.length < 10000) {
-          let query = supabase
-            .from('patients')
-            .select('*')
-            .order('name', { ascending: true })
-            .range(from, to);
-
-          if (user.role === 'Administrador') {
-            // No filters for Admin
-          } else if (user.role === 'Gestor') {
-            query = query.eq('area_color', user.color);
-          } else {
-            query = query.eq('agent_id', user.id);
-          }
-
-          const { data, error } = await query;
-          if (error) throw error;
-          
-          if (data && data.length > 0) {
-            allData = [...allData, ...data];
-            if (data.length < 1000) {
-              hasMore = false;
-            } else {
-              from += 1000;
-              to += 1000;
-            }
-          } else {
-            hasMore = false;
-          }
-        }
+        let allData: any[] = await fetchTableWithFilters<any>('patients', user);
         
         // HEALING LOGIC: SINCERELY UPDATE LATENCY AND RECENT VISITS
         try {

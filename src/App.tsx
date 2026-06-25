@@ -16,6 +16,8 @@ import { ExportTool } from './components/ExportTool';
 import { syncService } from './lib/syncService';
 import { encryptionService } from './lib/encryption';
 import { safeStorage } from './lib/safeStorage';
+import { AppUser } from './types';
+import { User } from '@supabase/supabase-js';
 
 // NOTE: In production, replace this with an env var or Supabase RLS policy.
 // Never rely solely on client-side role checks for access control.
@@ -29,7 +31,7 @@ const getAdminEmails = () => {
 const ADMIN_EMAILS = getAdminEmails();
 
 export default function App() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -96,7 +98,7 @@ export default function App() {
     return () => window.removeEventListener('online', handleOnline);
   }, []);
 
-  const fetchProfile = async (supabaseUser: any) => {
+  const fetchProfile = async (supabaseUser: User | AppUser) => {
     try {
       if (supabaseUser?.id) {
         encryptionService.setKey(supabaseUser.id);
@@ -177,11 +179,11 @@ export default function App() {
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
         
         {user ? (
-          <Route element={<Layout user={user} theme={theme} toggleTheme={toggleTheme} onProfileUpdate={() => fetchProfile(user)} />}>
+          <Route element={<Layout user={user} theme={theme} toggleTheme={toggleTheme} onProfileUpdate={() => user && fetchProfile(user)} />}>
             <Route path="/" element={<Dashboard user={user} />} />
             <Route path="/pacientes" element={<PatientList user={user} />} />
             <Route path="/domicilios" element={<HouseholdList user={user} />} />
-            <Route path="/configuracoes" element={<Settings user={user} onProfileUpdate={() => fetchProfile(user)} />} />
+            <Route path="/configuracoes" element={<Settings user={user} onProfileUpdate={() => user && fetchProfile(user)} />} />
             <Route path="/relatorios" element={<Reports user={user} />} />
             <Route path="/historico" element={<VisitHistory user={user} />} />
             <Route path="/novo-cadastro" element={<PatientForm user={user} />} />

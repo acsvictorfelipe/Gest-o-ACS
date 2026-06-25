@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AppUser } from '../types';
+import { normalizeCategories } from '../lib/utils';
 
 export function ImportTool({ user }: { user: AppUser }) {
   const navigate = useNavigate();
@@ -114,15 +115,12 @@ export function ImportTool({ user }: { user: AppUser }) {
 
             // 2. Map Categories
             const rawCat = getColumnValue(row, ['Categoria', 'Categorias', 'categoria']) || '';
-            const categories = [];
-            if (rawCat.includes('Gestante')) categories.push('Gestante');
-            if (rawCat.includes('Criança')) categories.push('Criança');
-            if (rawCat.includes('Acamado')) categories.push('AcamadoDomiciliado');
-            if (rawCat.includes('Adulto')) categories.push('Adulto');
-            if (rawCat.includes('Saúde Mental') || rawCat.includes('Saude Mental')) categories.push('SaudeMental');
+            const categories = normalizeCategories(rawCat);
             
             const idade = parseInt(getColumnValue(row, ['Idade', 'idade']) || '0');
-            if (idade >= 60) categories.push('Idoso');
+            if (idade >= 60 && !categories.includes('Idoso')) {
+              categories.push('Idoso');
+            }
             
             // 3. Map Clinical Data
             const hasDiabetes = normalizeSimNao(getColumnValue(row, ['Tem Diabete?', 'Diabetes', 'Diabético', 'Diabetico']));

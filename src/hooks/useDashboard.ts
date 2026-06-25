@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, fetchTableWithFilters } from '../lib/supabase';
 import {
   Baby,
   Calendar as CalendarIcon,
@@ -14,9 +14,9 @@ import {
 import { getAgeInMonths, VACCINE_SCHEDULE, getAgeNumber, getPatientLastVisitAt } from '../lib/dateUtils';
 import { generateUUID } from '../lib/utils';
 import { UI_CONFIG } from '../constants';
-import { encryptionService } from '../lib/encryption';
-import { visitRequestService } from '../lib/visitRequests';
-import { safeStorage } from '../lib/safeStorage';
+import { useDashboardAgenda } from './useDashboardAgenda';
+import { useDashboardWeeklyChart } from './useDashboardWeeklyChart';
+import { useDashboardRequests } from './useDashboardRequests';
 
 export interface SyncItem {
   id: string;
@@ -25,9 +25,6 @@ export interface SyncItem {
 }
 
 export function useDashboard(user: any) {
-  const [visitRequests, setVisitRequests] = React.useState<any[]>([]);
-  const [requestsRefreshTrigger, setRequestsRefreshTrigger] = React.useState(0);
-
   const [stats, setStats] = React.useState({
     totalPatients: 0,
     totalHouseholds: 0,
@@ -58,76 +55,20 @@ export function useDashboard(user: any) {
 
   const [allPatients, setAllPatients] = React.useState<any[]>([]);
   const [recentPatients, setRecentPatients] = React.useState<any[]>([]);
-  const [weeklyChartData, setWeeklyChartData] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 
-  // Roteiro do Dia (Checklist de visitas planejadas para hoje)
-  const [dailyAgenda, setDailyAgenda] = React.useState<SyncItem[]>(() => {
-    const saved = safeStorage.getItem('gestao_acs_daily_agenda');
-    if (!saved) return [];
-    const decrypted = encryptionService.decrypt(saved);
-    try {
-      return JSON.parse(decrypted || saved);
-    } catch {
-      return [];
-    }
-  });
+  // Delegation hooks
+  const { dailyAgenda, handleAddToAgenda, handleRemoveFromAgenda, handleToggleAgenda } = 
+    useDashboardAgenda(user, allPatients, setAllPatients);
 
-  const saveAgenda = (newAgenda: SyncItem[]) => {
-    setDailyAgenda(newAgenda);
-    const serialized = JSON.stringify(newAgenda);
-    const encrypted = encryptionService.encrypt(serialized);
-    safeStorage.setItem('gestao_acs_daily_agenda', encrypted);
-  };
+  const { weeklyChartData, fetchWeeklyChart } = useDashboardWeeklyChart(user);
 
-  const handleAddToAgenda = (patientId: string) => {
-    const patient = allPatients.find(p => p.id === patientId);
-    if (!patient) return;
-    if (dailyAgenda.some(item => item.id === patientId)) return;
-    saveAgenda([...dailyAgenda, { id: patient.id, name: patient.name, done: false }]);
-  };
-
-  const handleRemoveFromAgenda = (patientId: string) => {
-    saveAgenda(dailyAgenda.filter(item => item.id !== patientId));
-  };
-
-  const handleToggleAgenda = async (patientId: string) => {
-    const item = dailyAgenda.find(i => i.id === patientId);
-    if (!item) return;
-    const nextValue = !item.done;
-
-    saveAgenda(dailyAgenda.map(it => it.id === patientId ? { ...it, done: nextValue } : it));
-
-    if (nextValue) {
-      try {
-        const todayStr = new Date().toISOString().split('T')[0];
-        const newId = generateUUID();
-        
-        await supabase.from('visits').insert({
-          id: newId,
-          patient_id: patientId,
-          agent_id: user.id,
-          date: todayStr,
-          type: 'Rotina',
-          summary: 'Visita de rotina registrada via roteiro diário do painel.',
-          microarea: user.microarea,
-          area_color: user.color || '#00488d'
-        });
-
-        const nowISO = new Date().toISOString();
-        await supabase.from('patients')
-          .update({ last_visit_at: nowISO })
-          .eq('id', patientId);
-
-        setAllPatients(prev => prev.map(p => p.id === patientId ? { ...p, last_visit_at: nowISO } : p));
-      } catch (err) {
-        console.error('Erro ao marcar visita concluída pelo roteiro:', err);
-      }
-    }
-  };
+  const { visitRequests, handleUpdateVisitRequestStatus } = 
+    useDashboardRequests(user, setAllPatients, handleAddToAgenda);
 
   React.useEffect(() => {
     const fetchData = async () => {
+
       if (!user) {
         setLoading(false);
         return;
@@ -160,37 +101,7 @@ export function useDashboard(user: any) {
         const { count: hCount } = await householdQuery;
         const { count: newHCount } = await newHouseholdQuery;
 
-        let patientsData: any[] = [];
-        let from = 0;
-        let to = 999;
-        let hasMore = true;
-
-        while (hasMore && patientsData.length < 10000) {
-          let query = supabase.from('patients').select('*').range(from, to);
-
-          if (user.role === 'Administrador') {
-            // No additional filter
-          } else if (user.role === 'Gestor') {
-            query = query.eq('area_color', user.color);
-          } else {
-            query = query.eq('agent_id', user.id);
-          }
-
-          const { data, error } = await query;
-          if (error) throw error;
-
-          if (data && data.length > 0) {
-            patientsData = [...patientsData, ...data];
-            if (data.length < 1000) {
-              hasMore = false;
-            } else {
-              from += 1000;
-              to += 1000;
-            }
-          } else {
-            hasMore = false;
-          }
-        }
+        let patientsData: any[] = await fetchTableWithFilters<any>('patients', user);
 
         // HEALING LOGIC: SINCERELY UPDATE LATENCY AND RECENT VISITS
         try {
@@ -391,54 +302,6 @@ export function useDashboard(user: any) {
           return new Date(bVisit || 0).getTime() - new Date(aVisit || 0).getTime();
         }).slice(0, 5));
 
-        // Fetch real weekly visit data
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-        sevenDaysAgo.setHours(0, 0, 0, 0);
-        const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
-
-        let visitQuery = supabase
-          .from('visits')
-          .select('date, created_at');
-
-        if (user.role === 'Gestor') visitQuery = visitQuery.eq('area_color', user.color);
-        else if (user.role !== 'Administrador') visitQuery = visitQuery.eq('agent_id', user.id);
-
-        const { data: visitData, error: visitError } = await visitQuery;
-
-        if (visitError) {
-          console.error('Erro ao buscar visitas para o gráfico:', visitError);
-        }
-
-        // Build 7-day chart with real counts
-        const dayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-        const chartDays: { name: string; visitas: number; date: Date }[] = [];
-        for (let d = 6; d >= 0; d--) {
-          const day = new Date();
-          day.setDate(day.getDate() - d);
-          day.setHours(0, 0, 0, 0);
-          chartDays.push({ name: dayLabels[day.getDay()], visitas: 0, date: day });
-        }
-
-        (visitData || []).forEach((v: any) => {
-          const rawDate = v.date || v.created_at;
-          if (!rawDate) return;
-
-          const dateStr = String(rawDate).substring(0, 10);
-
-          if (dateStr < sevenDaysAgoStr) return;
-
-          const vDate = new Date(dateStr + 'T00:00:00');
-          const match = chartDays.find(cd =>
-            cd.date.getFullYear() === vDate.getFullYear() &&
-            cd.date.getMonth() === vDate.getMonth() &&
-            cd.date.getDate() === vDate.getDate()
-          );
-          if (match) match.visitas++;
-        });
-
-        setWeeklyChartData(chartDays.map(d => ({ name: d.name, visitas: d.visitas })));
-
       } catch (error) {
         console.error("Dashboard error:", error);
       } finally {
@@ -576,63 +439,6 @@ export function useDashboard(user: any) {
                     UI_CONFIG.categorias.outros;
 
     return { backgroundColor: cat.primary, color: '#fff' };
-  };
-
-  React.useEffect(() => {
-    if (!user?.id) return;
-    const loadRequests = async () => {
-      try {
-        const reqs = await visitRequestService.fetchAll();
-        const pendedAndAssigned = reqs.filter(r => r.agent_id === user.id);
-        setVisitRequests(pendedAndAssigned);
-      } catch (visErr) {
-        console.warn("Error fetching agent visit requests:", visErr);
-      }
-    };
-    loadRequests();
-  }, [user?.id, requestsRefreshTrigger]);
-
-  const handleUpdateVisitRequestStatus = async (requestId: string, status: 'pending' | 'accepted' | 'done' | 'dismissed', notes?: string) => {
-    try {
-      const ok = await visitRequestService.updateStatus(requestId, status, notes);
-      if (ok) {
-        const req = visitRequests.find(r => r.id === requestId);
-        
-        // If accepted, add to agenda immediately
-        if (status === 'accepted') {
-          if (req && req.patient_id) {
-            handleAddToAgenda(req.patient_id);
-          }
-        } else if (status === 'done') {
-          // If done, create real visit row and set last_visit_at
-          if (req && req.patient_id) {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const newId = generateUUID();
-            
-            await supabase.from('visits').insert({
-              id: newId,
-              patient_id: req.patient_id,
-              agent_id: user.id,
-              date: todayStr,
-              type: 'Solicitada',
-              summary: notes || req.reason || 'Visita solicitada marcada como concluída.',
-              microarea: user.microarea,
-              area_color: user.color || '#00488d'
-            });
-
-            const nowISO = new Date().toISOString();
-            await supabase.from('patients')
-              .update({ last_visit_at: nowISO })
-              .eq('id', req.patient_id);
-
-            setAllPatients(prev => prev.map(p => p.id === req.patient_id ? { ...p, last_visit_at: nowISO } : p));
-          }
-        }
-        setRequestsRefreshTrigger(prev => prev + 1);
-      }
-    } catch (e) {
-      console.error('Error updating visit request status:', e);
-    }
   };
 
   return {

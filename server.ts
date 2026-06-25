@@ -54,9 +54,52 @@ async function startServer() {
     }
   );
 
+  // Middleware to require Administrador or Gestor role
+  async function requireAdminOrGestor(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.warn('Authentication failed: missing or invalid authorization header');
+      return res.status(401).json({ error: 'Acesso negado: Token de autenticação ausente ou inválido' });
+    }
+
+    const token = authHeader.substring(7);
+
+    try {
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      if (error || !user) {
+        console.warn('Authentication failed: invalid token or expired session', error);
+        return res.status(401).json({ error: 'Acesso negado: Sessão inválida ou expirada' });
+      }
+
+      // Check metadata role first
+      const metadataRole = user.user_metadata?.role;
+      
+      // Also query the profile from public.profiles database to make sure it's up-to-date and valid
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const role = profile?.role || metadataRole;
+
+      if (role !== 'Administrador' && role !== 'Gestor') {
+        console.warn(`User ${user.email} with role "${role}" tried to access admin route.`);
+        return res.status(403).json({ error: 'Acesso negado: Apenas Administradores ou Gestores podem realizar esta ação' });
+      }
+
+      (req as any).user = user;
+      (req as any).userRole = role;
+      next();
+    } catch (err: any) {
+      console.error('Authentication middleware error:', err);
+      return res.status(500).json({ error: 'Erro interno ao validar autenticação' });
+    }
+  }
+
   // API Route for creating users
-  console.log('Registering POST /api/admin/create-user');
-  app.post('/api/admin/create-user', async (req, res) => {
+  console.log('Registering POST /api/admin/create-user with security protection');
+  app.post('/api/admin/create-user', requireAdminOrGestor, async (req, res) => {
     console.log('Received request to create user:', req.body.email);
     const { email, password, name, role, color, microarea } = req.body;
 
@@ -107,8 +150,12 @@ async function startServer() {
 
   // API Route for forcing profile update (migration)
   app.post('/api/admin/force-profile-update', async (req, res) => {
-    const { email } = req.body;
-    const targetEmail = process.env.VITE_MIGRATION_EMAIL || 'acsvictorfelipe@gmail.com';
+    const { email, role, color, microarea } = req.body;
+    const targetEmail = process.env.VITE_MIGRATION_EMAIL;
+    
+    if (!targetEmail) {
+      return res.status(403).json({ error: 'Acesso negado: VITE_MIGRATION_EMAIL não configurado no servidor' });
+    }
     
     if (!email || email.toLowerCase() !== targetEmail.toLowerCase()) {
       return res.status(403).json({ error: 'Acesso negado: e-mail de destino incorreto' });
@@ -147,13 +194,18 @@ async function startServer() {
 
       const userId = profiles[0].id;
 
+      // Use env variables or request body parameter or default values
+      const targetRole = role || process.env.MIGRATION_ROLE || 'Agente';
+      const targetColor = color || '#64748b'; // Default gray
+      const targetMicroarea = microarea !== undefined ? microarea : (process.env.MIGRATION_MICROAREA || '3');
+
       // 2. Update the profile using admin client (bypasses RLS)
       const { error: updateError } = await supabaseAdmin
         .from('profiles')
         .update({
-          role: 'Agente',
-          color: '#64748b', // Cinza
-          microarea: '3'
+          role: targetRole,
+          color: targetColor,
+          microarea: targetMicroarea
         })
         .eq('id', userId);
 
@@ -162,9 +214,9 @@ async function startServer() {
       // 3. Update Auth Metadata as well
       const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
         user_metadata: { 
-          role: 'Agente',
-          color: '#64748b',
-          microarea: '3'
+          role: targetRole,
+          color: targetColor,
+          microarea: targetMicroarea
         }
       });
 
@@ -177,8 +229,8 @@ async function startServer() {
     }
   });
 
-  // API Route for deleting users
-  app.delete('/api/admin/delete-user/:id', async (req, res) => {
+  // API Route for deleting users with security protection
+  app.delete('/api/admin/delete-user/:id', requireAdminOrGestor, async (req, res) => {
     const { id } = req.params;
     console.log('Received request to delete user ID:', id);
     
