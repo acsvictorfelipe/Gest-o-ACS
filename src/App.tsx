@@ -19,17 +19,6 @@ import { safeStorage } from './lib/safeStorage';
 import { AppUser } from './types';
 import { User } from '@supabase/supabase-js';
 
-// NOTE: In production, replace this with an env var or Supabase RLS policy.
-// Never rely solely on client-side role checks for access control.
-const getAdminEmails = () => {
-  const isBrowser = typeof window !== 'undefined';
-  const config = isBrowser && (window as any).__SUPABASE_CONFIG__ ? (window as any).__SUPABASE_CONFIG__ : {};
-  const emailsStr = config.VITE_ADMIN_EMAILS || import.meta.env.VITE_ADMIN_EMAILS || 'victorfelipe2012@gmail.com';
-  return emailsStr.split(',').map((email: string) => email.trim());
-};
-
-const ADMIN_EMAILS = getAdminEmails();
-
 export default function App() {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -104,55 +93,26 @@ export default function App() {
         encryptionService.setKey(supabaseUser.id);
       }
       const { data, error } = await supabase
-
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)
         .single();
 
       if (data) {
-        let updatedProfile = data;
-        // Bootstrap: Promote specific emails to Administrador
-        if (supabaseUser.email && ADMIN_EMAILS.includes(supabaseUser.email) && data.role !== 'Administrador') {
-          const { data: promotedData, error: promoError } = await supabase
-            .from('profiles')
-            .update({ role: 'Administrador' })
-            .eq('id', supabaseUser.id)
-            .select()
-            .single();
-          
-          if (!promoError && promotedData) {
-            updatedProfile = promotedData;
-          }
-        }
+        const name = data.name || supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
         
-        // Ensure name fallback from metadata
-        const name = updatedProfile.name || supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
-        setUser({ ...supabaseUser, ...updatedProfile, name });
-      } else {
-        // Profile doesn't exist, check if it's a super admin to create it
-        const name = supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
-        
-        if (supabaseUser.email && ADMIN_EMAILS.includes(supabaseUser.email)) {
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert({
-              id: supabaseUser.id,
-              email: supabaseUser.email,
-              name: name,
-              role: 'Administrador',
-              color: '#64748b'
-            })
-            .select()
-            .single();
-          
-          if (!createError && newProfile) {
-            setUser({ ...supabaseUser, ...newProfile });
-            return;
-          }
-        }
+        // Update last_login in the background for audit/dashboard tracking
+        supabase.from('profiles')
+          .update({ last_login: new Date().toISOString() })
+          .eq('id', supabaseUser.id)
+          .then(({ error: updateErr }) => {
+            if (updateErr) console.warn('Failed to update last_login:', updateErr);
+          });
 
-        console.error("Profile fetch error or not found:", error);
+        setUser({ ...supabaseUser, ...data, name });
+      } else {
+        console.error("Profile not found in database:", error);
+        const name = supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
         setUser({ ...supabaseUser, name });
       }
     } catch (err) {
@@ -162,8 +122,6 @@ export default function App() {
       setLoading(false);
     }
   };
-
-  // Migration block removed — was a one-time operation that no longer needs to run.
 
   if (loading) {
     return (
