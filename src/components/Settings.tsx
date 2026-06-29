@@ -99,7 +99,7 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
   };
 
   const handleRemoveStreet = (index: number) => {
-    setFormData(prev => ({ ...prev, streets: prev.streets.filter((_, i) => i !== index) }));
+    setFormData(prev => ({ ...prev, streets: prev.streets.filter((_: string, i: number) => i !== index) }));
   };
 
   const handleSaveStreetEdit = (index: number) => {

@@ -839,19 +839,19 @@ export function AdminDashboard({ user }: { user: any }) {
           ) : (
             visitRequests.map((req) => {
               const responder = userMap[req.agent_id];
-              const priorityColors = {
+              const priorityColors: Record<string, string> = {
                 low: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
                 medium: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
                 high: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
                 urgent: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20 animate-pulse'
               };
-              const statusColors = {
+              const statusColors: Record<string, string> = {
                 pending: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20',
                 accepted: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20',
                 done: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
                 dismissed: 'bg-slate-500/10 text-slate-500 dark:text-slate-400 border-slate-500/20'
               };
-              const statusLabels = {
+              const statusLabels: Record<string, string> = {
                 pending: 'Pendente',
                 accepted: 'Em Progresso',
                 done: 'Concluído',
