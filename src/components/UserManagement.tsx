@@ -48,8 +48,6 @@ const getIndicatorStatus = (percentage: number, target: number) => {
 export function UserManagement({ currentUser }: { currentUser: AppUser | null }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('equipe');
-
-  if (!currentUser) return null;
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [households, setHouseholds] = useState<Household[]>([]);
@@ -214,7 +212,6 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
   // Tab 3: Update User
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingUser) return;
     setSubmitting(true);
     try {
       const isSystemAdmin = editFormData.role === 'Administrador';
@@ -917,7 +914,7 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
                           </button>
                           {!isCurrentUser && (
                             <button 
-                              onClick={() => handleDeleteUser(u.id, u.name || '')} 
+                              onClick={() => handleDeleteUser(u.id, u.name)} 
                               className="p-2 border border-border rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 text-text-muted hover:text-red-500 transition-colors"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1234,7 +1231,7 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
                       }`}>
                         {camp.active ? 'Em Destaque' : 'Arquivado'}
                       </span>
-                      <span className="text-[9px] font-bold text-text-muted">{formatDate(camp.created_at || '')}</span>
+                      <span className="text-[9px] font-bold text-text-muted">{formatDate(camp.created_at)}</span>
                     </div>
                     <h4 className="text-[13px] font-black text-text-primary uppercase tracking-tight leading-tight">{camp.title}</h4>
                     <p className="text-[11px] text-text-secondary leading-normal whitespace-pre-line">{camp.content}</p>
@@ -1305,7 +1302,7 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
                     <div className="flex-1 min-w-0 space-y-0.5">
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-black text-text-primary uppercase tracking-tight text-[11px]">{log.action}</span>
-                        <span className="text-[9px] text-text-muted font-bold shrink-0">{formatDate(log.created_at || '')}</span>
+                        <span className="text-[9px] text-text-muted font-bold shrink-0">{formatDate(log.created_at)}</span>
                       </div>
                       <p className="text-[10px] text-text-secondary leading-normal">{log.details}</p>
                       <p className="text-[8px] text-text-muted uppercase font-bold tracking-wide mt-1">

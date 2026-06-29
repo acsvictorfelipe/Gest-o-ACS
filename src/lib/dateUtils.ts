@@ -271,4 +271,32 @@ export function getPatientLastVisitAt(p: any): string | null {
   return latestDate ? latestDate.toISOString() : null;
 }
 
+export function isVisitLate(lastVisitAt: string | null | undefined): boolean {
+  if (!lastVisitAt) return true;
+  
+  try {
+    const cleanDateStr = lastVisitAt.includes('T') ? lastVisitAt.split('T')[0] : lastVisitAt;
+    const parts = cleanDateStr.split('-');
+    if (parts.length !== 3) return true;
+    
+    const year = parseInt(parts[0]);
+    const month = parseInt(parts[1]) - 1;
+    const day = parseInt(parts[2]);
+    
+    // Create date at noon to be timezone independent
+    const lastVisitDate = new Date(year, month, day, 12, 0, 0);
+    const today = new Date();
+    const todayNoon = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 0, 0);
+    
+    const diffTime = todayNoon.getTime() - lastVisitDate.getTime();
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    
+    return diffDays > 30;
+  } catch (e) {
+    console.warn('Error parsing last visit date in isVisitLate:', e);
+    return true;
+  }
+}
+
+
 

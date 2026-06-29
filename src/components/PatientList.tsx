@@ -33,13 +33,14 @@ import {
   MessageCircle,
   Phone,
   CheckSquare,
-  Calendar
+  Calendar,
+  UserPlus
 } from 'lucide-react';
 import { UI_CONFIG } from '../constants';
 import { safeStorage } from '../lib/safeStorage';
 
 import { format, isSameDay } from 'date-fns';
-import { calculateAge, getAgeInMonths, getAgeNumber, VACCINE_SCHEDULE, formatDate, parseDate, getPatientLastVisitAt } from '../lib/dateUtils';
+import { calculateAge, getAgeInMonths, getAgeNumber, VACCINE_SCHEDULE, formatDate, parseDate, getPatientLastVisitAt, isVisitLate } from '../lib/dateUtils';
 
 export function PatientList({ user }: { user: any }) {
   const navigate = useNavigate();
@@ -164,12 +165,16 @@ export function PatientList({ user }: { user: any }) {
             }
 
             if (trueAcsVisitDateStr && trueAcsVisitDateStr !== (p.last_visit_at ? p.last_visit_at.split('T')[0] : null)) {
-              supabase.from('patients')
-                .update({ last_visit_at: trueAcsVisitDateStr })
-                .eq('id', p.id)
-                .then(({ error }) => {
+              (async () => {
+                try {
+                  const { error } = await supabase.from('patients')
+                    .update({ last_visit_at: trueAcsVisitDateStr })
+                    .eq('id', p.id);
                   if (error) console.error(`Error syncing last_visit_at for patient ${p.id}:`, error);
-                });
+                } catch (err) {
+                  console.warn(`Silent error catching on background patients sync for patient ${p.id}:`, err);
+                }
+              })();
 
               return {
                 ...p,
@@ -647,7 +652,7 @@ export function PatientList({ user }: { user: any }) {
                     .sort(sortPatientsByAddressNumber)
                     .map((p) => {
                       const realVisitAt = getPatientLastVisitAt(p);
-                      const isAtraso = !realVisitAt || new Date(realVisitAt) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                      const isAtraso = isVisitLate(realVisitAt);
                       return (
                         <tr 
                           key={p.id} 
@@ -815,13 +820,13 @@ export function PatientList({ user }: { user: any }) {
                         <td className="px-8 py-5 text-center">
                           {isAtraso ? (
                             <span 
-                              className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-500 text-white font-extrabold text-sm shadow-sm" 
+                              className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-50 dark:bg-red-950/20 text-red-500 border border-red-100 dark:border-red-900/30 text-[11px] font-extrabold shadow-sm mx-auto" 
                               title="Visita em Atraso"
                             >
                               !
                             </span>
                           ) : (
-                            <span className="block w-6 h-6 mx-auto" aria-hidden="true" />
+                            <span className="block w-5 h-5 mx-auto" aria-hidden="true" />
                           )}
                         </td>
                         <td className="px-8 py-5 text-right">
@@ -876,14 +881,14 @@ export function PatientList({ user }: { user: any }) {
                   <div className="flex items-center justify-between">
                     <div>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="text-sm font-semibold text-text-primary dark:text-white leading-tight">{p.name}</h4>
                           {(() => {
                             const realVisitAtMobile = getPatientLastVisitAt(p);
-                            const isAtrasoMobile = !realVisitAtMobile || new Date(realVisitAtMobile) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                            const isAtrasoMobile = isVisitLate(realVisitAtMobile);
                             return isAtrasoMobile ? (
                               <span 
-                                className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white font-black text-[10px] shadow-sm shrink-0" 
+                                className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-50 dark:bg-red-950/20 text-red-500 border border-red-100 dark:border-red-900/30 text-[9px] font-extrabold shadow-sm shrink-0" 
                                 title="Visita em Atraso"
                               >
                                 !
@@ -922,15 +927,17 @@ export function PatientList({ user }: { user: any }) {
                             })()}
                           </p>
                           </div>
-                          {p.clinical_data?.contact && (
-                            <button 
-                              onClick={(e) => handleWhatsApp(e, p.clinical_data.contact)}
-                              className="mt-2 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500 text-white shadow-sm shadow-emerald-500/20 active:scale-95 transition-all w-fit"
-                            >
-                              <MessageCircle className="w-4 h-4" />
-                              <span className="text-[11px] font-bold uppercase">WhatsApp</span>
-                            </button>
-                          )}
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {p.clinical_data?.contact && (
+                              <button 
+                                onClick={(e) => handleWhatsApp(e, p.clinical_data.contact)}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500 text-white shadow-sm shadow-emerald-500/20 active:scale-95 transition-all w-fit"
+                              >
+                                <MessageCircle className="w-4 h-4" />
+                                <span className="text-[11px] font-bold uppercase">WhatsApp</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">

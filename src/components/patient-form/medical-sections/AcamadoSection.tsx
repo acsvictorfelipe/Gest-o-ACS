@@ -21,7 +21,7 @@ export function AcamadoSection({ formData, setFormData, isReadOnly }: AcamadoSec
           <label className="block text-[10px] font-bold uppercase text-text-muted mb-2">Grau de Dependência</label>
           <select 
             value={formData.clinicalData?.acamadodomiciliado?.dependencia || 'Total'}
-            onChange={e => setFormData((prev: any) => ({
+            onChange={e => setFormData(prev => ({
               ...prev, 
               clinicalData: { 
                 ...prev.clinicalData, 
@@ -39,7 +39,7 @@ export function AcamadoSection({ formData, setFormData, isReadOnly }: AcamadoSec
           <label className="block text-[10px] font-bold uppercase text-text-muted mb-2">Faz uso de curativos?</label>
           <select 
             value={formData.clinicalData?.acamadodomiciliado?.curativos || 'Não'}
-            onChange={e => setFormData((prev: any) => ({
+            onChange={e => setFormData(prev => ({
               ...prev, 
               clinicalData: { 
                 ...prev.clinicalData, 
@@ -56,7 +56,7 @@ export function AcamadoSection({ formData, setFormData, isReadOnly }: AcamadoSec
           <label className="block text-[10px] font-bold uppercase text-text-muted mb-2">Cuidador Presente</label>
           <select 
             value={formData.clinicalData?.acamadodomiciliado?.cuidador || 'Não'}
-            onChange={e => setFormData((prev: any) => ({
+            onChange={e => setFormData(prev => ({
               ...prev, 
               clinicalData: { 
                 ...prev.clinicalData, 
@@ -73,7 +73,7 @@ export function AcamadoSection({ formData, setFormData, isReadOnly }: AcamadoSec
           <label className="block text-[10px] font-bold uppercase text-text-muted mb-2">Faz uso de fralda?</label>
           <select 
             value={formData.clinicalData?.acamadodomiciliado?.usoFralda || 'Não'}
-            onChange={e => setFormData((prev: any) => ({
+            onChange={e => setFormData(prev => ({
               ...prev, 
               clinicalData: { 
                 ...prev.clinicalData, 
@@ -91,7 +91,7 @@ export function AcamadoSection({ formData, setFormData, isReadOnly }: AcamadoSec
             <label className="block text-[10px] font-bold uppercase text-text-muted mb-2">Tamanho da Fralda</label>
             <select 
               value={formData.clinicalData?.acamadodomiciliado?.tamanhoFralda || ''}
-              onChange={e => setFormData((prev: any) => ({
+              onChange={e => setFormData(prev => ({
                 ...prev, 
                 clinicalData: { 
                   ...prev.clinicalData, 
@@ -120,7 +120,7 @@ export function AcamadoSection({ formData, setFormData, isReadOnly }: AcamadoSec
           <label className="block text-[10px] font-bold uppercase text-text-muted mb-2">Observações</label>
           <textarea 
             value={formData.clinicalData?.acamadodomiciliado?.observacoes || ''}
-            onChange={e => setFormData((prev: any) => ({
+            onChange={e => setFormData(prev => ({
               ...prev, 
               clinicalData: { 
                 ...prev.clinicalData, 
@@ -135,3 +135,4 @@ export function AcamadoSection({ formData, setFormData, isReadOnly }: AcamadoSec
     </section>
   );
 }
+

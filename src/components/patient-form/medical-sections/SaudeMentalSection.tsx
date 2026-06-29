@@ -20,7 +20,7 @@ export function SaudeMentalSection({ formData, setFormData, isReadOnly }: SaudeM
         <label className="block text-[10px] font-bold uppercase text-text-muted">Anotações de Saúde Mental</label>
         <textarea 
           value={formData.clinicalData?.saudeMental?.notes || ''}
-          onChange={e => setFormData((prev: any) => ({
+          onChange={e => setFormData(prev => ({
             ...prev, 
             clinicalData: { 
               ...prev.clinicalData, 
@@ -34,3 +34,4 @@ export function SaudeMentalSection({ formData, setFormData, isReadOnly }: SaudeM
     </section>
   );
 }
+

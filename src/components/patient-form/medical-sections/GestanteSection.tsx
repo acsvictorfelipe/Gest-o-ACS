@@ -243,7 +243,7 @@ export function GestanteSection({
           </div>
         </div>
 
-        <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border dark:border-slate-800">
+        <div className="col-span-full grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-border dark:border-slate-800">
           <div>
             <label className="block text-[10px] font-semibold uppercase text-text-muted mb-2">Consulta de Puerpério (até 42 dias)</label>
             <input 
@@ -273,6 +273,23 @@ export function GestanteSection({
               }))}
               className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-700 rounded-xl p-3 text-sm"
             />
+          </div>
+          <div>
+            <label className="block text-[10px] font-semibold uppercase text-text-muted mb-2">Planejamento Familiar?</label>
+            <select 
+              value={data.planejamentoFamiliar || 'Não'}
+              onChange={e => setFormData((prev: any) => ({
+                ...prev, 
+                clinicalData: { 
+                  ...prev.clinicalData, 
+                  gestante: { ...(prev.clinicalData?.gestante || {}), planejamentoFamiliar: e.target.value } 
+                }
+              }))}
+              className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-700 rounded-xl p-3 text-sm"
+            >
+              <option value="Não">Não</option>
+              <option value="Sim">Sim</option>
+            </select>
           </div>
         </div>
       </div>

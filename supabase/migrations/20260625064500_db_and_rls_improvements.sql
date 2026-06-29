@@ -46,6 +46,17 @@ ALTER TABLE public.campaigns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.visit_requests ENABLE ROW LEVEL SECURITY;
 
+-- Helper for gestor check without specific area color
+CREATE OR REPLACE FUNCTION public.is_gestor_any()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'Gestor'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
 -- 4. Set up safe RLS policies for campaigns
 DROP POLICY IF EXISTS "Campaigns are viewable by authenticated users" ON public.campaigns;
 CREATE POLICY "Campaigns are viewable by authenticated users" ON public.campaigns
@@ -62,17 +73,6 @@ CREATE POLICY "Admins and Gestors can update campaigns" ON public.campaigns
 DROP POLICY IF EXISTS "Admins and Gestors can delete campaigns" ON public.campaigns;
 CREATE POLICY "Admins and Gestors can delete campaigns" ON public.campaigns
   FOR DELETE TO authenticated USING (is_admin() OR is_gestor_any());
-
--- Helper for gestor check without specific area color
-CREATE OR REPLACE FUNCTION public.is_gestor_any()
-RETURNS BOOLEAN AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'Gestor'
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 5. Set up safe RLS policies for system_logs
 DROP POLICY IF EXISTS "Admins can view system logs" ON public.system_logs;

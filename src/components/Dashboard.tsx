@@ -141,7 +141,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         <div className="space-y-3">
           {visitRequests.filter(r => r.status === 'pending' || r.status === 'accepted').map((req, i) => {
             const isPending = req.status === 'pending';
-            const priorityColors: Record<string, string> = {
+            const priorityColors = {
               low: 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20',
               medium: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20',
               high: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20',

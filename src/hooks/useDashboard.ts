@@ -147,12 +147,16 @@ export function useDashboard(user: any) {
             }
 
             if (trueAcsVisitDateStr && trueAcsVisitDateStr !== (p.last_visit_at ? p.last_visit_at.split('T')[0] : null)) {
-              supabase.from('patients')
-                .update({ last_visit_at: trueAcsVisitDateStr })
-                .eq('id', p.id)
-                .then(({ error }) => {
+              (async () => {
+                try {
+                  const { error } = await supabase.from('patients')
+                    .update({ last_visit_at: trueAcsVisitDateStr })
+                    .eq('id', p.id);
                   if (error) console.error(`Error syncing last_visit_at for patient ${p.id}:`, error);
-                });
+                } catch (err) {
+                  console.warn(`Silent error catching on background patients sync in dashboard for patient ${p.id}:`, err);
+                }
+              })();
 
               return {
                 ...p,

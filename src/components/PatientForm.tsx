@@ -9,7 +9,8 @@ import {
   Loader2,
   Home,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  UserPlus
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -73,6 +74,7 @@ export function PatientForm({ user }: { user: any }) {
     householdId: '',
     categories: [] as string[],
     clinicalData: {
+      historicoGestacoes: [] as any[],
       visitasGerais: [] as { date: string, summary: string }[],
       consultasGerais: [] as { date: string, summary: string }[],
       socialBenefits: [] as string[],
@@ -131,6 +133,7 @@ export function PatientForm({ user }: { user: any }) {
         puerperioConsulta: '',
         puerperioVisita: '',
         saudeBucal: '',
+        planejamentoFamiliar: 'Não',
         diabetes: 'Não',
         diabetesData: {
           avaliacaoPes: 'Não',
@@ -299,6 +302,7 @@ export function PatientForm({ user }: { user: any }) {
                 consultas: data.clinical_data?.gestante?.consultas || [],
                 visitasAcs: data.clinical_data?.gestante?.visitasAcs || [],
                 visitasAcsDiabetes: data.clinical_data?.gestante?.visitasAcsDiabetes || [],
+                planejamentoFamiliar: data.clinical_data?.gestante?.planejamentoFamiliar || 'Não',
                 diabetesData: {
                   ...formData.clinicalData.gestante.diabetesData,
                   ...(data.clinical_data?.gestante?.diabetesData || {})
@@ -660,6 +664,37 @@ export function PatientForm({ user }: { user: any }) {
     }
   };
 
+  const downloadVCard = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const name = formData.name || 'Paciente';
+    const contact = formData.contact || '';
+    const address = formData.address || '';
+    const number = formData.number || '';
+    const complement = formData.complement || '';
+    const fullAddress = address ? `${address}, ${number}${complement ? ` - ${complement}` : ''}`.trim() : '';
+
+    const vcard = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      `FN;CHARSET=UTF-8:${name}`,
+      contact ? `TEL;TYPE=CELL,VOICE:${contact}` : '',
+      address ? `ADR;TYPE=HOME;CHARSET=UTF-8:;;${address};;;;` : '',
+      fullAddress ? `NOTE;CHARSET=UTF-8:Endereço: ${fullAddress}` : '',
+      'END:VCARD'
+    ].filter(Boolean).join('\r\n');
+
+    const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeName = name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    a.download = `contato_${safeName}.vcf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -694,6 +729,59 @@ export function PatientForm({ user }: { user: any }) {
     }
     if (cleanClinicalData.consultasGerais) {
       cleanClinicalData.consultasGerais = cleanClinicalData.consultasGerais.filter((c: any) => c && c.date);
+    }
+
+    let isArchived = false;
+    if (formData.categories?.includes('Gestante') && cleanClinicalData.gestante?.puerperioVisita) {
+      const historicoGestacoes = Array.isArray(cleanClinicalData.historicoGestacoes) 
+        ? [...cleanClinicalData.historicoGestacoes] 
+        : [];
+      
+      const gestacaoParaArquivar = { 
+        ...cleanClinicalData.gestante, 
+        arquivadoEm: new Date().toISOString() 
+      };
+      
+      historicoGestacoes.push(gestacaoParaArquivar);
+      cleanClinicalData.historicoGestacoes = historicoGestacoes;
+
+      // Reset active gestante data
+      cleanClinicalData.gestante = {
+        dum: '',
+        dpp: '',
+        consultas: [] as string[],
+        visitasAcs: [] as string[],
+        visitasAcsDiabetes: [] as string[],
+        dtpa: 'Não',
+        sifilis: 'NÃO REALIZADO',
+        hepatiteB: 'NÃO REALIZADO',
+        hiv: 'NÃO REALIZADO',
+        hepatiteC: 'NÃO REALIZADO',
+        puerperioConsulta: '',
+        puerperioVisita: '',
+        saudeBucal: '',
+        planejamentoFamiliar: 'Não',
+        diabetes: 'Não',
+        diabetesData: {
+          avaliacaoPes: 'Não',
+          hemoglobinaGlicada: 'Não',
+          visitaAcs1: '',
+          visitaAcs2: ''
+        },
+        hipertensao: 'Não',
+        hipertensaoData: {
+          consultas6Meses: 'Não',
+          visitaAcs1: '',
+          visitaAcs2: ''
+        }
+      };
+
+      formData.categories = formData.categories.filter((cat: string) => cat !== 'Gestante');
+      isArchived = true;
+    }
+
+    if (isArchived) {
+      alert("Visita de puerpério detectada: a gestação atual foi arquivada no histórico com sucesso, e a paciente foi removida da categoria Gestantes.");
     }
     
     try {
@@ -1180,6 +1268,17 @@ export function PatientForm({ user }: { user: any }) {
             >
               <Home className="w-4 h-4" />
               <span className="hidden sm:inline">Ver Domicílio</span>
+            </button>
+          )}
+          {id && (
+            <button 
+              type="button" 
+              onClick={() => downloadVCard()}
+              className="p-2 text-slate-500 hover:text-primary dark:hover:text-teal-400 transition-colors bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center gap-1.5 text-xs font-semibold"
+              title="Salvar nos contatos"
+            >
+              <UserPlus className="w-4 h-4 text-blue-500 shrink-0" />
+              <span className="hidden sm:inline">Salvar Contato</span>
             </button>
           )}
           {id && (

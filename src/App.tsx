@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { Layout } from './components/Layout';
 import { Login } from './components/Login';
@@ -102,12 +102,16 @@ export default function App() {
         const name = data.name || supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
         
         // Update last_login in the background for audit/dashboard tracking
-        supabase.from('profiles')
-          .update({ last_login: new Date().toISOString() })
-          .eq('id', supabaseUser.id)
-          .then(({ error: updateErr }) => {
+        (async () => {
+          try {
+            const { error: updateErr } = await supabase.from('profiles')
+              .update({ last_login: new Date().toISOString() })
+              .eq('id', supabaseUser.id);
             if (updateErr) console.warn('Failed to update last_login:', updateErr);
-          });
+          } catch (err) {
+            console.warn('Failed to update last_login in background:', err);
+          }
+        })();
 
         setUser({ ...supabaseUser, ...data, name });
       } else {
@@ -122,6 +126,8 @@ export default function App() {
       setLoading(false);
     }
   };
+
+  // Migration block removed — was a one-time operation that no longer needs to run.
 
   if (loading) {
     return (

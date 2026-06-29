@@ -1,0 +1,10 @@
+{
+  "name": "Gestão ACS",
+  "description": "Sistema de gestão para Agentes Comunitários de Saúde com foco em acompanhamento territorial e prontuário eletrônico.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
