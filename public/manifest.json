@@ -1,0 +1,37 @@
+{
+  "name": "Gestão ACS",
+  "short_name": "Gestão ACS",
+  "description": "Sistema de Gestão para Agentes Comunitários de Saúde (ACS)",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#14B8A6",
+  "theme_color": "#14B8A6",
+  "orientation": "any",
+  "categories": ["medical", "productivity"],
+  "icons": [
+    {
+      "src": "/icon-512.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "maskable"
+    }
+  ]
+}
