@@ -1,5 +1,6 @@
 import React from 'react';
 import { Home, MessageCircle, Phone, Gift } from 'lucide-react';
+import { useToast } from '../Toast';
 
 interface AddressInfoProps {
   formData: any;
@@ -12,12 +13,13 @@ export function AddressInfo({ formData, setFormData, isReadOnly, streets = [] }:
   const [showStreets, setShowStreets] = React.useState(false);
   const [filteredStreets, setFilteredStreets] = React.useState<string[]>([]);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const { warning } = useToast();
 
   const handleWhatsApp = (phone: string) => {
     if (!phone) return;
     const cleanNumber = phone.replace(/\D/g, '');
     if (cleanNumber.length < 10) {
-      alert("Número de telefone incompleto.");
+      warning("Número de telefone incompleto.");
       return;
     }
     const finalNumber = cleanNumber.startsWith('55') ? cleanNumber : `55${cleanNumber}`;

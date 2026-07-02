@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, fetchTableWithFilters } from '../lib/supabase';
+import { useToast } from './Toast';
 import { logActivity } from '../lib/auditLogger';
 import { AppUser, UserProfile, Patient, Household, Visit, Campaign, SystemLog } from '../types';
 import { 
@@ -37,6 +38,10 @@ import { getAgeInMonths, formatDate, calculateAge, getPatientLastVisitAt } from 
 import { motion, AnimatePresence } from 'motion/react';
 import { EquipeTab } from './user-management/EquipeTab';
 import { PrevineTab } from './user-management/PrevineTab';
+import { UsuariosTab } from './user-management/UsuariosTab';
+import { RedistribuicaoTab } from './user-management/RedistribuicaoTab';
+import { CampanhasTab } from './user-management/CampanhasTab';
+import { AuditoriaTab } from './user-management/AuditoriaTab';
 
 // Helper to determine indicator success color and tag
 const getIndicatorStatus = (percentage: number, target: number) => {
@@ -47,6 +52,7 @@ const getIndicatorStatus = (percentage: number, target: number) => {
 
 export function UserManagement({ currentUser }: { currentUser: AppUser | null }) {
   const navigate = useNavigate();
+  const { warning, error: toastError } = useToast();
   const [activeTab, setActiveTab] = useState('equipe');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -166,6 +172,8 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
     }
   }, [message]);
 
+  if (!currentUser) return null;
+
   // Tab 3: Create User
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -225,11 +233,11 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
       const { error } = await supabase
         .from('profiles')
         .update(payload)
-        .eq('id', editingUser.id);
+        .eq('id', editingUser!.id);
 
       if (error) throw error;
 
-      await logActivity(currentUser.id, 'Edição de Usuário', `Atualizou o perfil do usuário ${editingUser.name}.`);
+      await logActivity(currentUser.id, 'Edição de Usuário', `Atualizou o perfil do usuário ${editingUser!.name}.`);
 
       setMessage({ type: 'success', text: 'Usuário atualizado com sucesso.' });
       setEditingUser(null);
@@ -256,7 +264,7 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
   // Tab 3: Delete User
   const handleDeleteUser = async (userId: string, userName: string) => {
     if (userId === currentUser.id) {
-      alert("Você não pode excluir seu próprio usuário.");
+      warning("Você não pode excluir seu próprio usuário.");
       return;
     }
 
@@ -292,11 +300,11 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
   // Tab 4: Mass Transfer of Households & Patients
   const handleTransfer = async () => {
     if (!fromAgentId || !toAgentId) {
-      alert("Selecione os agentes de origem e destino.");
+      warning("Selecione os agentes de origem e destino.");
       return;
     }
     if (fromAgentId === toAgentId) {
-      alert("O agente de origem e destino devem ser diferentes.");
+      warning("O agente de origem e destino devem ser diferentes.");
       return;
     }
 
@@ -322,7 +330,7 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
       }
 
       if (targetHouseholdIds.length === 0) {
-        alert("Nenhum domicílio encontrado para os critérios de transferência selecionados.");
+        warning("Nenhum domicílio encontrado para os critérios de transferência selecionados.");
         setTransferring(false);
         return;
       }
@@ -420,7 +428,7 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
       fetchData();
     } catch (e: any) {
       console.error(e);
-      alert("Erro ao publicar campanha. Verifique se a tabela 'campaigns' existe no Supabase.");
+      toastError("Erro ao publicar campanha. Verifique se a tabela 'campaigns' existe no Supabase.");
     }
   };
 
@@ -676,648 +684,71 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
 
         {/* ABA 3: GERENCIAR USUÁRIOS */}
         {activeTab === 'usuarios' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-            {/* Form Column */}
-            <div className="lg:col-span-1">
-              <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm flex flex-col h-full">
-                <h3 className="text-sm font-black text-text-primary uppercase tracking-wider mb-5 flex items-center gap-2 shrink-0">
-                  <UserPlus className="w-4.5 h-4.5 text-teal-600" />
-                  {editingUser ? 'Editar Perfil' : 'Novo Agente/Gestor'}
-                </h3>
-
-                {editingUser ? (
-                  // EDIT MODE
-                  <form onSubmit={handleUpdateUser} className="space-y-4 flex-1 flex flex-col justify-between">
-                    <div className="space-y-4">
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase tracking-wider text-text-muted">Nome do Usuário</label>
-                        <input 
-                          required 
-                          type="text" 
-                          value={editFormData.name} 
-                          onChange={e => setEditFormData({...editFormData, name: e.target.value})}
-                          className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-xl py-2.5 px-3.5 text-xs font-semibold focus:ring-2 focus:ring-teal-600/20"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase tracking-wider text-text-muted">Função / Cargo</label>
-                        <select 
-                          value={editFormData.role}
-                          onChange={e => setEditFormData({...editFormData, role: e.target.value})}
-                          disabled={currentUser?.role === 'Gestor'}
-                          className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-xl py-2.5 px-3.5 text-xs font-bold focus:ring-2 focus:ring-teal-600/20 disabled:opacity-75 disabled:cursor-not-allowed"
-                        >
-                          <option value="Agente">Agente Comunitário</option>
-                          {currentUser?.role !== 'Gestor' && (
-                            <>
-                              <option value="Gestor">Gestor / Supervisor</option>
-                              <option value="Administrador">Administrador Geral</option>
-                            </>
-                          )}
-                        </select>
-                      </div>
-
-                      {editFormData.role !== 'Administrador' && (
-                        <>
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-black uppercase tracking-wider text-text-muted">Número da Microárea</label>
-                            <input 
-                              required 
-                              type="text" 
-                              value={editFormData.microarea} 
-                              onChange={e => setEditFormData({...editFormData, microarea: e.target.value})}
-                              className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-xl py-2.5 px-3.5 text-xs font-semibold focus:ring-2 focus:ring-teal-600/20"
-                            />
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-black uppercase tracking-wider text-text-muted">Cor da Microárea (Identificação)</label>
-                            <div className="flex items-center gap-3">
-                              <input 
-                                type="color" 
-                                value={editFormData.color} 
-                                onChange={e => setEditFormData({...editFormData, color: e.target.value})}
-                                disabled={currentUser?.role === 'Gestor'}
-                                className="w-10 h-10 border-0 rounded-xl overflow-hidden cursor-pointer p-0 bg-transparent shrink-0 disabled:cursor-not-allowed"
-                              />
-                              <span className="text-[11px] font-mono font-bold uppercase">{editFormData.color}</span>
-                              {currentUser?.role === 'Gestor' && (
-                                <span className="text-[9px] text-text-muted font-bold uppercase">(Fixo para sua Equipe)</span>
-                              )}
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    <div className="flex gap-2.5 mt-6 pt-4 border-t border-border shrink-0">
-                      <button 
-                        type="button" 
-                        onClick={() => setEditingUser(null)} 
-                        className="flex-1 py-2.5 border border-border hover:bg-bg-primary rounded-xl text-xs font-black uppercase tracking-wider"
-                      >
-                        Cancelar
-                      </button>
-                      <button 
-                        type="submit" 
-                        disabled={submitting} 
-                        className="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm flex items-center justify-center gap-1.5"
-                      >
-                        {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                        Salvar
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  // CREATE MODE
-                  <form onSubmit={handleCreateUser} className="space-y-4 flex-1 flex flex-col justify-between">
-                    <div className="space-y-4">
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase tracking-wider text-text-muted">Nome Completo</label>
-                        <input 
-                          required 
-                          type="text" 
-                          placeholder="Nome do Agente"
-                          value={formData.name} 
-                          onChange={e => setFormData({...formData, name: e.target.value})}
-                          className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-xl py-2.5 px-3.5 text-xs font-semibold focus:ring-2 focus:ring-teal-600/20"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase tracking-wider text-text-muted">E-mail de Acesso</label>
-                        <input 
-                          required 
-                          type="email" 
-                          placeholder="exemplo@gmail.com"
-                          value={formData.email} 
-                          onChange={e => setFormData({...formData, email: e.target.value})}
-                          className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-xl py-2.5 px-3.5 text-xs font-semibold focus:ring-2 focus:ring-teal-600/20"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase tracking-wider text-text-muted">Senha Inicial</label>
-                        <input 
-                          required 
-                          type="password" 
-                          placeholder="Mínimo 6 caracteres"
-                          value={formData.password} 
-                          onChange={e => setFormData({...formData, password: e.target.value})}
-                          className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-xl py-2.5 px-3.5 text-xs font-semibold focus:ring-2 focus:ring-teal-600/20"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase tracking-wider text-text-muted">Função / Cargo</label>
-                        <select 
-                          value={formData.role} 
-                          onChange={e => setFormData({...formData, role: e.target.value})}
-                          disabled={currentUser?.role === 'Gestor'}
-                          className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-xl py-2.5 px-3.5 text-xs font-bold focus:ring-2 focus:ring-teal-600/20 disabled:opacity-75 disabled:cursor-not-allowed"
-                        >
-                          <option value="Agente">Agente Comunitário</option>
-                          {currentUser?.role !== 'Gestor' && (
-                            <>
-                              <option value="Gestor">Gestor / Supervisor</option>
-                              <option value="Administrador">Administrador Geral</option>
-                            </>
-                          )}
-                        </select>
-                      </div>
-
-                      {formData.role !== 'Administrador' && (
-                        <>
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-black uppercase tracking-wider text-text-muted">Microárea</label>
-                            <input 
-                              required 
-                              type="text" 
-                              placeholder="Número da microárea"
-                              value={formData.microarea} 
-                              onChange={e => setFormData({...formData, microarea: e.target.value})}
-                              className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-xl py-2.5 px-3.5 text-xs font-semibold focus:ring-2 focus:ring-teal-600/20"
-                            />
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-black uppercase tracking-wider text-text-muted">Cor da Área</label>
-                            <div className="flex items-center gap-3">
-                              <input 
-                                type="color" 
-                                value={formData.color} 
-                                onChange={e => setFormData({...formData, color: e.target.value})}
-                                disabled={currentUser?.role === 'Gestor'}
-                                className="w-10 h-10 border-0 rounded-xl overflow-hidden cursor-pointer p-0 bg-transparent shrink-0 disabled:cursor-not-allowed"
-                              />
-                              <span className="text-[11px] font-mono font-bold uppercase">{formData.color}</span>
-                              {currentUser?.role === 'Gestor' && (
-                                <span className="text-[9px] text-text-muted font-bold uppercase">(Fixo para sua Equipe)</span>
-                              )}
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    <button 
-                      type="submit" 
-                      disabled={submitting} 
-                      className="w-full mt-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm flex items-center justify-center gap-1.5 shrink-0"
-                    >
-                      {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                      Cadastrar Usuário
-                    </button>
-                  </form>
-                )}
-              </div>
-            </div>
-
-            {/* Users List Column */}
-            <div className="lg:col-span-2">
-              <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm h-full flex flex-col">
-                <h3 className="text-sm font-black text-text-primary uppercase tracking-wider mb-5 shrink-0">Usuários Cadastrados ({users.length})</h3>
-                <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1">
-                  {users.map(u => {
-                    const isCurrentUser = u.id === currentUser.id;
-                    const isSystemAdmin = u.role === 'Administrador';
-                    return (
-                      <div key={u.id} className="p-3.5 rounded-2xl border border-border/80 flex items-center justify-between gap-3 bg-bg-primary/20 hover:bg-bg-primary/40 transition-colors">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: u.color }} />
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-[13px] font-black text-text-primary uppercase truncate tracking-tight">{u.name}</h4>
-                              <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded leading-none shrink-0 ${
-                                isSystemAdmin 
-                                  ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400' 
-                                  : u.role === 'Gestor' 
-                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400' 
-                                    : 'bg-teal-100 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400'
-                              }`}>
-                                {u.role}
-                              </span>
-                            </div>
-                            <p className="text-[10px] text-text-muted font-semibold mt-1 truncate">
-                              {u.email} {!isSystemAdmin && `• Microárea ${u.microarea || '--'}`}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button 
-                            onClick={() => handleEditUser(u)} 
-                            className="p-2 border border-border rounded-xl hover:bg-bg-primary text-text-secondary hover:text-text-primary transition-colors"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          {!isCurrentUser && (
-                            <button 
-                              onClick={() => handleDeleteUser(u.id, u.name)} 
-                              className="p-2 border border-border rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 text-text-muted hover:text-red-500 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
+          <UsuariosTab
+            currentUser={currentUser}
+            users={users}
+            editingUser={editingUser}
+            setEditingUser={setEditingUser}
+            formData={formData}
+            setFormData={setFormData}
+            editFormData={editFormData}
+            setEditFormData={setEditFormData}
+            handleCreateUser={handleCreateUser}
+            handleUpdateUser={handleUpdateUser}
+            handleDeleteUser={handleDeleteUser}
+            handleEditUser={handleEditUser}
+            submitting={submitting}
+          />
         )}
 
         {/* ABA 4: REDISTRIBUIÇÃO */}
         {activeTab === 'redistribuicao' && (
-          <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm max-w-4xl mx-auto space-y-6">
-            <div>
-              <h3 className="text-sm font-black text-text-primary uppercase tracking-tight flex items-center gap-2">
-                <Activity className="w-5 h-5 text-teal-600" />
-                Redistribuição de Microáreas
-              </h3>
-              <p className="text-[10px] text-text-secondary font-medium mt-1 leading-relaxed">
-                Transfira domicílios e pacientes entre agentes de saúde comunitária de forma simples.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-border/60">
-              <div className="space-y-1">
-                <label className="text-[9px] font-black uppercase tracking-wider text-text-muted">Agente de Origem (ACS)</label>
-                <select 
-                  value={fromAgentId} 
-                  onChange={e => {
-                    setFromAgentId(e.target.value);
-                    setSelectedHouseholds([]);
-                    setHouseholdSearch('');
-                  }}
-                  className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-xl py-3 px-3.5 text-xs font-bold focus:ring-2 focus:ring-teal-600/20"
-                >
-                  <option value="">Selecione o ACS de origem</option>
-                  {users.filter(u => u.role === 'Agente').map(u => (
-                    <option key={u.id} value={u.id}>ACS {u.name} (Microárea {u.microarea})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[9px] font-black uppercase tracking-wider text-text-muted">Agente de Destino (ACS)</label>
-                <select 
-                  value={toAgentId} 
-                  onChange={e => setToAgentId(e.target.value)}
-                  className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-xl py-3 px-3.5 text-xs font-bold focus:ring-2 focus:ring-teal-600/20"
-                >
-                  <option value="">Selecione o ACS de destino</option>
-                  {users.filter(u => u.role === 'Agente' && u.id !== fromAgentId).map(u => (
-                    <option key={u.id} value={u.id}>ACS {u.name} (Microárea {u.microarea})</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {fromAgentId && (
-              <div className="space-y-5 animate-in fade-in duration-300">
-                <div className="bg-bg-primary/20 p-4 border border-border/60 rounded-2xl flex flex-col sm:flex-row gap-4 items-center justify-between text-[11px] font-bold text-text-secondary">
-                  <div>
-                    Estatísticas do Agente de Origem:
-                    <span className="text-text-primary font-black ml-1.5">{sourceAgentHouseholds.length} Domicílios</span> • 
-                    <span className="text-text-primary font-black ml-1.5">{patients.filter(p => p.agent_id === fromAgentId).length} Pacientes</span>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => setTransferType('all')} 
-                      className={`px-3 py-1.5 rounded-xl uppercase text-[9px] font-black border transition-all ${
-                        transferType === 'all' ? 'bg-teal-600 text-white border-teal-600' : 'bg-bg-secondary border-border hover:bg-bg-primary'
-                      }`}
-                    >
-                      Tudo
-                    </button>
-                    {sourceAgentMicroareas.length > 0 && (
-                      <button 
-                        onClick={() => {
-                          setTransferType('microarea');
-                          setSelectedMicroarea(sourceAgentMicroareas[0] as string);
-                        }} 
-                        className={`px-3 py-1.5 rounded-xl uppercase text-[9px] font-black border transition-all ${
-                          transferType === 'microarea' ? 'bg-teal-600 text-white border-teal-600' : 'bg-bg-secondary border-border hover:bg-bg-primary'
-                        }`}
-                      >
-                        Por Microárea
-                      </button>
-                    )}
-                    <button 
-                      onClick={() => setTransferType('selected')} 
-                      className={`px-3 py-1.5 rounded-xl uppercase text-[9px] font-black border transition-all ${
-                        transferType === 'selected' ? 'bg-teal-600 text-white border-teal-600' : 'bg-bg-secondary border-border hover:bg-bg-primary'
-                      }`}
-                    >
-                      Selecionados
-                    </button>
-                  </div>
-                </div>
-
-                {/* TRANSFER TYPE OPTION PANEL */}
-                {transferType === 'microarea' && (
-                  <div className="bg-bg-secondary p-4 border border-border rounded-2xl flex items-center gap-3 space-y-1">
-                    <label className="text-[10px] font-black uppercase text-text-muted shrink-0">Selecione a Microárea:</label>
-                    <select 
-                      value={selectedMicroarea} 
-                      onChange={e => setSelectedMicroarea(e.target.value)}
-                      className="bg-bg-primary dark:bg-slate-800 border-none rounded-xl py-2 px-3 text-xs font-bold focus:ring-2 focus:ring-teal-600/20 shrink-0"
-                    >
-                      {sourceAgentMicroareas.map((m: any) => (
-                        <option key={m} value={m}>Microárea {m}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {transferType === 'selected' && (
-                  <div className="bg-bg-secondary border border-border rounded-2xl overflow-hidden flex flex-col">
-                    <div className="p-3 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-bg-primary/10">
-                      <span className="text-[9px] font-black uppercase tracking-wider text-text-muted">
-                        Selecione os Domicílios para Transferência ({selectedHouseholds.length} selecionados)
-                      </span>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const filteredIds = filteredHouseholds.map(h => h.id);
-                            setSelectedHouseholds(prev => {
-                              const newSelection = new Set([...prev, ...filteredIds]);
-                              return Array.from(newSelection);
-                            });
-                          }}
-                          className="px-2 py-1 bg-bg-secondary border border-border hover:bg-bg-primary text-[9px] font-black uppercase rounded-lg text-text-secondary hover:text-text-primary transition-all"
-                        >
-                          Selecionar Todos Filtrados
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedHouseholds([]);
-                          }}
-                          className="px-2 py-1 bg-bg-secondary border border-border hover:bg-red-50 dark:hover:bg-red-950/20 text-[9px] font-black uppercase rounded-lg text-text-muted hover:text-red-500 transition-all"
-                        >
-                          Limpar Seleção
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Campo de Pesquisa Rápida */}
-                    <div className="p-3 border-b border-border bg-bg-primary/5 flex items-center gap-2">
-                      <Search className="w-4 h-4 text-text-muted shrink-0" />
-                      <input
-                        type="text"
-                        placeholder="Pesquisar por responsável, rua, número ou microárea..."
-                        value={householdSearch}
-                        onChange={e => setHouseholdSearch(e.target.value)}
-                        className="w-full bg-transparent border-none p-0 text-xs font-semibold placeholder:text-text-muted/65 focus:ring-0"
-                      />
-                      {householdSearch && (
-                        <button
-                          type="button"
-                          onClick={() => setHouseholdSearch('')}
-                          className="text-[10px] text-text-muted hover:text-text-primary font-bold px-1.5 py-0.5 rounded hover:bg-bg-primary"
-                        >
-                          Limpar
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="max-h-[260px] overflow-y-auto divide-y divide-border/60 custom-scrollbar">
-                      {filteredHouseholds.map(h => {
-                        const isChecked = selectedHouseholds.includes(h.id);
-                        return (
-                          <div 
-                            key={h.id} 
-                            onClick={() => {
-                              setSelectedHouseholds(prev => 
-                                prev.includes(h.id) ? prev.filter(id => id !== h.id) : [...prev, h.id]
-                              );
-                            }}
-                            className="flex items-center gap-3 p-3 text-[12px] font-semibold text-text-secondary hover:bg-bg-primary/20 transition-colors cursor-pointer select-none"
-                          >
-                            <input 
-                              type="checkbox" 
-                              checked={isChecked}
-                              onChange={() => {}} // Controlled by outer div click
-                              className="w-4 h-4 rounded text-teal-600 border-slate-300 dark:border-slate-700 focus:ring-teal-500 shrink-0" 
-                            />
-                            <div className="min-w-0">
-                              <span className="text-text-primary font-bold uppercase">{h.responsible_name || 'Responsável não cadastrado'}</span>
-                              <span className="text-text-muted ml-2">{h.address}, {h.number} (Microárea {h.microarea})</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {filteredHouseholds.length === 0 && (
-                        <div className="p-6 text-center text-text-muted text-xs font-semibold uppercase">
-                          Nenhum domicílio encontrado para a pesquisa.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* TRANSFER ACTION BUTTON */}
-                <div className="flex justify-end pt-4">
-                  <button
-                    onClick={handleTransfer}
-                    disabled={transferring || !toAgentId}
-                    className="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-md shadow-teal-600/10 flex items-center gap-2 active:scale-98 transition-all disabled:opacity-50"
-                  >
-                    {transferring ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-                    Realizar Transferência
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <RedistribuicaoTab
+            users={users}
+            patients={patients}
+            fromAgentId={fromAgentId}
+            setFromAgentId={setFromAgentId}
+            toAgentId={toAgentId}
+            setToAgentId={setToAgentId}
+            transferType={transferType}
+            setTransferType={setTransferType}
+            selectedMicroarea={selectedMicroarea}
+            setSelectedMicroarea={setSelectedMicroarea}
+            selectedHouseholds={selectedHouseholds}
+            setSelectedHouseholds={setSelectedHouseholds}
+            householdSearch={householdSearch}
+            setHouseholdSearch={setHouseholdSearch}
+            transferring={transferring}
+            handleTransfer={handleTransfer}
+            sourceAgentHouseholds={sourceAgentHouseholds}
+            sourceAgentMicroareas={sourceAgentMicroareas}
+            filteredHouseholds={filteredHouseholds}
+          />
         )}
 
         {/* ABA 5: CAMPANHAS & DIRETRIZES */}
         {activeTab === 'campanhas' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between gap-4">
-              <h3 className="text-xs font-black text-text-primary uppercase tracking-wider">Diretrizes de Saúde Ativas</h3>
-              {currentUser?.role === 'Administrador' && (
-                <button 
-                  onClick={() => {
-                    setCampaignForm({ title: '', content: '', target: 'Todos' });
-                    setShowNewCampaignModal(true);
-                  }} 
-                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-98 transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  Nova Diretriz
-                </button>
-              )}
-            </div>
-
-            {/* Campaign Modal overlay */}
-            <AnimatePresence>
-              {showNewCampaignModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="bg-bg-secondary border border-border w-full max-w-lg rounded-3xl p-6 shadow-2xl relative"
-                  >
-                    <button 
-                      onClick={() => setShowNewCampaignModal(false)}
-                      className="absolute top-4 right-4 p-2 text-text-muted hover:text-text-primary rounded-full hover:bg-bg-primary transition-colors"
-                    >
-                      <CloseIcon className="w-4.5 h-4.5" />
-                    </button>
-
-                    <h4 className="text-sm font-black text-text-primary uppercase tracking-wider mb-5 flex items-center gap-2">
-                      <Megaphone className="w-4.5 h-4.5 text-teal-600" />
-                      Publicar Diretriz de Saúde
-                    </h4>
-
-                    <form onSubmit={handleCreateCampaign} className="space-y-4">
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase tracking-wider text-text-muted">Título da Diretriz</label>
-                        <input 
-                          required 
-                          type="text" 
-                          placeholder="Ex: Campanha Contra a Influenza - Priorizar Idosos"
-                          value={campaignForm.title} 
-                          onChange={e => setCampaignForm({...campaignForm, title: e.target.value})}
-                          className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-xl py-3 px-3.5 text-xs font-semibold focus:ring-2 focus:ring-teal-600/20"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase tracking-wider text-text-muted">Conteúdo / Orientações para o ACS</label>
-                        <textarea 
-                          required 
-                          rows={4}
-                          placeholder="Descreva as instruções detalhadas que os agentes de saúde comunitária devem priorizar em suas visitas de campo nesta semana..."
-                          value={campaignForm.content} 
-                          onChange={e => setCampaignForm({...campaignForm, content: e.target.value})}
-                          className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-xl py-3 px-3.5 text-xs font-semibold focus:ring-2 focus:ring-teal-600/20 resize-none"
-                        />
-                      </div>
-
-                      <button
-                        type="submit"
-                        className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-md shadow-teal-600/10 flex items-center justify-center gap-1.5 mt-4"
-                      >
-                        <Check className="w-4 h-4" />
-                        Publicar para toda a Equipe
-                      </button>
-                    </form>
-                  </motion.div>
-                </div>
-              )}
-            </AnimatePresence>
-
-            {/* Campaign lists */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {campaigns.map(camp => (
-                <div key={camp.id} className={`p-5 rounded-3xl border flex flex-col justify-between gap-3 shadow-sm bg-bg-secondary ${
-                  camp.active ? 'border-teal-500/25 shadow-teal-500/5' : 'border-border/60 opacity-60'
-                }`}>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded ${
-                        camp.active ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {camp.active ? 'Em Destaque' : 'Arquivado'}
-                      </span>
-                      <span className="text-[9px] font-bold text-text-muted">{formatDate(camp.created_at)}</span>
-                    </div>
-                    <h4 className="text-[13px] font-black text-text-primary uppercase tracking-tight leading-tight">{camp.title}</h4>
-                    <p className="text-[11px] text-text-secondary leading-normal whitespace-pre-line">{camp.content}</p>
-                  </div>
-
-                  {currentUser?.role === 'Administrador' && (
-                    <div className="flex justify-end pt-3 border-t border-border/40">
-                      <button 
-                        onClick={() => handleToggleCampaign(camp.id, camp.active, camp.title)}
-                        className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border transition-all ${
-                          camp.active 
-                            ? 'border-border text-text-secondary hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/20' 
-                            : 'border-teal-500/20 text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/20'
-                        }`}
-                      >
-                        {camp.active ? 'Arquivar' : 'Reativar'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {campaigns.length === 0 && (
-                <div className="col-span-2 text-center py-12 border border-dashed border-border rounded-3xl bg-bg-secondary/40">
-                  <Megaphone className="w-10 h-10 mx-auto text-text-muted opacity-30 mb-2.5" />
-                  <p className="text-xs font-black text-text-primary uppercase tracking-wider">Nenhuma campanha publicada</p>
-                  <p className="text-[10px] text-text-muted mt-1">Crie diretrizes para orientar os agentes comunitários nas visitas de campo.</p>
-                </div>
-              )}
-            </div>
-          </div>
+          <CampanhasTab
+            currentUser={currentUser}
+            campaigns={campaigns}
+            campaignForm={campaignForm}
+            setCampaignForm={setCampaignForm}
+            showNewCampaignModal={showNewCampaignModal}
+            setShowNewCampaignModal={setShowNewCampaignModal}
+            handleCreateCampaign={handleCreateCampaign}
+            handleToggleCampaign={handleToggleCampaign}
+          />
         )}
 
         {/* ABA 6: AUDIT LOGS */}
         {activeTab === 'auditoria' && (
-          <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm flex flex-col space-y-4">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-              <div>
-                <h3 className="text-sm font-black text-text-primary uppercase tracking-tight flex items-center gap-2">
-                  <History className="w-4.5 h-4.5 text-teal-600" />
-                  Logs de Auditoria do Sistema
-                </h3>
-                <p className="text-[9px] text-text-secondary font-medium">Linha do tempo de conformidade e segurança clínica (LGPD)</p>
-              </div>
-
-              {/* Search bar */}
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-                <input 
-                  type="text" 
-                  placeholder="Pesquisar logs..."
-                  value={logSearch}
-                  onChange={e => setLogSearch(e.target.value)}
-                  className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-xl py-2 pl-9 pr-3.5 text-xs font-semibold focus:ring-2 focus:ring-teal-600/20"
-                />
-              </div>
-            </div>
-
-            {/* Logs timeline list */}
-            <div className="flex-1 overflow-y-auto max-h-[450px] divide-y divide-border/60 custom-scrollbar pr-1">
-              {filteredLogs.map(log => {
-                const logUser = users.find(u => u.id === log.user_id);
-                return (
-                  <div key={log.id} className="py-3 flex items-start gap-4 text-[12px] font-semibold text-text-secondary group">
-                    <div className="w-8 h-8 rounded-full bg-teal-50 dark:bg-slate-800 flex items-center justify-center shrink-0 text-teal-600">
-                      <ShieldCheck className="w-4.5 h-4.5" />
-                    </div>
-                    <div className="flex-1 min-w-0 space-y-0.5">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="font-black text-text-primary uppercase tracking-tight text-[11px]">{log.action}</span>
-                        <span className="text-[9px] text-text-muted font-bold shrink-0">{formatDate(log.created_at)}</span>
-                      </div>
-                      <p className="text-[10px] text-text-secondary leading-normal">{log.details}</p>
-                      <p className="text-[8px] text-text-muted uppercase font-bold tracking-wide mt-1">
-                        Executado por: {logUser?.name || 'Sistema'} ({logUser?.email || 'sistema@gestaoacs.local'})
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {filteredLogs.length === 0 && (
-                <div className="text-center py-12 font-bold text-text-muted">Nenhum log encontrado.</div>
-              )}
-            </div>
-          </div>
+          <AuditoriaTab
+            systemLogs={systemLogs}
+            logSearch={logSearch}
+            setLogSearch={setLogSearch}
+            filteredLogs={filteredLogs}
+            users={users}
+          />
         )}
       </div>
     </div>

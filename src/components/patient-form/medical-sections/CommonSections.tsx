@@ -25,7 +25,7 @@ export function CommonSections({ formData, setFormData, isReadOnly }: CommonSect
             <label className="block text-[10px] font-bold uppercase text-text-muted">Anotações Gerais</label>
             <textarea 
               value={formData.clinicalData?.adulto?.notes || ''}
-              onChange={e => setFormData(prev => ({
+              onChange={e => setFormData((prev: any) => ({
                 ...prev, 
                 clinicalData: { 
                   ...prev.clinicalData, 
@@ -50,7 +50,7 @@ export function CommonSections({ formData, setFormData, isReadOnly }: CommonSect
               <label className="block text-[10px] font-bold uppercase text-text-muted mb-2">Vacina Influenza (Anual)</label>
               <select 
                 value={formData.clinicalData?.idoso?.vacinaInfluenza || 'Não'}
-                onChange={e => setFormData(prev => ({
+                onChange={e => setFormData((prev: any) => ({
                   ...prev, 
                   clinicalData: { 
                     ...prev.clinicalData, 
@@ -68,7 +68,7 @@ export function CommonSections({ formData, setFormData, isReadOnly }: CommonSect
               <input 
                 type="date" 
                 value={formData.clinicalData?.idoso?.consultaMedicaAnualData || ''}
-                onChange={e => setFormData(prev => ({
+                onChange={e => setFormData((prev: any) => ({
                   ...prev, 
                   clinicalData: { 
                     ...prev.clinicalData, 
@@ -83,7 +83,7 @@ export function CommonSections({ formData, setFormData, isReadOnly }: CommonSect
             <label className="block text-[10px] font-bold uppercase text-text-muted">Anotações Gerais</label>
             <textarea 
               value={formData.clinicalData?.idoso?.notes || ''}
-              onChange={e => setFormData(prev => ({
+              onChange={e => setFormData((prev: any) => ({
                 ...prev, 
                 clinicalData: { 
                   ...prev.clinicalData, 

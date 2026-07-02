@@ -9,11 +9,53 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Gestão ACS" />
-    <link rel="apple-touch-icon" href="/icon-512.jpg" />
+    <link rel="apple-touch-icon" href="/icon-512.png" />
 
     <script>
       (function() {
-        var storageMock = function() {
+        var storageMock = function(backingStorage) {
+          if (backingStorage) {
+            return {
+              setItem: function(key, value) {
+                try {
+                  backingStorage.setItem(key, String(value));
+                } catch (e) {}
+              },
+              getItem: function(key) {
+                try {
+                  return backingStorage.getItem(key);
+                } catch (e) {
+                  return null;
+                }
+              },
+              removeItem: function(key) {
+                try {
+                  backingStorage.removeItem(key);
+                } catch (e) {}
+              },
+              clear: function() {
+                try {
+                  backingStorage.clear();
+                } catch (e) {}
+              },
+              key: function(i) {
+                try {
+                  return backingStorage.key(i);
+                } catch (e) {
+                  return null;
+                }
+              },
+              get length() {
+                try {
+                  return backingStorage.length;
+                } catch (e) {
+                  return 0;
+                }
+              }
+            };
+          }
+
+          // In-memory fallback
           var storage = {};
           return {
             setItem: function(key, value) {
@@ -38,63 +80,87 @@
           };
         };
 
-        var useLocalFallback = false;
+        var canAccessLocalStorage = false;
         try {
-          var test = window.localStorage;
-          if (!test) throw new Error('localStorage is null');
-          test.getItem('__test_access__');
+          if (window.localStorage) {
+            window.localStorage.setItem('__test_access__', '1');
+            window.localStorage.removeItem('__test_access__');
+            canAccessLocalStorage = true;
+          }
         } catch (e) {
-          useLocalFallback = true;
+          canAccessLocalStorage = false;
         }
 
-        if (useLocalFallback) {
-          console.warn('localStorage is blocked or unavailable, using polyfill.');
+        var canAccessSessionStorage = false;
+        var sessionStore = null;
+        try {
+          if (window.sessionStorage) {
+            window.sessionStorage.setItem('__test_access__', '1');
+            window.sessionStorage.removeItem('__test_access__');
+            canAccessSessionStorage = true;
+            sessionStore = window.sessionStorage;
+          }
+        } catch (e) {
+          canAccessSessionStorage = false;
+        }
+
+        if (!canAccessLocalStorage) {
+          console.warn('localStorage is blocked or unavailable, using polyfill with sessionStorage fallback.');
+          var mockLocal = storageMock(sessionStore);
+          var success = false;
+          
           try {
-            var mockLocal = storageMock();
-            Object.defineProperty(Window.prototype, 'localStorage', {
+            Object.defineProperty(window, 'localStorage', {
               get: function() { return mockLocal; },
               configurable: true
             });
-          } catch (e) {
+            success = true;
+          } catch (e) {}
+
+          if (!success) {
             try {
-              Object.defineProperty(window, 'localStorage', {
-                value: mockLocal,
-                configurable: true,
-                writable: true
+              Object.defineProperty(Window.prototype, 'localStorage', {
+                get: function() { return mockLocal; },
+                configurable: true
               });
-            } catch (err) {
-              console.error('Failed to polyfill localStorage:', err);
-            }
+              success = true;
+            } catch (e) {}
+          }
+
+          if (!success) {
+            try {
+              window.localStorage = mockLocal;
+            } catch (e) {}
           }
         }
 
-        var useSessionFallback = false;
-        try {
-          var testSession = window.sessionStorage;
-          if (!testSession) throw new Error('sessionStorage is null');
-          testSession.getItem('__test_access__');
-        } catch (e) {
-          useSessionFallback = true;
-        }
-
-        if (useSessionFallback) {
+        if (!canAccessSessionStorage) {
           console.warn('sessionStorage is blocked or unavailable, using polyfill.');
+          var mockSession = storageMock(null);
+          var success = false;
+          
           try {
-            var mockSession = storageMock();
-            Object.defineProperty(Window.prototype, 'sessionStorage', {
+            Object.defineProperty(window, 'sessionStorage', {
               get: function() { return mockSession; },
               configurable: true
             });
-          } catch (e) {
+            success = true;
+          } catch (e) {}
+
+          if (!success) {
             try {
-              Object.defineProperty(window, 'sessionStorage', {
-                value: mockSession,
-                configurable: true,
-                writable: true
+              Object.defineProperty(Window.prototype, 'sessionStorage', {
+                get: function() { return mockSession; },
+                configurable: true
               });
-            } catch (err) {
-              console.error('Failed to polyfill sessionStorage:', err);
-            }
+              success = true;
+            } catch (e) {}
+          }
+
+          if (!success) {
+            try {
+              window.sessionStorage = mockSession;
+            } catch (e) {}
           }
         }
       })();

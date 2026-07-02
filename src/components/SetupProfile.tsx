@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { useToast } from './Toast';
 import { 
   Palette, 
   MapPin, 
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react';
 
 export function SetupProfile({ user, onComplete }: { user: any, onComplete: () => void }) {
+  const { warning, error: toastError } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: user.name || '',
@@ -29,11 +31,11 @@ export function SetupProfile({ user, onComplete }: { user: any, onComplete: () =
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name) {
-      alert("Por favor, informe seu nome.");
+      warning("Por favor, informe seu nome.");
       return;
     }
     if (user.role === 'Agente' && !formData.microarea) {
-      alert("Por favor, informe sua microárea.");
+      warning("Por favor, informe sua microárea.");
       return;
     }
     
@@ -52,7 +54,7 @@ export function SetupProfile({ user, onComplete }: { user: any, onComplete: () =
       onComplete();
     } catch (error) {
       console.error("Error setting up profile:", error);
-      alert("Erro ao salvar configurações iniciais.");
+      toastError("Erro ao salvar configurações iniciais.");
     } finally {
       setLoading(false);
     }

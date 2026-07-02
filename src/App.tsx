@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { Layout } from './components/Layout';
+import { ToastProvider } from './components/Toast';
 import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
 import { PatientForm } from './components/PatientForm';
@@ -138,29 +139,31 @@ export default function App() {
   }
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-        
-        {user ? (
-          <Route element={<Layout user={user} theme={theme} toggleTheme={toggleTheme} onProfileUpdate={() => user && fetchProfile(user)} />}>
-            <Route path="/" element={<Dashboard user={user} />} />
-            <Route path="/pacientes" element={<PatientList user={user} />} />
-            <Route path="/domicilios" element={<HouseholdList user={user} />} />
-            <Route path="/configuracoes" element={<Settings user={user} onProfileUpdate={() => user && fetchProfile(user)} />} />
-            <Route path="/relatorios" element={<Reports user={user} />} />
-            <Route path="/historico" element={<VisitHistory user={user} />} />
-            <Route path="/novo-cadastro" element={<PatientForm user={user} />} />
-            <Route path="/editar-paciente/:id" element={<PatientForm user={user} />} />
-            <Route path="/domicilio/:id" element={<HouseholdView user={user} />} />
-            <Route path="/usuarios" element={<UserManagement currentUser={user} />} />
-            <Route path="/exportar" element={<ExportTool user={user} />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Route>
-        ) : (
-          <Route path="*" element={<Navigate to="/login" />} />
-        )}
-      </Routes>
-    </Router>
+    <ToastProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+          
+          {user ? (
+            <Route element={<Layout user={user} theme={theme} toggleTheme={toggleTheme} onProfileUpdate={() => user && fetchProfile(user)} />}>
+              <Route path="/" element={<Dashboard user={user} />} />
+              <Route path="/pacientes" element={<PatientList user={user} />} />
+              <Route path="/domicilios" element={<HouseholdList user={user} />} />
+              <Route path="/configuracoes" element={<Settings user={user} onProfileUpdate={() => user && fetchProfile(user)} />} />
+              <Route path="/relatorios" element={<Reports user={user} />} />
+              <Route path="/historico" element={<VisitHistory user={user} />} />
+              <Route path="/novo-cadastro" element={<PatientForm user={user} />} />
+              <Route path="/editar-paciente/:id" element={<PatientForm user={user} />} />
+              <Route path="/domicilio/:id" element={<HouseholdView user={user} />} />
+              <Route path="/usuarios" element={<UserManagement currentUser={user} />} />
+              <Route path="/exportar" element={<ExportTool user={user} />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </Route>
+          ) : (
+            <Route path="*" element={<Navigate to="/login" />} />
+          )}
+        </Routes>
+      </Router>
+    </ToastProvider>
   );
 }

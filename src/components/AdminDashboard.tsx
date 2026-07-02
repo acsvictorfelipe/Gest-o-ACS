@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
+import { useToast } from './Toast';
 import { formatDate, getAgeInMonths, calculateAge, getAgeNumber } from '../lib/dateUtils';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -36,6 +37,7 @@ import { Bell, Send, ClipboardCheck, Mail } from 'lucide-react';
 
 export function AdminDashboard({ user }: { user: any }) {
   const navigate = useNavigate();
+  const { warning, error: toastError } = useToast();
   
   const [loading, setLoading] = React.useState(true);
   const [profiles, setProfiles] = React.useState<any[]>([]);
@@ -148,7 +150,7 @@ export function AdminDashboard({ user }: { user: any }) {
   const handleCreateVisitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newRequestAgent || !newRequestPatient || !newRequestReason.trim()) {
-      alert('Por favor, preencha todos os campos.');
+      warning('Por favor, preencha todos os campos.');
       return;
     }
 
@@ -193,7 +195,7 @@ export function AdminDashboard({ user }: { user: any }) {
       setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error creating visit request:', error);
-      alert('Erro ao criar solicitação de visita.');
+      toastError('Erro ao criar solicitação de visita.');
     } finally {
       setSubmittingRequest(false);
     }
@@ -865,7 +867,7 @@ export function AdminDashboard({ user }: { user: any }) {
                 >
                   <div className="flex items-start justify-between gap-1.5">
                     <div>
-                      <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${priorityColors[req.priority] || priorityColors.medium}`}>
+                      <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${priorityColors[req.priority as 'low' | 'medium' | 'high' | 'urgent'] || priorityColors.medium}`}>
                         {req.priority === 'low' ? 'Baixa' : req.priority === 'medium' ? 'Média' : req.priority === 'high' ? 'Alta' : 'URGENTE'}
                       </span>
                       <h4 className="text-xs font-black uppercase text-text-primary tracking-tight mt-2 flex items-center gap-1.5">
@@ -877,10 +879,10 @@ export function AdminDashboard({ user }: { user: any }) {
                         </p>
                       )}
                     </div>
-
+ 
                     <div className="flex flex-col items-end gap-1.5">
-                      <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${statusColors[req.status] || statusColors.pending}`}>
-                        {statusLabels[req.status] || req.status}
+                      <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${statusColors[req.status as 'pending' | 'accepted' | 'done' | 'dismissed'] || statusColors.pending}`}>
+                        {statusLabels[req.status as 'pending' | 'accepted' | 'done' | 'dismissed'] || req.status}
                       </span>
                       <span className="text-[9px] text-text-muted font-semibold">
                         {formatDate(req.created_at)}

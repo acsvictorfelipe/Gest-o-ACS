@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, fetchTableWithFilters } from '../lib/supabase';
 import { 
   BarChart3, 
   Search, 
@@ -40,63 +40,16 @@ export function Reports({ user }: { user: any }) {
       if (!user.microarea && user.role !== 'Administrador') return;
       setLoading(true);
       try {
-        // Fetch Patients in chunks
-        let allPatients: any[] = [];
-        let pFrom = 0;
-        let pTo = 999;
-        let pHasMore = true;
+        // Fetch Patients using central helper
+        const allPatients = await fetchTableWithFilters<any>('patients', user, {
+          orderBy: { column: 'name', ascending: true }
+        });
 
-        while (pHasMore && allPatients.length < 10000) {
-          let pQuery = supabase
-            .from('patients')
-            .select('*')
-            .order('name', { ascending: true })
-            .range(pFrom, pTo);
-
-          if (user.role === 'Administrador') {
-          } else if (user.role === 'Gestor') {
-            pQuery = pQuery.eq('area_color', user.color);
-          } else {
-            pQuery = pQuery.eq('agent_id', user.id);
-          }
-
-          const { data, error } = await pQuery;
-          if (error) throw error;
-          if (data && data.length > 0) {
-            allPatients = [...allPatients, ...data];
-            if (data.length < 1000) pHasMore = false;
-            else { pFrom += 1000; pTo += 1000; }
-          } else pHasMore = false;
-        }
-
-        // Fetch Households in chunks
-        let allHouseholds: any[] = [];
-        let hFrom = 0;
-        let hTo = 999;
-        let hHasMore = true;
-
-        while (hHasMore && allHouseholds.length < 5000) {
-          let hQuery = supabase
-            .from('households')
-            .select('*, patients(id)')
-            .order('address', { ascending: true })
-            .range(hFrom, hTo);
-
-          if (user.role === 'Administrador') {
-          } else if (user.role === 'Gestor') {
-            hQuery = hQuery.eq('area_color', user.color);
-          } else {
-            hQuery = hQuery.eq('agent_id', user.id);
-          }
-
-          const { data, error } = await hQuery;
-          if (error) throw error;
-          if (data && data.length > 0) {
-            allHouseholds = [...allHouseholds, ...data];
-            if (data.length < 1000) hHasMore = false;
-            else { hFrom += 1000; hTo += 1000; }
-          } else hHasMore = false;
-        }
+        // Fetch Households using central helper
+        const allHouseholds = await fetchTableWithFilters<any>('households', user, {
+          select: '*, patients(id)',
+          orderBy: { column: 'address', ascending: true }
+        });
 
         setPatients(allPatients);
         setHouseholds(allHouseholds);
@@ -119,51 +72,21 @@ export function Reports({ user }: { user: any }) {
       }
       setFetchingVisits(true);
       try {
-        let allVisits: any[] = [];
-        let vFrom = 0;
-        let vTo = 999;
-        let vHasMore = true;
-
-        while (vHasMore) {
-          let query = supabase
-            .from('visits')
-            .select(`
-              *,
-              patients (
-                id,
-                name,
-                cns,
-                birth_date,
-                categories,
-                clinical_data
-              )
-            `)
-            .order('date', { ascending: true })
-            .range(vFrom, vTo);
-
-          if (user.role === 'Administrador') {
-            // No filters
-          } else if (user.role === 'Gestor') {
-            query = query.eq('area_color', user.color);
-          } else {
-            query = query.eq('agent_id', user.id);
-          }
-
-          const { data, error } = await query;
-          if (error) throw error;
-
-          if (data && data.length > 0) {
-            allVisits = [...allVisits, ...data];
-            if (data.length < 1000) {
-              vHasMore = false;
-            } else {
-              vFrom += 1000;
-              vTo += 1000;
-            }
-          } else {
-            vHasMore = false;
-          }
-        }
+        // Fetch Visits with nested patients info using central helper
+        const allVisits = await fetchTableWithFilters<any>('visits', user, {
+          select: `
+            *,
+            patients (
+              id,
+              name,
+              cns,
+              birth_date,
+              categories,
+              clinical_data
+            )
+          `,
+          orderBy: { column: 'date', ascending: true }
+        });
 
         // Filter by selected year and month
         const filtered = allVisits.filter(v => {

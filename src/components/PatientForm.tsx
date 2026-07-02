@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { syncService } from '../lib/syncService';
 import { generateUUID } from '../lib/utils';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useToast } from './Toast';
 import { 
   X, 
   Download,
@@ -25,6 +26,7 @@ import { FormActions } from './patient-form/FormActions';
 
 export function PatientForm({ user }: { user: any }) {
   const navigate = useNavigate();
+  const { success, warning, error: toastError } = useToast();
   const { id } = useParams();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
@@ -407,7 +409,7 @@ export function PatientForm({ user }: { user: any }) {
         // Queue patient deletion
         await syncService.addToQueue('patients', 'DELETE', { id });
         
-        alert('Exclusão agendada para sincronização.');
+        success('Exclusão agendada para sincronização.');
         navigate('/pacientes');
         return;
       }
@@ -435,7 +437,7 @@ export function PatientForm({ user }: { user: any }) {
       navigate('/pacientes');
     } catch (error: any) {
       console.error("Error deleting patient:", error);
-      alert(error.message || "Erro ao excluir paciente.");
+      toastError(error.message || "Erro ao excluir paciente.");
     } finally {
       setDeleting(false);
     }
@@ -781,7 +783,7 @@ export function PatientForm({ user }: { user: any }) {
     }
 
     if (isArchived) {
-      alert("Visita de puerpério detectada: a gestação atual foi arquivada no histórico com sucesso, e a paciente foi removida da categoria Gestantes.");
+      success("Visita de puerpério detectada: a gestação atual foi arquivada no histórico com sucesso, e a paciente foi removida da categoria Gestantes.");
     }
     
     try {
@@ -898,8 +900,11 @@ export function PatientForm({ user }: { user: any }) {
           return 'all';
         };
 
-        alert('Dados salvos localmente. Serão sincronizados quando houver internet.');
-        navigate(`/pacientes?filter=${getRedirectFilter(finalCategories)}`);
+        success('Dados salvos localmente. Serão sincronizados quando houver internet.');
+        setTimeout(() => {
+          window.location.hash = `#/pacientes?filter=${getRedirectFilter(finalCategories)}`;
+          window.location.reload();
+        }, 1500);
         return;
       }
 
@@ -1052,10 +1057,14 @@ export function PatientForm({ user }: { user: any }) {
         return 'all';
       };
 
-      navigate(`/pacientes?filter=${getRedirectFilter(formData.categories)}`);
+      success('Paciente salvo com sucesso!');
+      setTimeout(() => {
+        window.location.hash = `#/pacientes?filter=${getRedirectFilter(formData.categories)}`;
+        window.location.reload();
+      }, 1500);
     } catch (error: any) {
       console.error("Error saving patient:", error);
-      alert(error.message || "Erro ao salvar paciente.");
+      toastError(error.message || "Erro ao salvar paciente.");
     } finally {
       setLoading(false);
     }

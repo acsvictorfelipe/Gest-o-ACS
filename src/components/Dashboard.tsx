@@ -174,7 +174,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                       <span className="text-[10px] font-black bg-teal-600/15 text-teal-700 dark:text-teal-400 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                         Solicitação de Visita
                       </span>
-                      <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${priorityColors[req.priority] || priorityColors.medium}`}>
+                      <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${priorityColors[req.priority as 'low' | 'medium' | 'high' | 'urgent'] || priorityColors.medium}`}>
                         Prioridade: {req.priority === 'low' ? 'Baixa' : req.priority === 'medium' ? 'Média' : req.priority === 'high' ? 'Alta' : 'URGENTE'}
                       </span>
                       <span className="text-[9px] text-text-muted font-bold">

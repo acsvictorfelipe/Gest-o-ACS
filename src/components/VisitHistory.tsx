@@ -12,6 +12,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from './Toast';
 
 import { formatDate } from '../lib/dateUtils';
 
@@ -47,6 +48,7 @@ function getPeriodStart(period: PeriodKey): string | null {
 
 export function VisitHistory({ user }: { user: any }) {
   const navigate = useNavigate();
+  const { error: toastError } = useToast();
   const [visits, setVisits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -143,7 +145,7 @@ export function VisitHistory({ user }: { user: any }) {
       await fetchVisits();
     } catch (err) {
       console.error("Error updating visit:", err);
-      alert("Erro ao salvar alterações da visita dadas.");
+      toastError("Erro ao salvar alterações da visita dadas.");
     } finally {
       setSubmitting(false);
     }
@@ -161,7 +163,7 @@ export function VisitHistory({ user }: { user: any }) {
       await fetchVisits();
     } catch (err) {
       console.error("Error deleting visit:", err);
-      alert("Erro ao excluir visita.");
+      toastError("Erro ao excluir visita.");
     }
   };
 

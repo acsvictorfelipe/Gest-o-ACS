@@ -77,7 +77,10 @@ export async function fetchAllRows<T>(
 export async function fetchTableWithFilters<T>(
   tableName: string,
   user: any,
-  options?: { select?: string }
+  options?: {
+    select?: string;
+    orderBy?: { column: string; ascending?: boolean };
+  }
 ): Promise<T[]> {
   const selectQuery = options?.select || '*';
   let allData: T[] = [];
@@ -99,6 +102,10 @@ export async function fetchTableWithFilters<T>(
       } else {
         query = query.eq('agent_id', user.id);
       }
+    }
+
+    if (options?.orderBy) {
+      query = query.order(options.orderBy.column, { ascending: options.orderBy.ascending ?? true });
     }
 
     const { data, error } = await query;

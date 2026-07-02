@@ -29,7 +29,7 @@ export function RastreamentoSection({ formData, setFormData, isReadOnly }: Rastr
             <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Exame Citopatológico</label>
             <select 
               value={formData.clinicalData.rastreamento?.exameCitopatologico || 'Não'}
-              onChange={e => setFormData(prev => ({
+              onChange={e => setFormData((prev: any) => ({
                 ...prev, 
                 clinicalData: { 
                   ...prev.clinicalData, 
@@ -50,7 +50,7 @@ export function RastreamentoSection({ formData, setFormData, isReadOnly }: Rastr
             <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Saúde Sexual Reprodutiva</label>
             <select 
               value={formData.clinicalData.rastreamento?.saudeSexualReprodutiva || 'Não'}
-              onChange={e => setFormData(prev => ({
+              onChange={e => setFormData((prev: any) => ({
                 ...prev, 
                 clinicalData: { 
                   ...prev.clinicalData, 
@@ -71,7 +71,7 @@ export function RastreamentoSection({ formData, setFormData, isReadOnly }: Rastr
             <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Mamografia</label>
             <select 
               value={formData.clinicalData.rastreamento?.mamografia || 'Não'}
-              onChange={e => setFormData(prev => ({
+              onChange={e => setFormData((prev: any) => ({
                 ...prev, 
                 clinicalData: { 
                   ...prev.clinicalData, 
@@ -92,7 +92,7 @@ export function RastreamentoSection({ formData, setFormData, isReadOnly }: Rastr
             <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Vacina HPV</label>
             <select 
               value={formData.clinicalData.rastreamento?.vacinaHpv || 'Não'}
-              onChange={e => setFormData(prev => ({
+              onChange={e => setFormData((prev: any) => ({
                 ...prev, 
                 clinicalData: { 
                   ...prev.clinicalData, 

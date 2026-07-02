@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { syncService } from '../lib/syncService';
 import { formatDate } from '../lib/dateUtils';
+import { useToast } from './Toast';
 import { 
   Home, 
   Users, 
@@ -24,6 +25,7 @@ import {
 export function HouseholdView({ user }: { user: any }) {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { info, error: toastError } = useToast();
   const [household, setHousehold] = useState<any>(null);
   const [residents, setResidents] = useState<any[]>([]);
   const [visits, setVisits] = useState<any[]>([]);
@@ -105,7 +107,7 @@ export function HouseholdView({ user }: { user: any }) {
         await syncService.addToQueue('households', 'UPDATE', { id, ...editForm });
         setHousehold({ ...household, ...editForm });
         setIsEditing(false);
-        alert('Alterações salvas localmente.');
+        info('Alterações salvas localmente.');
         navigate('/domicilios');
         return;
       }
@@ -121,7 +123,7 @@ export function HouseholdView({ user }: { user: any }) {
       navigate('/domicilios');
     } catch (error) {
       console.error("Error updating household:", error);
-      alert("Erro ao atualizar domicílio.");
+      toastError("Erro ao atualizar domicílio.");
     } finally {
       setLoading(false);
     }
@@ -140,7 +142,7 @@ export function HouseholdView({ user }: { user: any }) {
           }
         }
         await syncService.addToQueue('households', 'DELETE', { id });
-        alert('Exclusão agendada para sincronização.');
+        info('Exclusão agendada para sincronização.');
         navigate('/domicilios');
         return;
       }

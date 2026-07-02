@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase, fetchTableWithFilters } from '../lib/supabase';
 import { Download, FileText, Loader2, Users, Heart, Activity, FileSpreadsheet } from 'lucide-react';
 import { formatDate } from '../lib/dateUtils';
+import { useToast } from './Toast';
 
 type ExportType = 'basic' | 'diabetes' | 'hypertension' | 'clinical_all';
 
 export function ExportTool({ user }: { user: any }) {
+  const { warning, error: toastError } = useToast();
   const [loading, setLoading] = useState(false);
   const [exportCount, setExportCount] = useState(0);
   const [selectedType, setSelectedType] = useState<ExportType>('basic');
+  const [counts, setCounts] = useState<{ basic: number; diabetes: number; hypertension: number; clinical_all: number } | null>(null);
+  const [fetchingCounts, setFetchingCounts] = useState(false);
 
   const getDiabetesData = (p: any) => {
     const clinical = p.clinical_data || {};
@@ -46,6 +50,35 @@ export function ExportTool({ user }: { user: any }) {
            clinical.acamadodomiciliado?.hipertensao === 'Sim';
   };
 
+  useEffect(() => {
+    async function loadCounts() {
+      if (!user) return;
+      setFetchingCounts(true);
+      try {
+        const data = await fetchTableWithFilters<any>('patients', user, {
+          select: 'id, clinical_data, categories'
+        });
+        if (data) {
+          const basicCount = data.length;
+          const diabetesCount = data.filter(p => isPatientDiabetic(p)).length;
+          const hypertensionCount = data.filter(p => isPatientHypertensive(p)).length;
+          const clinicalAllCount = data.length;
+          setCounts({
+            basic: basicCount,
+            diabetes: diabetesCount,
+            hypertension: hypertensionCount,
+            clinical_all: clinicalAllCount
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching preview counts:', err);
+      } finally {
+        setFetchingCounts(false);
+      }
+    }
+    loadCounts();
+  }, [user]);
+
   const exportData = async () => {
     setLoading(true);
     try {
@@ -54,7 +87,7 @@ export function ExportTool({ user }: { user: any }) {
       });
 
       if (!data || data.length === 0) {
-        alert('Nenhum dado encontrado para exportação.');
+        warning('Nenhum dado encontrado para exportação.');
         return;
       }
 
@@ -67,7 +100,7 @@ export function ExportTool({ user }: { user: any }) {
       }
 
       if (filteredData.length === 0) {
-        alert('Nenhum paciente atende aos critérios do filtro selecionado.');
+        warning('Nenhum paciente atende aos critérios do filtro selecionado.');
         return;
       }
 
@@ -304,7 +337,7 @@ export function ExportTool({ user }: { user: any }) {
 
     } catch (err: any) {
       console.error('Export error:', err);
-      alert('Erro ao exportar dados: ' + err.message);
+      toastError('Erro ao exportar dados: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -383,6 +416,13 @@ export function ExportTool({ user }: { user: any }) {
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                   {option.description}
                 </p>
+                {fetchingCounts ? (
+                  <div className="h-4 w-28 bg-slate-100 dark:bg-slate-800 rounded animate-pulse mt-1" />
+                ) : counts !== null ? (
+                  <span className="inline-block text-[10px] font-black uppercase text-teal-600 dark:text-teal-400 mt-1">
+                    {counts[option.id]} {counts[option.id] === 1 ? 'paciente cadastrado' : 'pacientes cadastrados'}
+                  </span>
+                ) : null}
               </div>
             </div>
           );
@@ -394,7 +434,16 @@ export function ExportTool({ user }: { user: any }) {
           <p className="text-sm font-bold text-slate-800 dark:text-slate-300">
             Você está exportando: <span className="text-teal-600 dark:text-teal-400 uppercase font-black">{options.find(o => o.id === selectedType)?.title}</span>
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          {fetchingCounts ? (
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 animate-pulse font-bold uppercase">
+              Carregando contagem de pacientes...
+            </p>
+          ) : counts !== null ? (
+            <p className="text-sm font-black text-slate-900 dark:text-white mt-1.5 uppercase">
+              {counts[selectedType]} {counts[selectedType] === 1 ? 'paciente será incluído' : 'pacientes serão incluídos'} no arquivo
+            </p>
+          ) : null}
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
             O arquivo gerado incluirá uma marca de codificação (BOM) para garantir que caracteres especiais (como acentos e cedilhas) apareçam perfeitamente formatados no Microsoft Excel.
           </p>
         </div>

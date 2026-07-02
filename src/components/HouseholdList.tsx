@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase, fetchTableWithFilters } from '../lib/supabase';
 import { syncService } from '../lib/syncService';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from './Toast';
 import { 
   Home, 
   Search, 
@@ -16,6 +17,7 @@ import {
 
 export function HouseholdList({ user }: { user: any }) {
   const navigate = useNavigate();
+  const { info } = useToast();
   const [households, setHouseholds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,7 +63,7 @@ export function HouseholdList({ user }: { user: any }) {
         
         setHouseholds(households.filter(h => h.id !== deleteConfirm));
         setDeleteConfirm(null);
-        alert('Exclusão agendada para sincronização.');
+        info('Exclusão agendada para sincronização.');
         return;
       }
 

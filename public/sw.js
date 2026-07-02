@@ -1,9 +1,10 @@
-const CACHE_NAME = 'gestao-acs-v1';
+const CACHE_NAME = 'gestao-acs-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icon-512.jpg'
+  '/icon-512.png',
+  '/icon-192.png'
 ];
 
 // Install Event

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { formatDate } from '../../../lib/dateUtils';
+import { useToast } from '../../Toast';
 import { 
   Calendar, 
   Trash2, 
@@ -58,6 +59,7 @@ export function VisitasHistoricoSection({
   isReadOnly
 }: VisitasHistoricoSectionProps) {
   const navigate = useNavigate();
+  const { warning } = useToast();
   const [activeTab, setActiveTab] = useState<'timeline' | 'vacinas'>('timeline');
   const [dbVisits, setDbVisits] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -113,7 +115,7 @@ export function VisitasHistoricoSection({
 
   const handleSaveEdit = (type: 'visitasGerais' | 'consultasGerais', index: number) => {
     if (!editDate) {
-      alert('Por favor, selecione uma data para salvar o registro.');
+      warning('Por favor, selecione uma data para salvar o registro.');
       return;
     }
     updateDateInList('root', type, index, {
