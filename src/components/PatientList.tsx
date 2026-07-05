@@ -99,6 +99,7 @@ export function PatientList({ user }: { user: any }) {
              activeFilter === 'bebes-pendentes' ? 'Bebês com Visitas Pendentes' :
              activeFilter === 'visitas-atraso' ? 'Visitas em Atraso' :
              activeFilter === 'receitas_vencendo' ? 'Receitas a Vencer' :
+             activeFilter === 'sus_atualizado' ? 'SUS Atualizado' :
              'Pacientes'}
           </h2>
           <p className="text-[12px] text-slate-500 font-medium mt-1">Gerencie os atendimentos e registros da sua microárea.</p>
@@ -114,8 +115,8 @@ export function PatientList({ user }: { user: any }) {
 
       {/* Search Bar & Filters */}
       <div className="space-y-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex flex-col sm:flex-row gap-3 flex-1 max-w-2xl">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full">
             <div className="relative group flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-600 transition-colors" />
               <input 
@@ -142,32 +143,34 @@ export function PatientList({ user }: { user: any }) {
               </select>
               <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             </div>
-          </div>
 
-           <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1">
-             {[
-               { id: 'all', label: 'Todos' },
-               { id: 'gestantes', label: 'Gestantes' },
-               { id: 'criancas', label: 'Crianças' },
-               { id: 'idosos', label: 'Idosos' },
-               { id: 'hipertensos', label: 'Hipertensos' },
-               { id: 'diabéticos', label: 'Diabéticos' },
-               { id: 'acamados', label: 'Acamados' },
-               { id: 'receitas_vencendo', label: 'Receitas a Vencer' },
-             ].map((f) => (
-               <button
-                 key={f.id}
-                 onClick={() => setActiveFilter(f.id)}
-                 className={`px-4 py-2 rounded-xl text-[12px] font-semibold whitespace-nowrap transition-all ${
-                   activeFilter === f.id 
-                     ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20' 
-                     : 'bg-white text-slate-500 border border-border hover:border-slate-200'
-                 }`}
-               >
-                 {f.label}
-               </button>
-             ))}
-           </div>
+            {/* Categorias Dropdown Select */}
+            <div className="relative min-w-[220px]">
+              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-600 shrink-0" />
+              <select
+                value={activeFilter}
+                onChange={(e) => setActiveFilter(e.target.value)}
+                className="w-full bg-bg-secondary border border-border rounded-xl py-3 pl-11 pr-10 shadow-sm focus:ring-2 focus:ring-teal-600/10 focus:border-teal-600/30 transition-all text-[13px] font-bold text-slate-800 dark:text-white appearance-none cursor-pointer"
+              >
+                {[
+                  { id: 'all', label: '📂 Categorias (Todos)' },
+                  { id: 'gestantes', label: 'Gestantes' },
+                  { id: 'criancas', label: 'Crianças' },
+                  { id: 'idosos', label: 'Idosos' },
+                  { id: 'hipertensos', label: 'Hipertensos' },
+                  { id: 'diabéticos', label: 'Diabéticos' },
+                  { id: 'acamados', label: 'Acamados' },
+                  { id: 'receitas_vencendo', label: 'Receitas a Vencer' },
+                  { id: 'sus_atualizado', label: 'SUS Atualizado' },
+                ].map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -268,6 +271,12 @@ export function PatientList({ user }: { user: any }) {
                               <div>
                                  <div className="flex items-center gap-2 flex-wrap">
                                    <p className="text-[14px] font-semibold text-text-primary leading-tight group-hover:text-teal-600 transition-colors uppercase">{p.name}</p>
+                                    {p.clinical_data?.sus_atualizado === 'Sim' && (
+                                      <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30 text-[9px] font-bold uppercase rounded-md shrink-0">
+                                        <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                        SUS Atualizado
+                                      </span>
+                                    )}
                                    {(() => {
                                      const status = getPrescriptionStatus(p);
                                      if (status === 'vencida') {
@@ -487,6 +496,12 @@ export function PatientList({ user }: { user: any }) {
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="text-sm font-semibold text-text-primary dark:text-white leading-tight">{p.name}</h4>
+                          {p.clinical_data?.sus_atualizado === 'Sim' && (
+                            <span className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30 text-[9px] font-bold uppercase rounded shrink-0">
+                              <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                              SUS Atualizado
+                            </span>
+                          )}
                           {(() => {
                             const realVisitAtMobile = getPatientLastVisitAt(p);
                             const isAtrasoMobile = isVisitLate(realVisitAtMobile);

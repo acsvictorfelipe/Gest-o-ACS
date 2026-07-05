@@ -63,7 +63,7 @@ export function VisitasHistoricoSection({
   const [activeTab, setActiveTab] = useState<'timeline' | 'vacinas'>('timeline');
   const [dbVisits, setDbVisits] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filterType, setFilterType] = useState<'todos' | 'visitas' | 'consultas'>('todos');
+  const [filterType, setFilterType] = useState<'todos' | 'visitas'>('todos');
   const [searchTerm, setSearchTerm] = useState('');
   
   // Expanded state for long notes
@@ -139,16 +139,6 @@ export function VisitasHistoricoSection({
 
   // Efeito para ativar automaticamente o modo de edição ao adicionar um item sem data
   useEffect(() => {
-    if (formData.clinicalData.consultasGerais) {
-      const emptyIdx = formData.clinicalData.consultasGerais.findIndex((c: any) => c && c.date === '');
-      if (emptyIdx !== -1) {
-        setEditingLocalType('consultasGerais');
-        setEditingLocalIndex(emptyIdx);
-        setEditDate('');
-        setEditSummary('');
-        return;
-      }
-    }
     if (formData.clinicalData.visitasGerais) {
       const emptyIdx = formData.clinicalData.visitasGerais.findIndex((v: any) => v && v.date === '');
       if (emptyIdx !== -1) {
@@ -161,7 +151,7 @@ export function VisitasHistoricoSection({
         return;
       }
     }
-  }, [formData.clinicalData.consultasGerais, formData.clinicalData.visitasGerais]);
+  }, [formData.clinicalData.visitasGerais]);
 
   // Compile clinical milestones from different sources
   const getTimelineItems = (): TimelineItem[] => {
@@ -336,22 +326,6 @@ export function VisitasHistoricoSection({
       });
     }
 
-    // 7. General Patient Consultations (consultasGerais)
-    if (formData.clinicalData.consultasGerais) {
-      formData.clinicalData.consultasGerais.forEach((c: any, index: number) => {
-        if (c.date === undefined) return;
-        items.push({
-          id: `consulta-local-${index}`,
-          date: c.date || '',
-          type: 'consulta_geral',
-          title: 'Consulta Médica / Enfermagem',
-          summary: c.summary || '',
-          status: 'Realizada',
-          index
-        });
-      });
-    }
-
     // Sort: items with no date first, then most recent date first
     return items.sort((a, b) => {
       if (!a.date && b.date) return -1;
@@ -367,7 +341,6 @@ export function VisitasHistoricoSection({
   const filteredItems = allItems.filter(item => {
     // 1. Tab Filters
     if (filterType === 'visitas' && item.type !== 'visita_db' && item.type !== 'visita_local') return false;
-    if (filterType === 'consultas' && item.type !== 'consulta_puericultura' && item.type !== 'consulta_prenatal' && item.type !== 'puerperio' && item.type !== 'consulta_geral') return false;
     
     // 2. Text Search
     if (searchTerm.trim() !== '') {
@@ -385,7 +358,6 @@ export function VisitasHistoricoSection({
   const counts = {
     todos: allItems.length,
     visitas: allItems.filter(i => i.type === 'visita_db' || i.type === 'visita_local').length,
-    consultas: allItems.filter(i => i.type === 'consulta_puericultura' || i.type === 'consulta_prenatal' || i.type === 'puerperio' || i.type === 'consulta_geral').length
   };
 
   // Helper for type-specific styling
@@ -554,17 +526,6 @@ export function VisitasHistoricoSection({
               + Visita ACS
             </button>
           )}
-
-          {!isReadOnly && (
-            <button 
-              type="button"
-              onClick={() => addDateToList('root', 'consultasGerais')}
-              className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-bold uppercase transition-all tracking-tight flex items-center gap-1.5 shadow-sm"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              + Registrar Consulta
-            </button>
-          )}
         </div>
       </div>
 
@@ -659,21 +620,6 @@ export function VisitasHistoricoSection({
                 Visitas ACS
                 <span className="px-1.5 py-0.5 rounded-full text-[9px] bg-primary/10 text-primary font-black">
                   {counts.visitas}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFilterType('consultas')}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all tracking-tight flex items-center gap-1.5 whitespace-nowrap ${
-                  filterType === 'consultas'
-                    ? 'bg-purple-600 text-white shadow-sm'
-                    : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100'
-                }`}
-              >
-                Consultas UBS
-                <span className="px-1.5 py-0.5 rounded-full text-[9px] bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-black">
-                  {counts.consultas}
                 </span>
               </button>
             </div>

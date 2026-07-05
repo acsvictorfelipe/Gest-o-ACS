@@ -242,39 +242,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </div>
       )}
 
-      {/* 1. Quick Actions Bar */}
-      <motion.div 
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="backdrop-blur-md bg-bg-secondary/80 border border-border rounded-[28px] p-5 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400">
-            <Activity className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-text-primary leading-tight">Painel do Agente de Saúde</h2>
-            <p className="text-[11px] text-text-secondary font-medium mt-0.5">Acesso rápido para ações diárias de campo</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2.5 flex-wrap w-full md:w-auto justify-end">
-          <button
-            onClick={() => navigate('/novo-cadastro')}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl text-[12px] font-bold shadow-md shadow-teal-600/10 active:scale-98 transition-all w-full sm:w-auto"
-          >
-            <Plus className="w-4 h-4" />
-            Novo Cidadão
-          </button>
-          
-          <button
-            onClick={() => navigate('/pacientes')}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white rounded-2xl text-[12px] font-bold shadow-sm active:scale-98 transition-all w-full sm:w-auto"
-          >
-            <CalendarIcon className="w-4 h-4" />
-            Registrar Visita
-          </button>
-        </div>
-      </motion.div>
+
 
       {/* 2. Stat Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">

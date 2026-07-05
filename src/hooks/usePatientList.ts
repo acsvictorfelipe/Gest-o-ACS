@@ -344,6 +344,10 @@ export function usePatientList(user: any) {
       return matchesSearch && (status === 'vencida' || status === 'vencendo');
     }
 
+    if (activeFilter === 'sus_atualizado') {
+      return matchesSearch && p.clinical_data?.sus_atualizado === 'Sim';
+    }
+
     return matchesSearch;
   });
 

@@ -76,6 +76,7 @@ export function PatientForm({ user }: { user: any }) {
     householdId: '',
     categories: [] as string[],
     clinicalData: {
+      sus_atualizado: 'Não',
       historicoGestacoes: [] as any[],
       visitasGerais: [] as { date: string, summary: string }[],
       consultasGerais: [] as { date: string, summary: string }[],
@@ -1259,11 +1260,32 @@ export function PatientForm({ user }: { user: any }) {
         </div>
       )}
 
-      <div className="flex justify-between items-center bg-white dark:bg-slate-900 px-6 py-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        <header className="flex flex-col gap-1">
-          <h2 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white uppercase">{id ? 'Editar Cadastro' : 'Novo Cadastro'}</h2>
-          <p className="text-xs text-slate-500 font-medium tracking-tight">Preencha as informações detalhadas do prontuário.</p>
-        </header>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 px-6 py-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <header className="flex flex-col gap-1">
+            <h2 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white uppercase">{id ? 'Editar Cadastro' : 'Novo Cadastro'}</h2>
+            <p className="text-xs text-slate-500 font-medium tracking-tight">Preencha as informações detalhadas do prontuário.</p>
+          </header>
+          
+          <label className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/35 rounded-lg cursor-pointer transition-colors select-none text-emerald-800 dark:text-emerald-400 font-bold text-xs uppercase shrink-0">
+            <input 
+              type="checkbox"
+              checked={formData.clinicalData?.sus_atualizado === 'Sim'}
+              onChange={e => {
+                setIsDirty(true);
+                setFormData((prev: any) => ({
+                  ...prev,
+                  clinicalData: {
+                    ...prev.clinicalData,
+                    sus_atualizado: e.target.checked ? 'Sim' : 'Não'
+                  }
+                }));
+              }}
+              className="w-4 h-4 rounded text-emerald-600 border-emerald-300 focus:ring-emerald-500 dark:border-emerald-800 dark:bg-slate-800 focus:ring-offset-0"
+            />
+            <span>SUS Atualizado</span>
+          </label>
+        </div>
         <div className="flex items-center gap-2">
           {formData.householdId && (
             <button 
