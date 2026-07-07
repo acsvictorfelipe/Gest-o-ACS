@@ -608,7 +608,8 @@ export function PatientForm({ user }: { user: any }) {
           consultas6Meses: 'Não',
           visitaAcs1: '',
           visitaAcs2: ''
-        }
+        },
+        notes: ''
       };
 
       formData.categories = formData.categories.filter((cat: string) => cat !== 'Gestante');
@@ -1092,19 +1093,41 @@ export function PatientForm({ user }: { user: any }) {
         </div>
       )}
 
-      {Object.keys(methods.formState.errors).length > 0 && (
-        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-xl p-4 text-red-700 dark:text-red-400">
-          <div className="flex items-center gap-2 font-bold uppercase tracking-wider text-xs mb-2">
-            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
-            Por favor, corrija os seguintes erros antes de salvar:
+      {Object.keys(methods.formState.errors).length > 0 && (() => {
+        const getErrorMessages = (errors: any): string[] => {
+          const messages: string[] = [];
+          const traverse = (obj: any) => {
+            if (!obj || typeof obj !== 'object') return;
+            if (typeof obj.message === 'string' && obj.message) {
+              messages.push(obj.message);
+              return;
+            }
+            for (const key of Object.keys(obj)) {
+              traverse(obj[key]);
+            }
+          };
+          traverse(errors);
+          return messages;
+        };
+        const uniqueErrors = Array.from(new Set(getErrorMessages(methods.formState.errors)));
+        return (
+          <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-xl p-4 text-red-700 dark:text-red-400">
+            <div className="flex items-center gap-2 font-bold uppercase tracking-wider text-xs mb-2">
+              <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
+              Por favor, corrija os seguintes erros antes de salvar:
+            </div>
+            <ul className="list-disc list-inside text-xs space-y-1 font-semibold">
+              {uniqueErrors.length > 0 ? (
+                uniqueErrors.map((message: string, index: number) => (
+                  <li key={index}>{message}</li>
+                ))
+              ) : (
+                <li>Existem campos obrigatórios ou inválidos não preenchidos no formulário.</li>
+              )}
+            </ul>
           </div>
-          <ul className="list-disc list-inside text-xs space-y-1 font-semibold">
-            {Object.entries(methods.formState.errors).map(([field, error]: any) => (
-              <li key={field}>{error.message}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+        );
+      })()}
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 px-6 py-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">

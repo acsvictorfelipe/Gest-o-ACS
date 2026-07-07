@@ -155,7 +155,8 @@ export const patientFormSchema = z.object({
         consultas6Meses: 'Não',
         visitaAcs1: '',
         visitaAcs2: ''
-      })
+      }),
+      notes: z.string().default('')
     }).default({
       dum: '',
       dpp: '',
@@ -183,7 +184,8 @@ export const patientFormSchema = z.object({
         consultas6Meses: 'Não',
         visitaAcs1: '',
         visitaAcs2: ''
-      }
+      },
+      notes: ''
     }),
     crianca: z.object({
       consultas: z.array(z.string()).default([]),
@@ -191,14 +193,16 @@ export const patientFormSchema = z.object({
       visita30dias: z.string().default(''),
       visita6meses: z.string().default(''),
       proximaVisitaSugerida: z.string().default(''),
-      vacinas: z.record(z.string(), z.string()).default({})
+      vacinas: z.record(z.string(), z.string()).default({}),
+      notes: z.string().default('')
     }).default({
       consultas: [],
       visitasAcs: [],
       visita30dias: '',
       visita6meses: '',
       proximaVisitaSugerida: '',
-      vacinas: {}
+      vacinas: {},
+      notes: ''
     }),
     adulto: z.object({
       diabetes: z.string().default('Não'),
@@ -373,7 +377,8 @@ export const patientFormSchema = z.object({
         consultas6Meses: 'Não',
         visitaAcs1: '',
         visitaAcs2: ''
-      }
+      },
+      notes: ''
     },
     crianca: {
       consultas: [],
@@ -381,7 +386,8 @@ export const patientFormSchema = z.object({
       visita30dias: '',
       visita6meses: '',
       proximaVisitaSugerida: '',
-      vacinas: {}
+      vacinas: {},
+      notes: ''
     },
     adulto: {
       diabetes: 'Não',
@@ -524,7 +530,8 @@ export const initialDefaultValues: PatientFormValues = {
         consultas6Meses: 'Não',
         visitaAcs1: '',
         visitaAcs2: ''
-      }
+      },
+      notes: ''
     },
     crianca: {
       consultas: [],
@@ -532,7 +539,8 @@ export const initialDefaultValues: PatientFormValues = {
       visita30dias: '',
       visita6meses: '',
       proximaVisitaSugerida: '',
-      vacinas: {}
+      vacinas: {},
+      notes: ''
     },
     adulto: {
       diabetes: 'Não',
