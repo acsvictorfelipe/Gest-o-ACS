@@ -283,6 +283,37 @@ export function RedistribuicaoTab({
           </p>
         </div>
 
+        <div className="bg-teal-50/50 dark:bg-slate-800/50 border border-teal-100/50 dark:border-slate-700/50 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h4 className="text-xs font-bold text-teal-800 dark:text-teal-300">Auto-Padronização Rápida</h4>
+            <p className="text-[10px] text-slate-500 font-medium">
+              Corrige automaticamente microáreas de dígito único de todo o sistema (1, 2, 3... 9) para o formato de dois dígitos (01, 02, 03... 09).
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              if (window.confirm("Deseja padronizar automaticamente todas as microáreas de 1 a 9 para 01 a 09 no sistema?")) {
+                setRenaming(true);
+                try {
+                  for (let i = 1; i <= 9; i++) {
+                    await handleRenameMicroarea('all', String(i), '0' + i);
+                  }
+                } catch (err) {
+                  console.error(err);
+                } finally {
+                  setRenaming(false);
+                }
+              }
+            }}
+            disabled={renaming}
+            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-2 transition-all disabled:opacity-50 shrink-0 cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${renaming ? 'animate-spin' : ''}`} />
+            Padronizar (1-9 para 01-09)
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-1">
             <label className="text-[9px] font-black uppercase tracking-wider text-text-muted">Filtrar por Agente</label>

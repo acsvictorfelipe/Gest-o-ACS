@@ -220,26 +220,12 @@ export function VisitasHistoricoSection({
     // 4. Criança Section Milestones
     if (formData.categories.includes('Criança') && formData.clinicalData.crianca) {
       const kid = formData.clinicalData.crianca;
-      
-      if (kid.consultas) {
-        kid.consultas.forEach((cDate: string, idx: number) => {
-          if (cDate) {
-            items.push({
-              id: `kid-consulta-${idx}`,
-              date: cDate,
-              type: 'consulta_puericultura',
-              title: 'Consulta de Puericultura',
-              summary: 'Acompanhamento sistemático de crescimento e desenvolvimento infantil.'
-            });
-          }
-        });
-      }
 
       if (kid.visita30dias) {
         items.push({
           id: 'kid-v30d',
           date: kid.visita30dias,
-          type: 'consulta_puericultura',
+          type: 'visita_local',
           title: 'Acompanhamento do 1º Mês (30 dias)',
           summary: 'Primeira avaliação pós-natal de saúde e amamentação da criança.'
         });
@@ -249,7 +235,7 @@ export function VisitasHistoricoSection({
         items.push({
           id: 'kid-v6m',
           date: kid.visita6meses,
-          type: 'consulta_puericultura',
+          type: 'visita_local',
           title: 'Acompanhamento do 6º Mês',
           summary: 'Avaliação de crescimento, desenvolvimento e introdução alimentar.'
         });
@@ -259,20 +245,6 @@ export function VisitasHistoricoSection({
     // 5. Gestante Section Milestones
     if (formData.categories.includes('Gestante') && formData.clinicalData.gestante) {
       const gest = formData.clinicalData.gestante;
-      
-      if (gest.consultas) {
-        gest.consultas.forEach((cDate: string, idx: number) => {
-          if (cDate) {
-            items.push({
-              id: `gest-consulta-${idx}`,
-              date: cDate,
-              type: 'consulta_prenatal',
-              title: 'Consulta de Pré-Natal',
-              summary: 'Consulta médica ou de enfermagem de acompanhamento da gravidez.'
-            });
-          }
-        });
-      }
 
       if (gest.dum) {
         items.push({
@@ -294,16 +266,6 @@ export function VisitasHistoricoSection({
         });
       }
 
-      if (gest.puerperioConsulta) {
-        items.push({
-          id: 'gest-puerp-con',
-          date: gest.puerperioConsulta,
-          type: 'puerperio',
-          title: 'Consulta de Puerpério (Mãe)',
-          summary: 'Consulta de avaliação pós-parto realizada na UBS.'
-        });
-      }
-
       if (gest.puerperioVisita) {
         items.push({
           id: 'gest-puerp-vis',
@@ -313,17 +275,6 @@ export function VisitasHistoricoSection({
           summary: 'Visita domiciliar nos primeiros dias após a alta da maternidade.'
         });
       }
-    }
-
-    // 6. Idoso Section Milestones
-    if (formData.categories.includes('Idoso') && formData.clinicalData.idoso?.consultaMedicaAnualData) {
-      items.push({
-        id: 'idoso-consulta',
-        date: formData.clinicalData.idoso.consultaMedicaAnualData,
-        type: 'consulta_puericultura',
-        title: 'Consulta Médica Anual do Idoso',
-        summary: 'Acompanhamento preventivo sistemático do paciente na terceira idade.'
-      });
     }
 
     // Sort: items with no date first, then most recent date first

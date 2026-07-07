@@ -35,6 +35,10 @@ import {
 import { visitRequestService } from '../lib/visitRequests';
 import { Bell, Send, ClipboardCheck, Mail } from 'lucide-react';
 
+import { SystemStats } from './admin-dashboard/SystemStats';
+import { VisitRequestManager } from './admin-dashboard/VisitRequestManager';
+import { ActivityTimeline } from './admin-dashboard/ActivityTimeline';
+
 export function AdminDashboard({ user }: { user: any }) {
   const navigate = useNavigate();
   const { warning, error: toastError } = useToast();
@@ -48,20 +52,10 @@ export function AdminDashboard({ user }: { user: any }) {
   
   // Visit Request States
   const [visitRequests, setVisitRequests] = React.useState<any[]>([]);
-  const [showNewRequestForm, setShowNewRequestForm] = React.useState(false);
-  const [newRequestAgent, setNewRequestAgent] = React.useState('');
-  const [newRequestPatient, setNewRequestPatient] = React.useState('');
-  const [patientSearch, setPatientSearch] = React.useState('');
-  const [showPatientDropdown, setShowPatientDropdown] = React.useState(false);
-  const [newRequestPriority, setNewRequestPriority] = React.useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
-  const [newRequestReason, setNewRequestReason] = React.useState('');
-  const [submittingRequest, setSubmittingRequest] = React.useState(false);
 
   // Search and Filter states
   const [agentSearch, setAgentSearch] = React.useState('');
-  const [logSearch, setLogSearch] = React.useState('');
   const [selectedAgentFilter, setSelectedAgentFilter] = React.useState<string | null>(null);
-  const [logTypeFilter, setLogTypeFilter] = React.useState<string>('all');
   
   const [refreshTrigger, setRefreshTrigger] = React.useState(0);
   const [selectedIndicator, setSelectedIndicator] = React.useState<string>('gestantes');
@@ -146,70 +140,6 @@ export function AdminDashboard({ user }: { user: any }) {
   React.useEffect(() => {
     fetchAdminData();
   }, [refreshTrigger]);
-
-  const handleCreateVisitRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newRequestAgent || !newRequestPatient || !newRequestReason.trim()) {
-      warning('Por favor, preencha todos os campos.');
-      return;
-    }
-
-    setSubmittingRequest(true);
-    try {
-      const selectedPatient = patients.find(p => p.id === newRequestPatient);
-      const requestPayload = {
-        agent_id: newRequestAgent,
-        patient_id: newRequestPatient,
-        patient_name: selectedPatient ? selectedPatient.name : 'Paciente',
-        patient_address: selectedPatient ? selectedPatient.address : '',
-        patient_cns: selectedPatient ? selectedPatient.cns : '',
-        request_by: user.id,
-        sender_name: user.name || user.email || 'Supervisor',
-        priority: newRequestPriority,
-        reason: newRequestReason.trim()
-      };
-
-      await visitRequestService.create(requestPayload);
-      
-      // Log event
-      try {
-        await supabase.from('system_logs').insert({
-          user_id: user.id,
-          action: 'solicitacao_visita_criada',
-          details: `Solicitação de visita criada de ${user.name || user.email} para agente_id ${newRequestAgent} do paciente ${selectedPatient ? selectedPatient.name : ''}`,
-          created_at: new Date().toISOString()
-        });
-      } catch (logErr) {
-        console.warn("Log creation failed: ", logErr);
-      }
-
-      // Reset form
-      setNewRequestAgent('');
-      setNewRequestPatient('');
-      setPatientSearch('');
-      setNewRequestPriority('medium');
-      setNewRequestReason('');
-      setShowNewRequestForm(false);
-      
-      // Refresh
-      setRefreshTrigger(prev => prev + 1);
-    } catch (error) {
-      console.error('Error creating visit request:', error);
-      toastError('Erro ao criar solicitação de visita.');
-    } finally {
-      setSubmittingRequest(false);
-    }
-  };
-
-  const handleCancelVisitRequest = async (requestId: string) => {
-    if (!confirm('Deseja realmente cancelar esta solicitação de visita?')) return;
-    try {
-      await visitRequestService.updateStatus(requestId, 'dismissed');
-      setRefreshTrigger(prev => prev + 1);
-    } catch (e) {
-      console.error('Error cancelling visit request:', e);
-    }
-  };
 
   // Profile lookup mapping
   const userMap = React.useMemo(() => {
@@ -337,35 +267,7 @@ export function AdminDashboard({ user }: { user: any }) {
     });
   }, [agentsData, agentSearch]);
 
-  // Filters combined system logs
-  const filteredLogs = React.useMemo(() => {
-    return compiledLogs.filter(log => {
-      // 1. Search text filter
-      if (logSearch) {
-        const term = logSearch.toLowerCase();
-        const matchesText = (
-          (log.agentName || '').toLowerCase().includes(term) ||
-          (log.action || '').toLowerCase().includes(term) ||
-          (log.description || '').toLowerCase().includes(term)
-        );
-        if (!matchesText) return false;
-      }
-      
-      // 2. Selected Agent click filter
-      if (selectedAgentFilter && log.agentId !== selectedAgentFilter) {
-        return false;
-      }
 
-      // 3. Log Type filter
-      if (logTypeFilter !== 'all') {
-        if (logTypeFilter === 'visits' && log.type !== 'visit') return false;
-        if (logTypeFilter === 'cadastros' && !['cadastro_paciente', 'cadastro_domicilio'].includes(log.type)) return false;
-        if (logTypeFilter === 'auth' && log.type !== 'auth') return false;
-      }
-
-      return true;
-    }).slice(0, 100); // limit to 100 entries for smooth rendering
-  }, [compiledLogs, logSearch, selectedAgentFilter, logTypeFilter]);
 
   const isPatientSemDomicilio = React.useCallback((p: any) => {
     if (!p.household_id) return true;
@@ -591,338 +493,27 @@ export function AdminDashboard({ user }: { user: any }) {
         </div>
       </div>
 
-      {/* Admin Highlight stats bar */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          {
-            title: "Agentes Ativos",
-            value: activeAgentsCount,
-            subtech: `${totalGestoresCount} Gestores / Admins`,
-            icon: Users,
-            color: "border-emerald-500/20 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5"
-          },
-          {
-            title: "Cidadãos Assistidos",
-            value: patients.length,
-            subtech: `Total na rede municipal`,
-            icon: UserCheck,
-            color: "border-sky-500/20 text-sky-600 dark:text-sky-400 bg-sky-500/5"
-          },
-          {
-            title: "Domicílios Cadastrados",
-            value: households.length,
-            subtech: `Mapeados geograficamente`,
-            icon: MapPin,
-            color: "border-indigo-500/20 text-indigo-600 dark:text-indigo-400 bg-indigo-500/5"
-          },
-          {
-            title: "Visitas no Sistema",
-            value: totalVisitsCount,
-            subtech: `${compiledLogs.filter(l => l.type === 'visit').length} este período`,
-            icon: Calendar,
-            color: "border-purple-500/20 text-purple-600 dark:text-purple-400 bg-purple-500/5"
-          },
-        ].map((item, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className={`p-6 rounded-[28px] bg-bg-secondary border shadow-sm flex items-center justify-between transition-all hover:shadow-md ${item.color.split(' ')[0]}`}
-          >
-            <div className="space-y-1">
-              <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest">{item.title}</span>
-              <h4 className="text-[28px] font-black text-text-primary leading-none">{item.value}</h4>
-              <p className="text-[11px] text-text-secondary font-semibold">{item.subtech}</p>
-            </div>
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${item.color.split(' ')[2]}`}>
-              <item.icon className="w-6 h-6" />
-            </div>
-          </motion.div>
-        ))}
-      </div>
+      {/* System Stats Section */}
+      <SystemStats
+        activeAgentsCount={activeAgentsCount}
+        totalGestoresCount={totalGestoresCount}
+        patientsCount={patients.length}
+        householdsCount={households.length}
+        totalVisitsCount={totalVisitsCount}
+        visitLogsCount={compiledLogs.filter(l => l.type === 'visit').length}
+      />
 
       {/* Coordinated Visit Requests Section */}
-      <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border/40 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400">
-              <ClipboardCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-black text-text-primary uppercase tracking-tight">Solicitações de Visita Coordenadas</h3>
-              <p className="text-xs text-text-muted font-medium">Delegue e coordene visitas de rotina ou prioritárias diretamente para os Agentes (ACS)</p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => {
-              setShowNewRequestForm(!showNewRequestForm);
-              if (!showNewRequestForm && profiles.filter(p => p.role === 'Agente').length > 0) {
-                setNewRequestAgent(profiles.filter(p => p.role === 'Agente')[0].id);
-              }
-              if (!showNewRequestForm) {
-                setNewRequestPatient('');
-                setPatientSearch('');
-              }
-            }}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[12px] font-bold shadow-md transition-all active:scale-98 ${
-              showNewRequestForm 
-                ? 'bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-900 border border-slate-700' 
-                : 'bg-teal-600 hover:bg-teal-700 text-white shadow-teal-600/10'
-            }`}
-          >
-            {showNewRequestForm ? 'Fechar Formulário' : '+ Criar Solicitação'}
-          </button>
-        </div>
-
-        {showNewRequestForm && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }} 
-            animate={{ opacity: 1, y: 0 }}
-            className="p-5 rounded-2xl bg-bg-primary/45 border border-border/85"
-          >
-            <form onSubmit={handleCreateVisitRequest} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Agent Select */}
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-text-muted mb-1.5">Atribuir ao Agente (ACS)</label>
-                  <select
-                    value={newRequestAgent}
-                    onChange={(e) => setNewRequestAgent(e.target.value)}
-                    className="w-full bg-bg-secondary border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-text-primary focus:outline-none focus:ring-2 focus:ring-teal-500/30"
-                  >
-                    {profiles.filter(p => p.role === 'Agente').length === 0 ? (
-                      <option value="">Nenhum agente disponível</option>
-                    ) : (
-                      profiles
-                        .filter(p => p.role === 'Agente')
-                        .map(p => (
-                          <option key={p.id} value={p.id}>{p.name} (Micro {p.microarea || 'S/N'})</option>
-                        ))
-                    )}
-                  </select>
-                </div>
-
-                {/* Patient Select */}
-                <div className="relative">
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-text-muted mb-1.5">Paciente Destino</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Pesquise pelo nome ou CNS..."
-                      value={patientSearch}
-                      onChange={(e) => {
-                        setPatientSearch(e.target.value);
-                        setShowPatientDropdown(true);
-                        // If clearing, clear the target patient id
-                        if (!e.target.value) {
-                          setNewRequestPatient('');
-                        }
-                      }}
-                      onFocus={() => setShowPatientDropdown(true)}
-                      className="w-full bg-bg-secondary border border-border rounded-xl pl-3.5 pr-10 py-2.5 text-xs font-bold text-text-primary focus:outline-none focus:ring-2 focus:ring-teal-500/30 placeholder:text-text-muted/50"
-                    />
-                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
-                      {newRequestPatient ? (
-                        <span className="w-2 h-2 rounded-full bg-emerald-500" title="Paciente selecionado" />
-                      ) : (
-                        <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" title="Selecione um paciente" />
-                      )}
-                      <Search className="w-3.5 h-3.5 text-text-muted/60" />
-                    </div>
-                  </div>
-
-                  {/* Dropdown Menu */}
-                  {showPatientDropdown && (
-                    <>
-                      <div 
-                        className="fixed inset-0 z-10" 
-                        onClick={() => setShowPatientDropdown(false)} 
-                      />
-                      <div className="absolute z-20 w-full mt-1.5 bg-bg-secondary border border-border rounded-xl shadow-xl max-h-56 overflow-y-auto divide-y divide-border/30">
-                        {(() => {
-                          const query = patientSearch.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                          const filtered = patients.filter(p => {
-                            const nameNorm = p.name ? p.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : '';
-                            const cnsNorm = p.cns ? p.cns.toLowerCase() : '';
-                            return nameNorm.includes(query) || cnsNorm.includes(query);
-                          });
-
-                          if (filtered.length === 0) {
-                            return (
-                              <div className="px-4 py-3 text-xs text-text-muted text-center font-semibold">
-                                Nenhum paciente encontrado
-                              </div>
-                            );
-                          }
-
-                          return filtered.map(p => (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={() => {
-                                setNewRequestPatient(p.id);
-                                setPatientSearch(p.name);
-                                setShowPatientDropdown(false);
-                              }}
-                              className={`w-full text-left px-4 py-2.5 text-xs font-bold hover:bg-bg-primary/50 transition-colors flex flex-col gap-0.5 ${
-                                newRequestPatient === p.id ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400' : 'text-text-primary'
-                              }`}
-                            >
-                              <span className="font-extrabold">{p.name}</span>
-                              <span className="text-[10px] text-text-muted font-medium">
-                                CNS: {p.cns || 'S/N'} • Microárea: {p.microarea || 'S/N'}
-                              </span>
-                            </button>
-                          ));
-                        })()}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Priority Select */}
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-text-muted mb-1.5">Prioridade</label>
-                  <select
-                    value={newRequestPriority}
-                    onChange={(e) => setNewRequestPriority(e.target.value as any)}
-                    className="w-full bg-bg-secondary border border-border rounded-xl px-3.5 py-2.5 text-xs font-bold text-text-primary focus:outline-none focus:ring-2 focus:ring-teal-500/30"
-                  >
-                    <option value="low">Baixa</option>
-                    <option value="medium">Média</option>
-                    <option value="high">Alta</option>
-                    <option value="urgent">Urgente / Alerta Clínico</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Reason Description */}
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-text-muted mb-1.5">Motivo / Instruções de Campo</label>
-                <textarea
-                  value={newRequestReason}
-                  onChange={(e) => setNewRequestReason(e.target.value)}
-                  placeholder="Descreva detalhadamente o motivo da visita, ex: Gestante perdeu duas consultas de pré-natal seguidas; Realizar busca ativa e atualizar situação da vacinação infantil."
-                  rows={3}
-                  className="w-full bg-bg-secondary border border-border rounded-xl px-3.5 py-2.5 text-xs font-semibold text-text-primary focus:outline-none focus:ring-2 focus:ring-teal-500/30 resize-none placeholder:text-text-muted/50"
-                  required
-                />
-              </div>
-
-              <div className="flex justify-end gap-3.5 pt-1.5 border-t border-border/30">
-                <button
-                  type="button"
-                  onClick={() => setShowNewRequestForm(false)}
-                  className="px-4 py-2 bg-transparent text-text-secondary hover:bg-bg-secondary/60 rounded-xl text-xs font-bold transition-all"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingRequest}
-                  className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-md shadow-teal-600/10 disabled:opacity-50"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  {submittingRequest ? 'Enviando...' : 'Enviar Solicitação'}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {visitRequests.length === 0 ? (
-            <div className="col-span-1 lg:col-span-2 py-8 text-center text-text-muted font-medium text-xs bg-bg-primary/25 border border-border/40 rounded-2xl flex flex-col items-center justify-center gap-2">
-              <Mail className="w-5 h-5 text-text-muted/40" />
-              Nenhuma solicitação de visita pendente ou coordenada registrada.
-            </div>
-          ) : (
-            visitRequests.map((req) => {
-              const responder = userMap[req.agent_id];
-              const priorityColors = {
-                low: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
-                medium: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-                high: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
-                urgent: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20 animate-pulse'
-              };
-              const statusColors = {
-                pending: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20',
-                accepted: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20',
-                done: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-                dismissed: 'bg-slate-500/10 text-slate-500 dark:text-slate-400 border-slate-500/20'
-              };
-              const statusLabels = {
-                pending: 'Pendente',
-                accepted: 'Em Progresso',
-                done: 'Concluído',
-                dismissed: 'Dispensada / Cancelada'
-              };
-
-              return (
-                <div 
-                  key={req.id} 
-                  className="p-4 rounded-2xl border border-border/70 bg-bg-primary/30 flex flex-col justify-between space-y-3 hover:bg-bg-primary/60 transition-all group"
-                >
-                  <div className="flex items-start justify-between gap-1.5">
-                    <div>
-                      <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${priorityColors[req.priority as 'low' | 'medium' | 'high' | 'urgent'] || priorityColors.medium}`}>
-                        {req.priority === 'low' ? 'Baixa' : req.priority === 'medium' ? 'Média' : req.priority === 'high' ? 'Alta' : 'URGENTE'}
-                      </span>
-                      <h4 className="text-xs font-black uppercase text-text-primary tracking-tight mt-2 flex items-center gap-1.5">
-                        {req.patient_name}
-                      </h4>
-                      {req.patient_address && (
-                        <p className="text-[10px] text-text-muted font-bold uppercase mt-0.5 truncate max-w-[280px]" title={req.patient_address}>
-                          {req.patient_address}
-                        </p>
-                      )}
-                    </div>
- 
-                    <div className="flex flex-col items-end gap-1.5">
-                      <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${statusColors[req.status as 'pending' | 'accepted' | 'done' | 'dismissed'] || statusColors.pending}`}>
-                        {statusLabels[req.status as 'pending' | 'accepted' | 'done' | 'dismissed'] || req.status}
-                      </span>
-                      <span className="text-[9px] text-text-muted font-semibold">
-                        {formatDate(req.created_at)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="bg-bg-secondary/40 border border-border/40 p-2.5 rounded-xl">
-                    <p className="text-[11px] text-text-secondary leading-relaxed font-semibold">
-                      {req.reason}
-                    </p>
-                    {req.notes && (
-                      <div className="mt-2 pt-2 border-t border-border/20">
-                        <p className="text-[10px] text-text-muted italic">
-                          <strong className="text-text-secondary font-black uppercase text-[9px] non-italic tracking-wide block mb-0.5">Retorno do Agente:</strong>
-                          "{req.notes}"
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between text-[10px] font-bold text-text-muted pt-2 border-t border-border/30">
-                    <span className="flex items-center gap-1.5">
-                      Agente: <strong className="text-text-primary uppercase">{responder?.name || 'Carregando...'}</strong>
-                    </span>
-                    {req.status === 'pending' && (
-                      <button
-                        onClick={() => handleCancelVisitRequest(req.id)}
-                        className="text-[9px] text-red-500 hover:text-red-600 font-extrabold uppercase tracking-wider transition-colors"
-                      >
-                        Cancelar
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
+      <VisitRequestManager
+        user={user}
+        profiles={profiles}
+        patients={patients}
+        visitRequests={visitRequests}
+        userMap={userMap}
+        onRefresh={() => setRefreshTrigger(p => p + 1)}
+        warning={warning}
+        toastError={toastError}
+      />
 
       {/* Dynamic ACS Quick Monitoring & Dashboard Tracker */}
       <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm space-y-5">
@@ -932,7 +523,7 @@ export function AdminDashboard({ user }: { user: any }) {
               <TrendingUp className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-black text-text-primary uppercase tracking-tight">Atividade & Acesso Rápido dos ACS</h3>
+              <h3 className="text-base font-black text-text-primary uppercase tracking-tight">Atividade de Campo dos ACS</h3>
               <p className="text-xs text-text-muted font-medium">Agentes de Saúde ativos com registros e contribuições de pacientes e domicílios no sistema</p>
             </div>
           </div>
@@ -1382,133 +973,11 @@ export function AdminDashboard({ user }: { user: any }) {
 
         {/* Right Side: High Fidelity Audit Log Viewer */}
         <div className="col-span-12 xl:col-span-4 space-y-6">
-          <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm flex flex-col h-full min-h-[600px]">
-            
-            {/* Header */}
-            <div className="space-y-4 border-b border-border pb-4 shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                    <History className="w-4 h-4 animate-spin-slow" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Log de Auditoria</h3>
-                    <p className="text-[10px] text-text-secondary font-medium">Ações recentes registradas em tempo real</p>
-                  </div>
-                </div>
-                {selectedAgentFilter && (
-                  <button
-                    onClick={() => setSelectedAgentFilter(null)}
-                    className="text-[9px] font-black uppercase text-red-500 bg-red-100 hover:bg-red-200 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900/30 px-2 py-1 rounded"
-                  >
-                    Limpar Filtro
-                  </button>
-                )}
-              </div>
-
-              {/* Log Search input */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
-                <input
-                  type="text"
-                  placeholder="Pesquisar ação, paciente, agente..."
-                  value={logSearch}
-                  onChange={(e) => setLogSearch(e.target.value)}
-                  className="w-full pl-9 pr-4 py-1.5 bg-bg-primary border border-border rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500 transition-colors placeholder:text-text-muted/60"
-                />
-              </div>
-
-              {/* Log Quick filter tabs */}
-              <div className="flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-wider">
-                {[
-                  { id: 'all', label: 'Tudo' },
-                  { id: 'visits', label: 'Visitas' },
-                  { id: 'cadastros', label: 'Cadastros' },
-                  { id: 'auth', label: 'Acesso' }
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setLogTypeFilter(tab.id)}
-                    className={`px-2.5 py-1 rounded-lg border transition-all ${
-                      logTypeFilter === tab.id
-                        ? 'bg-slate-800 border-slate-800 text-white dark:bg-slate-700 dark:border-slate-700'
-                        : 'bg-bg-primary text-text-muted border-border hover:border-slate-300'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Scrollable Timeline */}
-            <div className="flex-1 overflow-y-auto mt-4 pr-1 space-y-4 custom-scrollbar max-h-[500px]">
-              {filteredLogs.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center space-y-2">
-                  <Database className="w-10 h-10 text-text-muted/30" />
-                  <p className="text-xs font-bold text-text-muted uppercase">Nenhuma atividade logada</p>
-                  <p className="text-[10px] text-text-secondary max-w-[200px]">Altere os termos da busca ou limpe o filtro do agente selecionado.</p>
-                </div>
-              ) : (
-                filteredLogs.map((log: any, i) => {
-                  const isVisit = log.type === 'visit';
-                  const isCadastro = ['cadastro_paciente', 'cadastro_domicilio'].includes(log.type);
-                  
-                  return (
-                    <div key={log.id} className="relative pl-6 pb-2 border-l border-slate-100 dark:border-slate-800/80 group">
-                      
-                      {/* Timeline Dot Indicator */}
-                      <span
-                        className={`absolute -left-1.5 top-1.5 w-3.5 h-3.5 rounded-full border-2 border-bg-secondary flex items-center justify-center shadow-sm ${
-                          isVisit
-                            ? 'bg-[#0d9488]'
-                            : isCadastro
-                              ? 'bg-[#6366f1]'
-                              : 'bg-amber-500'
-                        }`}
-                      />
-
-                      {/* Log Body */}
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center justify-between gap-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <span 
-                              className="w-1.5 h-1.5 rounded-full" 
-                              style={{ backgroundColor: log.color }} 
-                            />
-                            <span className="text-[11px] font-black text-text-primary uppercase tracking-tight">
-                              {log.agentName}
-                            </span>
-                            <span className="text-[8px] font-extrabold bg-slate-100 dark:bg-slate-800 text-text-secondary px-1.5 py-0.5 rounded uppercase">
-                              Micro {log.microarea || '00'}
-                            </span>
-                          </div>
-                          <span className="text-[9px] text-text-muted font-bold whitespace-nowrap">
-                            {log.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-
-                        {/* Title of action */}
-                        <p className="text-[11px] font-extrabold uppercase text-slate-700 dark:text-slate-300 tracking-wide">
-                          {log.action}
-                        </p>
-
-                        {/* Detailed Description */}
-                        <p className="text-[11px] text-text-secondary leading-normal font-medium bg-bg-primary/40 p-2 border border-border/40 rounded-xl">
-                          {log.description}
-                        </p>
-
-                        <div className="text-[9px] font-bold text-text-muted pt-0.5">
-                          {log.timestamp.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-          </div>
+          <ActivityTimeline
+            compiledLogs={compiledLogs}
+            selectedAgentFilter={selectedAgentFilter}
+            onSelectAgentFilter={setSelectedAgentFilter}
+          />
         </div>
 
       </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase, fetchTableWithFilters } from '../lib/supabase';
 import { syncService } from '../lib/syncService';
 import { useNavigate } from 'react-router-dom';
@@ -18,33 +19,22 @@ import {
 export function HouseholdList({ user }: { user: any }) {
   const navigate = useNavigate();
   const { info } = useToast();
-  const [households, setHouseholds] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [selectedStreet, setSelectedStreet] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchHouseholds = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-      if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
-      setLoading(true);
-      try {
-        let allHouseholds: any[] = await fetchTableWithFilters<any>('households', user, { select: '*, patients(id)' });
-        
-        setHouseholds(allHouseholds);
-      } catch (error) {
-        console.error("Error fetching households:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchHouseholds();
-  }, [user?.microarea, user?.id, user?.role, user?.color]);
+  const { data: households = [], isLoading: loading } = useQuery({
+    queryKey: ['householdsList', user?.id, user?.role, user?.color, user?.microarea],
+    queryFn: async () => {
+      if (!user) return [];
+      if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return [];
+      return await fetchTableWithFilters<any>('households', user, { select: '*, patients(id)' });
+    },
+    enabled: !!user && (!!user.microarea || user.role === 'Administrador' || user.role === 'Gestor'),
+  });
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
@@ -61,7 +51,10 @@ export function HouseholdList({ user }: { user: any }) {
         }
         await syncService.addToQueue('households', 'DELETE', { id: deleteConfirm });
         
-        setHouseholds(households.filter(h => h.id !== deleteConfirm));
+        queryClient.setQueryData(['householdsList', user?.id, user?.role, user?.color, user?.microarea], (old: any) => {
+          if (!old) return old;
+          return old.filter((h: any) => h.id !== deleteConfirm);
+        });
         setDeleteConfirm(null);
         info('Exclusão agendada para sincronização.');
         return;
@@ -99,7 +92,13 @@ export function HouseholdList({ user }: { user: any }) {
 
       if (error) throw error;
 
-      setHouseholds(households.filter(h => h.id !== deleteConfirm));
+      queryClient.setQueryData(['householdsList', user?.id, user?.role, user?.color, user?.microarea], (old: any) => {
+        if (!old) return old;
+        return old.filter((h: any) => h.id !== deleteConfirm);
+      });
+      queryClient.invalidateQueries({ queryKey: ['householdsList'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['patientList'] });
       setDeleteConfirm(null);
     } catch (error) {
       console.error("Error deleting household:", error);

@@ -30,45 +30,68 @@ export function useDashboardRequests(
     status: 'pending' | 'accepted' | 'done' | 'dismissed',
     notes?: string
   ) => {
+    const originalVisitRequests = [...visitRequests];
+    const req = visitRequests.find(r => r.id === requestId);
+    if (!req) return;
+
+    // 1. Optimistically update the visit requests list
+    setVisitRequests(prev => prev.map(r => r.id === requestId ? { ...r, status } : r));
+
+    // 2. Optimistically add to agenda immediately if accepted
+    if (status === 'accepted' && req.patient_id) {
+      handleAddToAgenda(req.patient_id);
+    }
+
+    // 3. Optimistically update last_visit_at in state if done
+    let originalPatients: any[] | null = null;
+    if (status === 'done' && req.patient_id) {
+      const nowISO = new Date().toISOString();
+      setAllPatients(prev => {
+        originalPatients = prev;
+        return prev.map(p => p.id === req.patient_id ? { ...p, last_visit_at: nowISO } : p);
+      });
+    }
+
     try {
       const ok = await visitRequestService.updateStatus(requestId, status, notes);
       if (ok) {
-        const req = visitRequests.find(r => r.id === requestId);
-        
-        // If accepted, add to agenda immediately
-        if (status === 'accepted') {
-          if (req && req.patient_id) {
-            handleAddToAgenda(req.patient_id);
-          }
-        } else if (status === 'done') {
-          // If done, create real visit row and set last_visit_at
-          if (req && req.patient_id) {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const newId = generateUUID();
-            
-            await supabase.from('visits').insert({
-              id: newId,
-              patient_id: req.patient_id,
-              agent_id: user.id,
-              date: todayStr,
-              type: 'Solicitada',
-              summary: notes || req.reason || 'Visita solicitada marcada como concluída.',
-              microarea: user.microarea,
-              area_color: user.color || '#00488d'
-            });
+        if (status === 'done' && req.patient_id) {
+          // If done, create real visit row and set last_visit_at in database
+          const todayStr = new Date().toISOString().split('T')[0];
+          const newId = generateUUID();
+          
+          await supabase.from('visits').insert({
+            id: newId,
+            patient_id: req.patient_id,
+            agent_id: user.id,
+            date: todayStr,
+            type: 'Solicitada',
+            summary: notes || req.reason || 'Visita solicitada marcada como concluída.',
+            microarea: user.microarea,
+            area_color: user.color || '#00488d'
+          });
 
-            const nowISO = new Date().toISOString();
-            await supabase.from('patients')
-              .update({ last_visit_at: nowISO })
-              .eq('id', req.patient_id);
-
-            setAllPatients(prev => prev.map(p => p.id === req.patient_id ? { ...p, last_visit_at: nowISO } : p));
-          }
+          const nowISO = new Date().toISOString();
+          await supabase.from('patients')
+            .update({ last_visit_at: nowISO })
+            .eq('id', req.patient_id);
         }
+        // Silently refresh to ensure absolute sync with server values
         setRequestsRefreshTrigger(prev => prev + 1);
+      } else {
+        // Rollback on failure
+        setVisitRequests(originalVisitRequests);
+        if (originalPatients) {
+          setAllPatients(originalPatients);
+        }
       }
     } catch (e) {
       console.error('Error updating visit request status:', e);
+      // Rollback on error
+      setVisitRequests(originalVisitRequests);
+      if (originalPatients) {
+        setAllPatients(originalPatients);
+      }
     }
   };
 

@@ -45,9 +45,18 @@ export function useDashboardAgenda(user: any, allPatients: any[], setAllPatients
     if (!item) return;
     const nextValue = !item.done;
 
+    // Save current states for potential rollback
+    const originalAgenda = [...dailyAgenda];
+    const originalPatients = [...allPatients];
+
+    // Optimistically update the agenda list checkmark status
     saveAgenda(dailyAgenda.map(it => it.id === patientId ? { ...it, done: nextValue } : it));
 
     if (nextValue) {
+      // Optimistically update the last_visit_at on the local patients array so alerts go green instantly
+      const nowISO = new Date().toISOString();
+      setAllPatients(prev => prev.map(p => p.id === patientId ? { ...p, last_visit_at: nowISO } : p));
+
       try {
         const todayStr = new Date().toISOString().split('T')[0];
         const newId = generateUUID();
@@ -63,14 +72,14 @@ export function useDashboardAgenda(user: any, allPatients: any[], setAllPatients
           area_color: user.color || '#00488d'
         });
 
-        const nowISO = new Date().toISOString();
         await supabase.from('patients')
           .update({ last_visit_at: nowISO })
           .eq('id', patientId);
-
-        setAllPatients(prev => prev.map(p => p.id === patientId ? { ...p, last_visit_at: nowISO } : p));
       } catch (err) {
         console.error('Error saving routine visit from agenda:', err);
+        // Rollback states on error
+        saveAgenda(originalAgenda);
+        setAllPatients(originalPatients);
       }
     }
   };

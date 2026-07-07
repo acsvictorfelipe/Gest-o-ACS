@@ -1,24 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { supabase } from './lib/supabase';
 import { Layout } from './components/Layout';
 import { ToastProvider } from './components/Toast';
-import { Login } from './components/Login';
-import { Dashboard } from './components/Dashboard';
-import { PatientForm } from './components/PatientForm';
-import { HouseholdView } from './components/HouseholdView';
-import { PatientList } from './components/PatientList';
-import { HouseholdList } from './components/HouseholdList';
-import { Settings } from './components/Settings';
-import { Reports } from './components/Reports';
-import { UserManagement } from './components/UserManagement';
-import { VisitHistory } from './components/VisitHistory';
-import { ExportTool } from './components/ExportTool';
 import { syncService } from './lib/syncService';
 import { encryptionService } from './lib/encryption';
 import { safeStorage } from './lib/safeStorage';
 import { AppUser } from './types';
 import { User } from '@supabase/supabase-js';
+
+const Login = lazy(() => import('./components/Login').then(module => ({ default: module.Login })));
+const Dashboard = lazy(() => import('./components/Dashboard').then(module => ({ default: module.Dashboard })));
+const PatientForm = lazy(() => import('./components/PatientForm').then(module => ({ default: module.PatientForm })));
+const HouseholdView = lazy(() => import('./components/HouseholdView').then(module => ({ default: module.HouseholdView })));
+const PatientList = lazy(() => import('./components/PatientList').then(module => ({ default: module.PatientList })));
+const HouseholdList = lazy(() => import('./components/HouseholdList').then(module => ({ default: module.HouseholdList })));
+const Settings = lazy(() => import('./components/Settings').then(module => ({ default: module.Settings })));
+const Reports = lazy(() => import('./components/Reports').then(module => ({ default: module.Reports })));
+const UserManagement = lazy(() => import('./components/UserManagement').then(module => ({ default: module.UserManagement })));
+const VisitHistory = lazy(() => import('./components/VisitHistory').then(module => ({ default: module.VisitHistory })));
+const ExportTool = lazy(() => import('./components/ExportTool').then(module => ({ default: module.ExportTool })));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes of cache lifetime
+    },
+  },
+});
 
 export default function App() {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -139,31 +150,39 @@ export default function App() {
   }
 
   return (
-    <ToastProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-          
-          {user ? (
-            <Route element={<Layout user={user} theme={theme} toggleTheme={toggleTheme} onProfileUpdate={() => user && fetchProfile(user)} />}>
-              <Route path="/" element={<Dashboard user={user} />} />
-              <Route path="/pacientes" element={<PatientList user={user} />} />
-              <Route path="/domicilios" element={<HouseholdList user={user} />} />
-              <Route path="/configuracoes" element={<Settings user={user} onProfileUpdate={() => user && fetchProfile(user)} />} />
-              <Route path="/relatorios" element={<Reports user={user} />} />
-              <Route path="/historico" element={<VisitHistory user={user} />} />
-              <Route path="/novo-cadastro" element={<PatientForm user={user} />} />
-              <Route path="/editar-paciente/:id" element={<PatientForm user={user} />} />
-              <Route path="/domicilio/:id" element={<HouseholdView user={user} />} />
-              <Route path="/usuarios" element={<UserManagement currentUser={user} />} />
-              <Route path="/exportar" element={<ExportTool user={user} />} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </Route>
-          ) : (
-            <Route path="*" element={<Navigate to="/login" />} />
-          )}
-        </Routes>
-      </Router>
-    </ToastProvider>
+    <QueryClientProvider client={queryClient}>
+      <ToastProvider>
+        <Router>
+          <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-surface">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          }>
+            <Routes>
+              <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+              
+              {user ? (
+                <Route element={<Layout user={user} theme={theme} toggleTheme={toggleTheme} onProfileUpdate={() => user && fetchProfile(user)} />}>
+                  <Route path="/" element={<Dashboard user={user} />} />
+                  <Route path="/pacientes" element={<PatientList user={user} />} />
+                  <Route path="/domicilios" element={<HouseholdList user={user} />} />
+                  <Route path="/configuracoes" element={<Settings user={user} onProfileUpdate={() => user && fetchProfile(user)} />} />
+                  <Route path="/relatorios" element={<Reports user={user} />} />
+                  <Route path="/historico" element={<VisitHistory user={user} />} />
+                  <Route path="/novo-cadastro" element={<PatientForm user={user} />} />
+                  <Route path="/editar-paciente/:id" element={<PatientForm user={user} />} />
+                  <Route path="/domicilio/:id" element={<HouseholdView user={user} />} />
+                  <Route path="/usuarios" element={<UserManagement currentUser={user} />} />
+                  <Route path="/exportar" element={<ExportTool user={user} />} />
+                  <Route path="*" element={<Navigate to="/" />} />
+                </Route>
+              ) : (
+                <Route path="*" element={<Navigate to="/login" />} />
+              )}
+            </Routes>
+          </Suspense>
+        </Router>
+      </ToastProvider>
+    </QueryClientProvider>
   );
 }

@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { patientFormSchema, initialDefaultValues, PatientFormValues } from './patient-form/patientSchema';
 import { supabase } from '../lib/supabase';
 import { syncService } from '../lib/syncService';
 import { generateUUID } from '../lib/utils';
@@ -56,194 +59,23 @@ export function PatientForm({ user }: { user: any }) {
 
   const isReadOnly = user.role === 'Gestor';
 
-  const [formData, setFormData] = useState({
-    name: '',
-    cns: '',
-    createdAt: '',
-    responsibleCns: '',
-    isFamilyResponsible: false,
-    birthDate: '',
-    gender: '',
-    visitDate: '',
-    visitType: 'Rotina',
-    visitSummary: '',
-    address: '',
-    number: '',
-    complement: '',
-    contact: '',
-    contact2: '',
-    messageContact: '',
-    householdId: '',
-    categories: [] as string[],
-    clinicalData: {
-      sus_atualizado: 'Não',
-      historicoGestacoes: [] as any[],
-      visitasGerais: [] as { date: string, summary: string }[],
-      consultasGerais: [] as { date: string, summary: string }[],
-      socialBenefits: [] as string[],
-      receitas: [] as { dataEmissao: string, validade: string, dataVencimento: string }[],
-      saudeMental: {
-        notes: ''
-      },
-      chronic: {
-        diabetes: 'Não',
-        diabetesData: {
-          avaliacaoPes: 'Não',
-          hemoglobinaGlicada: 'Não',
-          visitaAcs1: '',
-          visitaAcs2: ''
-        },
-        hipertensao: 'Não',
-        hipertensaoData: {
-          consultas6Meses: 'Não',
-          visitaAcs1: '',
-          visitaAcs2: ''
-        }
-      },
-      acamadodomiciliado: {
-        dependencia: 'Total',
-        curativos: 'Não',
-        cuidador: 'Não',
-        usoFralda: 'Não',
-        tamanhoFralda: '',
-        diabetes: 'Não',
-        diabetesData: {
-          avaliacaoPes: 'Não',
-          hemoglobinaGlicada: 'Não',
-          visitaAcs1: '',
-          visitaAcs2: ''
-        },
-        visitasAcsDiabetes: [] as string[],
-        hipertensao: 'Não',
-        hipertensaoData: {
-          consultas6Meses: 'Não',
-          visitaAcs1: '',
-          visitaAcs2: ''
-        },
-        observacoes: ''
-      },
-      gestante: {
-        dum: '',
-        dpp: '',
-        consultas: [] as string[],
-        visitasAcs: [] as string[],
-        visitasAcsDiabetes: [] as string[],
-        dtpa: 'Não',
-        sifilis: 'NÃO REALIZADO',
-        hepatiteB: 'NÃO REALIZADO',
-        hiv: 'NÃO REALIZADO',
-        hepatiteC: 'NÃO REALIZADO',
-        puerperioConsulta: '',
-        puerperioVisita: '',
-        saudeBucal: '',
-        planejamentoFamiliar: 'Não',
-        diabetes: 'Não',
-        diabetesData: {
-          avaliacaoPes: 'Não',
-          hemoglobinaGlicada: 'Não',
-          visitaAcs1: '',
-          visitaAcs2: ''
-        },
-        hipertensao: 'Não',
-        hipertensaoData: {
-          consultas6Meses: 'Não',
-          visitaAcs1: '',
-          visitaAcs2: ''
-        }
-      },
-      crianca: {
-        consultas: [] as string[],
-        visitasAcs: [] as string[],
-        visita30dias: '',
-        visita6meses: '',
-        proximaVisitaSugerida: '',
-        vacinas: {
-          bcg: '',
-          hepB_nascer: '',
-          penta1: '',
-          penta2: '',
-          penta3: '',
-          vip1: '',
-          vip2: '',
-          vip3: '',
-          vipR: '',
-          pneumo10_1: '',
-          pneumo10_2: '',
-          pneumo10_3: '',
-          rotavirus1: '',
-          rotavirus2: '',
-          menC1: '',
-          menC2: '',
-          menC3: '',
-          fa: '',
-          scr1: '',
-          dtp: '',
-          hepA: '',
-          scrv: '',
-          // Legacy keys
-          penta2m: '',
-          penta4m: '',
-          penta6m: '',
-          dtp15m: '',
-          dtp4y: '',
-          hepB: '',
-          vip2m: '',
-          vip4m: '',
-          vip6m: '',
-          vop15m: '',
-          vop4y: '',
-          scr2m: '',
-          scr15m: '',
-          pneumo2m: '',
-          pneumo4m: '',
-          pneumo12m: ''
-        }
-      },
-      adulto: {
-        diabetes: 'Não',
-        diabetesData: {
-          avaliacaoPes: 'Não',
-          hemoglobinaGlicada: 'Não',
-          visitaAcs1: '',
-          visitaAcs2: ''
-        },
-        visitasAcsDiabetes: [] as string[],
-        hipertensao: 'Não',
-        hipertensaoData: {
-          consultas6Meses: 'Não',
-          visitaAcs1: '',
-          visitaAcs2: ''
-        },
-        notes: ''
-      },
-      idoso: {
-        diabetes: 'Não',
-        diabetesData: {
-          avaliacaoPes: 'Não',
-          hemoglobinaGlicada: 'Não',
-          visitaAcs1: '',
-          visitaAcs2: ''
-        },
-        visitasAcsDiabetes: [] as string[],
-        hipertensao: 'Não',
-        hipertensaoData: {
-          consultas6Meses: 'Não',
-          visitaAcs1: '',
-          visitaAcs2: ''
-        },
-        vacinaInfluenza: 'Não',
-        visitaAcs1: '',
-        visitaAcs2: '',
-        consultaMedicaAnualData: ''
-      },
-      rastreamento: {
-        exameCitopatologico: 'Não',
-        saudeSexualReprodutiva: 'Não',
-        mamografia: 'Não',
-        vacinaHpv: 'Não'
-      }
-    }
+  const methods = useForm<any>({
+    resolver: zodResolver(patientFormSchema),
+    defaultValues: initialDefaultValues,
   });
+
+  const formData = methods.watch();
+
+  const setFormData = React.useCallback((updater: any) => {
+    setIsDirty(true);
+    if (typeof updater === 'function') {
+      const currentValues = methods.getValues();
+      const nextValues = updater(currentValues);
+      methods.reset(nextValues);
+    } else {
+      methods.reset(updater);
+    }
+  }, [methods]);
 
   useEffect(() => {
     const fetchPatient = async () => {
@@ -378,7 +210,7 @@ export function PatientForm({ user }: { user: any }) {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('nova-visita') === 'true') {
-      setFormData(prev => ({
+      setFormData((prev: any) => ({
         ...prev,
         visitDate: new Date().toISOString().split('T')[0],
         visitType: 'Rotina'
@@ -485,7 +317,7 @@ export function PatientForm({ user }: { user: any }) {
     let currentY = (doc as any).lastAutoTable.finalY + 10;
 
     // Clinical Data
-    formData.categories.forEach(cat => {
+    formData.categories.forEach((cat: string) => {
       const catId = cat.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const clinical = (formData.clinicalData as any)[catId];
       
@@ -608,7 +440,7 @@ export function PatientForm({ user }: { user: any }) {
     const ageNum = getAgeNumber(formData.birthDate);
     const ageInMonths = getAgeInMonths(formData.birthDate);
     
-    setFormData(prev => {
+    setFormData((prev: any) => {
       const currentCategories = [...prev.categories];
       let changed = false;
 
@@ -698,8 +530,8 @@ export function PatientForm({ user }: { user: any }) {
     URL.revokeObjectURL(url);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: PatientFormValues) => {
+    const formData = data;
     
     // Validação de CNS SUS do Paciente
     if (formData.cns) {
@@ -1168,7 +1000,7 @@ export function PatientForm({ user }: { user: any }) {
             .maybeSingle();
 
           if (householdData || patientData) {
-            setFormData(prev => ({
+            setFormData((prev: any) => ({
               ...prev,
               address: prev.address || householdData?.address || '',
               number: prev.number || householdData?.number || '',
@@ -1260,6 +1092,20 @@ export function PatientForm({ user }: { user: any }) {
         </div>
       )}
 
+      {Object.keys(methods.formState.errors).length > 0 && (
+        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-xl p-4 text-red-700 dark:text-red-400">
+          <div className="flex items-center gap-2 font-bold uppercase tracking-wider text-xs mb-2">
+            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
+            Por favor, corrija os seguintes erros antes de salvar:
+          </div>
+          <ul className="list-disc list-inside text-xs space-y-1 font-semibold">
+            {Object.entries(methods.formState.errors).map(([field, error]: any) => (
+              <li key={field}>{error.message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 px-6 py-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <header className="flex flex-col gap-1">
@@ -1334,7 +1180,7 @@ export function PatientForm({ user }: { user: any }) {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6 pb-20">
+      <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-6 pb-20">
         <fieldset disabled={isReadOnly} className="space-y-8 contents">
           <PersonalInfo formData={formData} setFormData={setFormData} />
           <AddressInfo formData={formData} setFormData={setFormData} streets={user.streets} />

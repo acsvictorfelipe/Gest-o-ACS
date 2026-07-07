@@ -292,6 +292,23 @@ export function GestanteSection({
             </select>
           </div>
         </div>
+
+        <div className="col-span-full space-y-4 pt-6 border-t border-border dark:border-slate-800">
+          <label className="block text-[10px] font-bold uppercase text-text-muted">Anotações Gerais</label>
+          <textarea 
+            disabled={isReadOnly}
+            value={data.notes || ''}
+            onChange={e => setFormData((prev: any) => ({
+              ...prev, 
+              clinicalData: { 
+                ...prev.clinicalData, 
+                gestante: { ...(prev.clinicalData?.gestante || {}), notes: e.target.value } 
+              }
+            }))}
+            className="w-full bg-bg-primary dark:bg-slate-800 border-none rounded-xl p-4 text-sm text-on-surface min-h-[100px] disabled:opacity-50"
+            placeholder="Descreva observações relevantes..."
+          />
+        </div>
       </div>
     </section>
   );

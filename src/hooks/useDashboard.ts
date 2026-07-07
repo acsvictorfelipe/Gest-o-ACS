@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase, fetchTableWithFilters } from '../lib/supabase';
 import {
   Baby,
@@ -25,37 +26,124 @@ export interface SyncItem {
 }
 
 export function useDashboard(user: any) {
-  const [stats, setStats] = React.useState({
-    totalPatients: 0,
-    totalHouseholds: 0,
-    gestantes: 0,
-    gestantesPendentes: 0,
-    criancas2y: 0,
-    criancasTotal: 0,
-    hipertensos: 0,
-    diabeticos: 0,
-    acamados: 0,
-    idosos: 0,
-    adultos: 0,
-    saudeMental: 0,
-    pendingVisits: 0,
-    lateVaccines: 0,
-    childVisitAlerts: 0,
-    receitasAVencer: 0,
-    newCidadaos: 0,
-    newHouseholds: 0,
-    newGestantes: 0,
-    partosThisMonth: 0,
-    newCriancas: 0,
-    newIdosos: 0,
-    newHipertensos: 0,
-    newDiabeticos: 0,
-    newAcamados: 0
+  const queryClient = useQueryClient();
+
+  const { data: queryData, isLoading: loading } = useQuery({
+    queryKey: ['dashboard', user?.id, user?.role, user?.color, user?.microarea],
+    queryFn: async () => {
+      if (!user) return { allPatients: [], hCount: 0, newHCount: 0 };
+      if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') {
+        return { allPatients: [], hCount: 0, newHCount: 0 };
+      }
+
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+      let householdQuery = supabase.from('households').select('*', { count: 'exact', head: true })
+        .neq('responsible_name', 'Responsável não cadastrado');
+      
+      let newHouseholdQuery = supabase.from('households').select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfMonth.toISOString())
+        .neq('responsible_name', 'Responsável não cadastrado');
+
+      if (user.role === 'Gestor') {
+        householdQuery = householdQuery.eq('area_color', user.color);
+        newHouseholdQuery = newHouseholdQuery.eq('area_color', user.color);
+      } else if (user.role !== 'Administrador') {
+        householdQuery = householdQuery.eq('agent_id', user.id);
+        newHouseholdQuery = newHouseholdQuery.eq('agent_id', user.id);
+      }
+
+      const [hRes, newHRes] = await Promise.all([householdQuery, newHouseholdQuery]);
+      const hCount = hRes.count || 0;
+      const newHCount = newHRes.count || 0;
+
+      let patientsData: any[] = await fetchTableWithFilters<any>('patients', user);
+
+      // HEALING LOGIC: SINCERELY UPDATE LATENCY AND RECENT VISITS
+      try {
+        let visitsDataQuery = supabase.from('visits').select('patient_id, date, type');
+        if (user.role === 'Gestor') {
+          visitsDataQuery = visitsDataQuery.eq('area_color', user.color);
+        } else if (user.role !== 'Administrador') {
+          visitsDataQuery = visitsDataQuery.eq('agent_id', user.id);
+        }
+        
+        const { data: allVisitsData } = await visitsDataQuery;
+        
+        const visitsMap: Record<string, string> = {};
+        if (allVisitsData) {
+          allVisitsData.forEach((v: any) => {
+            if (v.patient_id && v.date) {
+              const currentDate = visitsMap[v.patient_id];
+              const cleanDate = v.date.split('T')[0];
+              if (!currentDate || cleanDate > currentDate) {
+                visitsMap[v.patient_id] = cleanDate;
+              }
+            }
+          });
+        }
+
+        patientsData = patientsData.map(p => {
+          const clinicalVisitMax = getPatientLastVisitAt({ ...p, last_visit_at: null });
+          const dbVisitMax = visitsMap[p.id] || null;
+          
+          let trueAcsVisitDateStr = p.last_visit_at ? p.last_visit_at.split('T')[0] : null;
+          
+          if (clinicalVisitMax) {
+            const cleanClinical = clinicalVisitMax.split('T')[0];
+            if (!trueAcsVisitDateStr || cleanClinical > trueAcsVisitDateStr) {
+              trueAcsVisitDateStr = cleanClinical;
+            }
+          }
+          
+          if (dbVisitMax) {
+            if (!trueAcsVisitDateStr || dbVisitMax > trueAcsVisitDateStr) {
+              trueAcsVisitDateStr = dbVisitMax;
+            }
+          }
+
+          if (trueAcsVisitDateStr && trueAcsVisitDateStr !== (p.last_visit_at ? p.last_visit_at.split('T')[0] : null)) {
+            (async () => {
+              try {
+                const { error } = await supabase.from('patients')
+                  .update({ last_visit_at: trueAcsVisitDateStr })
+                  .eq('id', p.id);
+                if (error) console.error(`Error syncing last_visit_at in dashboard for patient ${p.id}:`, error);
+              } catch (err) {
+                console.warn(`Silent error catching on background patients sync in dashboard for patient ${p.id}:`, err);
+              }
+            })();
+
+            return {
+              ...p,
+              last_visit_at: trueAcsVisitDateStr
+            };
+          }
+          return p;
+        });
+      } catch (syncErr) {
+        console.error("Error healing patient visit dates:", syncErr);
+      }
+
+      return { allPatients: patientsData, hCount, newHCount };
+    },
+    enabled: !!user && (!!user.microarea || user.role === 'Administrador' || user.role === 'Gestor'),
   });
 
-  const [allPatients, setAllPatients] = React.useState<any[]>([]);
-  const [recentPatients, setRecentPatients] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const allPatients = queryData?.allPatients || [];
+
+  const setAllPatients = (updater: React.SetStateAction<any[]>) => {
+    queryClient.setQueryData(['dashboard', user?.id, user?.role, user?.color, user?.microarea], (old: any) => {
+      if (!old) return old;
+      const nextPatients = typeof updater === 'function' ? updater(old.allPatients) : updater;
+      return {
+        ...old,
+        allPatients: nextPatients
+      };
+    });
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    queryClient.invalidateQueries({ queryKey: ['patientList'] });
+  };
 
   // Delegation hooks
   const { dailyAgenda, handleAddToAgenda, handleRemoveFromAgenda, handleToggleAgenda } = 
@@ -66,254 +154,155 @@ export function useDashboard(user: any) {
   const { visitRequests, handleUpdateVisitRequestStatus } = 
     useDashboardRequests(user, setAllPatients, handleAddToAgenda);
 
-  React.useEffect(() => {
-    const fetchData = async () => {
+  const { stats, recentPatients } = React.useMemo(() => {
+    const defaultStats = {
+      totalPatients: 0,
+      totalHouseholds: 0,
+      gestantes: 0,
+      gestantesPendentes: 0,
+      criancas2y: 0,
+      criancasTotal: 0,
+      hipertensos: 0,
+      diabeticos: 0,
+      acamados: 0,
+      idosos: 0,
+      adultos: 0,
+      saudeMental: 0,
+      pendingVisits: 0,
+      lateVaccines: 0,
+      childVisitAlerts: 0,
+      receitasAVencer: 0,
+      newCidadaos: 0,
+      newHouseholds: queryData?.newHCount || 0,
+      newGestantes: 0,
+      partosThisMonth: 0,
+      newCriancas: 0,
+      newIdosos: 0,
+      newHipertensos: 0,
+      newDiabeticos: 0,
+      newAcamados: 0
+    };
 
-      if (!user) {
-        setLoading(false);
-        return;
+    if (!queryData) return { stats: defaultStats, recentPatients: [] };
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+    const newStats = {
+      ...defaultStats,
+      totalPatients: allPatients.length,
+      totalHouseholds: queryData.hCount,
+    };
+
+    allPatients.forEach(p => {
+      const clinical = p.clinical_data || {};
+      const categories = p.categories || [];
+
+      const realLastVisitStr = getPatientLastVisitAt(p);
+      const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
+      if (!lastVisit || lastVisit < thirtyDaysAgo) {
+        newStats.pendingVisits++;
       }
-      if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') {
-        setLoading(false);
-        return;
-      }
 
-      try {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 999;
 
-        let householdQuery = supabase.from('households').select('*', { count: 'exact', head: true })
-          .neq('responsible_name', 'Responsável não cadastrado');
-        
-        let newHouseholdQuery = supabase.from('households').select('*', { count: 'exact', head: true })
-          .gte('created_at', startOfMonth.toISOString())
-          .neq('responsible_name', 'Responsável não cadastrado');
+      if (categories.includes('Criança') && ageInMonths <= 24) {
+        newStats.criancasTotal++;
+        newStats.criancas2y++;
 
-        if (user.role === 'Gestor') {
-          householdQuery = householdQuery.eq('area_color', user.color);
-          newHouseholdQuery = newHouseholdQuery.eq('area_color', user.color);
-        } else if (user.role !== 'Administrador') {
-          householdQuery = householdQuery.eq('agent_id', user.id);
-          newHouseholdQuery = newHouseholdQuery.eq('agent_id', user.id);
-        }
-
-        const { count: hCount } = await householdQuery;
-        const { count: newHCount } = await newHouseholdQuery;
-
-        let patientsData: any[] = await fetchTableWithFilters<any>('patients', user);
-
-        // HEALING LOGIC: SINCERELY UPDATE LATENCY AND RECENT VISITS
-        try {
-          let visitsDataQuery = supabase.from('visits').select('patient_id, date, type');
-          if (user.role === 'Gestor') {
-            visitsDataQuery = visitsDataQuery.eq('area_color', user.color);
-          } else if (user.role !== 'Administrador') {
-            visitsDataQuery = visitsDataQuery.eq('agent_id', user.id);
+        // Check for late vaccines for children 0-2 years
+        const vacinas = clinical.crianca?.vacinas || {};
+        const isLate = VACCINE_SCHEDULE.some(group => {
+          if (group.age <= ageInMonths) {
+            return group.vaccines.some(v => vacinas[v.id] !== 'Sim');
           }
-          
-          const { data: allVisitsData } = await visitsDataQuery;
-          
-          const visitsMap: Record<string, string> = {};
-          if (allVisitsData) {
-            allVisitsData.forEach((v: any) => {
-              if (v.patient_id && v.date) {
-                const currentDate = visitsMap[v.patient_id];
-                const cleanDate = v.date.split('T')[0];
-                if (!currentDate || cleanDate > currentDate) {
-                  visitsMap[v.patient_id] = cleanDate;
-                }
-              }
-            });
-          }
-
-          patientsData = patientsData.map(p => {
-            const clinicalVisitMax = getPatientLastVisitAt({ ...p, last_visit_at: null });
-            const dbVisitMax = visitsMap[p.id] || null;
-            
-            let trueAcsVisitDateStr = p.last_visit_at ? p.last_visit_at.split('T')[0] : null;
-            
-            if (clinicalVisitMax) {
-              const cleanClinical = clinicalVisitMax.split('T')[0];
-              if (!trueAcsVisitDateStr || cleanClinical > trueAcsVisitDateStr) {
-                trueAcsVisitDateStr = cleanClinical;
-              }
-            }
-            
-            if (dbVisitMax) {
-              if (!trueAcsVisitDateStr || dbVisitMax > trueAcsVisitDateStr) {
-                trueAcsVisitDateStr = dbVisitMax;
-              }
-            }
-
-            if (trueAcsVisitDateStr && trueAcsVisitDateStr !== (p.last_visit_at ? p.last_visit_at.split('T')[0] : null)) {
-              (async () => {
-                try {
-                  const { error } = await supabase.from('patients')
-                    .update({ last_visit_at: trueAcsVisitDateStr })
-                    .eq('id', p.id);
-                  if (error) console.error(`Error syncing last_visit_at for patient ${p.id}:`, error);
-                } catch (err) {
-                  console.warn(`Silent error catching on background patients sync in dashboard for patient ${p.id}:`, err);
-                }
-              })();
-
-              return {
-                ...p,
-                last_visit_at: trueAcsVisitDateStr
-              };
-            }
-            return p;
-          });
-        } catch (syncErr) {
-          console.error("Error healing patient visit dates:", syncErr);
-        }
-
-        setAllPatients(patientsData);
-
-        const newStats = {
-          totalPatients: patientsData.length,
-          totalHouseholds: hCount || 0,
-          gestantes: 0,
-          gestantesPendentes: 0,
-          criancas2y: 0,
-          criancasTotal: 0,
-          hipertensos: 0,
-          diabeticos: 0,
-          acamados: 0,
-          idosos: 0,
-          adultos: 0,
-          saudeMental: 0,
-          pendingVisits: 0,
-          lateVaccines: 0,
-          childVisitAlerts: 0,
-          receitasAVencer: 0,
-          newCidadaos: 0,
-          newHouseholds: newHCount || 0,
-          newGestantes: 0,
-          partosThisMonth: 0,
-          newCriancas: 0,
-          newIdosos: 0,
-          newHipertensos: 0,
-          newDiabeticos: 0,
-          newAcamados: 0
-        };
-
-        patientsData.forEach(p => {
-          const clinical = p.clinical_data || {};
-          const categories = p.categories || [];
-
-          const realLastVisitStr = getPatientLastVisitAt(p);
-          const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
-          if (!lastVisit || lastVisit < thirtyDaysAgo) {
-            newStats.pendingVisits++;
-          }
-
-          const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 999;
-
-          if (categories.includes('Criança') && ageInMonths <= 24) {
-            newStats.criancasTotal++;
-            newStats.criancas2y++;
-
-            // Check for late vaccines for children 0-2 years
-            const vacinas = clinical.crianca?.vacinas || {};
-            const isLate = VACCINE_SCHEDULE.some(group => {
-              if (group.age <= ageInMonths) {
-                return group.vaccines.some(v => vacinas[v.id] !== 'Sim');
-              }
-              return false;
-            });
-
-            if (isLate) {
-              newStats.lateVaccines++;
-            }
-          }
-
-          if (p.birth_date && ageInMonths <= 6 && categories.includes('Criança')) {
-            // If visita6meses was recorded in clinical form, don't count as alert
-            if (!clinical.crianca?.visita6meses) {
-              const isAtrazo = !lastVisit || lastVisit < thirtyDaysAgo;
-              if (isAtrazo) {
-                newStats.childVisitAlerts++;
-              }
-            }
-          }
-
-          const isDiabetico = clinical.chronic?.diabetes === 'Sim' || clinical.gestante?.diabetes === 'Sim';
-          const isHipertenso = clinical.chronic?.hipertensao === 'Sim' || clinical.gestante?.hipertensao === 'Sim';
-
-          if (isDiabetico) newStats.diabeticos++;
-          if (isHipertenso) newStats.hipertensos++;
-
-          if (categories.includes('Gestante')) {
-            newStats.gestantes++;
-            const gConsultas = clinical.gestante?.consultas?.filter((c: string) => c && c.trim() !== '').length || 0;
-            const gVisitas = clinical.gestante?.visitasAcs?.filter((v: string) => v && v.trim() !== '').length || 0;
-            if (gConsultas < 9 || gVisitas < 3) {
-              newStats.gestantesPendentes++;
-            }
-          }
-          if (categories.includes('AcamadoDomiciliado')) newStats.acamados++;
-          if (categories.includes('Idoso') || categories.includes('Idosos')) newStats.idosos++;
-          if (categories.includes('Adulto')) newStats.adultos++;
-          if (categories.includes('SaudeMental') || categories.includes('Saúde Mental')) newStats.saudeMental++;
-
-          const createdAt = p.created_at ? new Date(p.created_at) : null;
-          const isNewThisMonth = createdAt && createdAt >= startOfMonth;
-          
-          if (isNewThisMonth) {
-            newStats.newCidadaos++;
-            if (categories.includes('Gestante')) newStats.newGestantes++;
-            if (categories.includes('Criança') && ageInMonths <= 24) newStats.newCriancas++;
-            if (categories.includes('Idoso') || categories.includes('Idosos')) newStats.newIdosos++;
-            if (categories.includes('AcamadoDomiciliado')) newStats.newAcamados++;
-            if (isDiabetico) newStats.newDiabeticos++;
-            if (isHipertenso) newStats.newHipertensos++;
-          }
-
-          if (clinical.gestante?.data_parto) {
-            const dataParto = new Date(clinical.gestante.data_parto);
-            if (dataParto >= startOfMonth && dataParto <= new Date()) {
-              newStats.partosThisMonth++;
-            }
-          }
-          
-          const isMentalOrAcamado = categories.includes('SaudeMental') || categories.includes('AcamadoDomiciliado');
-          const recipes = isMentalOrAcamado ? (clinical.receitas || []) : [];
-          if (recipes.length > 0) {
-            const hoje = new Date();
-            hoje.setHours(0, 0, 0, 0);
-            
-            const isVencendoOuVencida = recipes.some((rec: any) => {
-              if (!rec.dataVencimento) return false;
-              const dateVencimento = new Date(rec.dataVencimento + 'T00:00:00');
-              if (isNaN(dateVencimento.getTime())) return false;
-              
-              const alertDate = new Date(dateVencimento);
-              alertDate.setDate(alertDate.getDate() - 15);
-              return hoje >= alertDate;
-            });
-            if (isVencendoOuVencida) {
-              newStats.receitasAVencer++;
-            }
-          }
+          return false;
         });
 
-        setStats(newStats);
-        setRecentPatients(patientsData.sort((a, b) => {
-          const aVisit = getPatientLastVisitAt(a);
-          const bVisit = getPatientLastVisitAt(b);
-          return new Date(bVisit || 0).getTime() - new Date(aVisit || 0).getTime();
-        }).slice(0, 5));
-
-      } catch (error) {
-        console.error("Dashboard error:", error);
-      } finally {
-        setLoading(false);
+        if (isLate) {
+          newStats.lateVaccines++;
+        }
       }
-    };
-    fetchData();
-  }, [user]);
+
+      if (p.birth_date && ageInMonths <= 6 && categories.includes('Criança')) {
+        // If visita6meses was recorded in clinical form, don't count as alert
+        if (!clinical.crianca?.visita6meses) {
+          const isAtrazo = !lastVisit || lastVisit < thirtyDaysAgo;
+          if (isAtrazo) {
+            newStats.childVisitAlerts++;
+          }
+        }
+      }
+
+      const isDiabetico = clinical.chronic?.diabetes === 'Sim' || clinical.gestante?.diabetes === 'Sim';
+      const isHipertenso = clinical.chronic?.hipertensao === 'Sim' || clinical.gestante?.hipertensao === 'Sim';
+
+      if (isDiabetico) newStats.diabeticos++;
+      if (isHipertenso) newStats.hipertensos++;
+
+      if (categories.includes('Gestante')) {
+        newStats.gestantes++;
+        const gConsultas = clinical.gestante?.consultas?.filter((c: string) => c && c.trim() !== '').length || 0;
+        const gVisitas = clinical.gestante?.visitasAcs?.filter((v: string) => v && v.trim() !== '').length || 0;
+        if (gConsultas < 9 || gVisitas < 3) {
+          newStats.gestantesPendentes++;
+        }
+      }
+      if (categories.includes('AcamadoDomiciliado')) newStats.acamados++;
+      if (categories.includes('Idoso') || categories.includes('Idosos')) newStats.idosos++;
+      if (categories.includes('Adulto')) newStats.adultos++;
+      if (categories.includes('SaudeMental') || categories.includes('Saúde Mental')) newStats.saudeMental++;
+
+      const createdAt = p.created_at ? new Date(p.created_at) : null;
+      const isNewThisMonth = createdAt && createdAt >= startOfMonth;
+      
+      if (isNewThisMonth) {
+        newStats.newCidadaos++;
+        if (categories.includes('Gestante')) newStats.newGestantes++;
+        if (categories.includes('Criança') && ageInMonths <= 24) newStats.newCriancas++;
+        if (categories.includes('Idoso') || categories.includes('Idosos')) newStats.newIdosos++;
+        if (categories.includes('AcamadoDomiciliado')) newStats.newAcamados++;
+        if (isDiabetico) newStats.newDiabeticos++;
+        if (isHipertenso) newStats.newHipertensos++;
+      }
+
+      if (clinical.gestante?.data_parto) {
+        const dataParto = new Date(clinical.gestante.data_parto);
+        if (dataParto >= startOfMonth && dataParto <= new Date()) {
+          newStats.partosThisMonth++;
+        }
+      }
+      
+      const isMentalOrAcamado = categories.includes('SaudeMental') || categories.includes('AcamadoDomiciliado');
+      const recipes = isMentalOrAcamado ? (clinical.receitas || []) : [];
+      if (recipes.length > 0) {
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        
+        const isVencendoOuVencida = recipes.some((rec: any) => {
+          if (!rec.dataVencimento) return false;
+          const dateVencimento = new Date(rec.dataVencimento + 'T00:00:00');
+          if (isNaN(dateVencimento.getTime())) return false;
+          
+          const alertDate = new Date(dateVencimento);
+          alertDate.setDate(alertDate.getDate() - 15);
+          return hoje >= alertDate;
+        });
+        if (isVencendoOuVencida) {
+          newStats.receitasAVencer++;
+        }
+      }
+    });
+
+    const recentSorted = [...allPatients].sort((a, b) => {
+      const aVisit = getPatientLastVisitAt(a);
+      const bVisit = getPatientLastVisitAt(b);
+      return new Date(bVisit || 0).getTime() - new Date(aVisit || 0).getTime();
+    }).slice(0, 5);
+
+    return { stats: newStats, recentPatients: recentSorted };
+  }, [queryData, allPatients]);
 
   const getGestantesTrend = () => {
     const net = stats.newGestantes - stats.partosThisMonth;

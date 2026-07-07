@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase, fetchTableWithFilters } from '../lib/supabase';
 import { syncService } from '../lib/syncService';
 import { encryptionService } from '../lib/encryption';
@@ -11,15 +12,114 @@ import { getAgeInMonths, VACCINE_SCHEDULE, getPatientLastVisitAt } from '../lib/
 export function usePatientList(user: any) {
   const { info, error: toastError } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [patients, setPatients] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState(searchParams.get('filter') || 'all');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [householdsMap, setHouseholdsMap] = useState<Record<string, { address: string; number: string; complement: string }>>({});
   const [selectedStreet, setSelectedStreet] = useState('');
   const [dailyAgenda, setDailyAgenda] = useState<any[]>([]);
+
+  const { data: queryData, isLoading: loading } = useQuery({
+    queryKey: ['patientList', user?.id, user?.role, user?.color, user?.microarea],
+    queryFn: async () => {
+      if (!user) return { patients: [], householdsMap: {} };
+      if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') {
+        return { patients: [], householdsMap: {} };
+      }
+
+      // Fetch Households first for address mapping
+      const { data: hData } = await supabase
+        .from('households')
+        .select('id, address, number, complement');
+      
+      const map: Record<string, any> = {};
+      if (hData) {
+        hData.forEach(h => {
+          map[h.id] = {
+            address: h.address || '',
+            number: h.number || '',
+            complement: h.complement || ''
+          };
+        });
+      }
+
+      let allData: any[] = await fetchTableWithFilters<any>('patients', user);
+      
+      // HEALING LOGIC: SINCERELY UPDATE LATENCY AND RECENT VISITS
+      try {
+        let visitsDataQuery = supabase.from('visits').select('patient_id, date, type');
+        if (user.role === 'Gestor') {
+          visitsDataQuery = visitsDataQuery.eq('area_color', user.color);
+        } else if (user.role !== 'Administrador') {
+          visitsDataQuery = visitsDataQuery.eq('agent_id', user.id);
+        }
+        
+        const { data: allVisitsData } = await visitsDataQuery;
+        
+        const visitsMap: Record<string, string> = {};
+        if (allVisitsData) {
+          allVisitsData.forEach((v: any) => {
+            if (v.patient_id && v.date) {
+              const currentDate = visitsMap[v.patient_id];
+              const cleanDate = v.date.split('T')[0];
+              if (!currentDate || cleanDate > currentDate) {
+                visitsMap[v.patient_id] = cleanDate;
+              }
+            }
+          });
+        }
+
+        allData = allData.map(p => {
+          const clinicalVisitMax = getPatientLastVisitAt({ ...p, last_visit_at: null });
+          const dbVisitMax = visitsMap[p.id] || null;
+          
+          let trueAcsVisitDateStr = p.last_visit_at ? p.last_visit_at.split('T')[0] : null;
+          
+          if (clinicalVisitMax) {
+            const cleanClinical = clinicalVisitMax.split('T')[0];
+            if (!trueAcsVisitDateStr || cleanClinical > trueAcsVisitDateStr) {
+              trueAcsVisitDateStr = cleanClinical;
+            }
+          }
+          
+          if (dbVisitMax) {
+            if (!trueAcsVisitDateStr || dbVisitMax > trueAcsVisitDateStr) {
+              trueAcsVisitDateStr = dbVisitMax;
+            }
+          }
+
+          if (trueAcsVisitDateStr && trueAcsVisitDateStr !== (p.last_visit_at ? p.last_visit_at.split('T')[0] : null)) {
+            (async () => {
+              try {
+                const { error } = await supabase.from('patients')
+                  .update({ last_visit_at: trueAcsVisitDateStr })
+                  .eq('id', p.id);
+                if (error) console.error(`Error syncing last_visit_at for patient ${p.id}:`, error);
+              } catch (err) {
+                console.warn(`Silent error catching on background patients sync for patient ${p.id}:`, err);
+              }
+            })();
+
+            return {
+              ...p,
+              last_visit_at: trueAcsVisitDateStr
+            };
+          }
+          return p;
+        });
+      } catch (syncErr) {
+        console.error("Error healing patient visit dates:", syncErr);
+      }
+
+      return { patients: allData, householdsMap: map };
+    },
+    enabled: !!user && (!!user.microarea || user.role === 'Administrador' || user.role === 'Gestor'),
+  });
+
+  const patients = queryData?.patients || [];
+  const householdsMap = queryData?.householdsMap || {};
 
   useEffect(() => {
     const saved = safeStorage.getItem('gestao_acs_daily_agenda');
@@ -58,110 +158,6 @@ export function usePatientList(user: any) {
       setSearchTerm(search);
     }
   }, [searchParams]);
-
-  useEffect(() => {
-    const fetchPatients = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-      if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') return;
-      setLoading(true);
-      try {
-        // Fetch Households first for address mapping
-        const { data: hData } = await supabase
-          .from('households')
-          .select('id, address, number, complement');
-        
-        if (hData) {
-          const map: Record<string, any> = {};
-          hData.forEach(h => {
-            map[h.id] = {
-              address: h.address || '',
-              number: h.number || '',
-              complement: h.complement || ''
-            };
-          });
-          setHouseholdsMap(map);
-        }
-
-        let allData: any[] = await fetchTableWithFilters<any>('patients', user);
-        
-        // HEALING LOGIC: SINCERELY UPDATE LATENCY AND RECENT VISITS
-        try {
-          let visitsDataQuery = supabase.from('visits').select('patient_id, date, type');
-          if (user.role === 'Gestor') {
-            visitsDataQuery = visitsDataQuery.eq('area_color', user.color);
-          } else if (user.role !== 'Administrador') {
-            visitsDataQuery = visitsDataQuery.eq('agent_id', user.id);
-          }
-          
-          const { data: allVisitsData } = await visitsDataQuery;
-          
-          const visitsMap: Record<string, string> = {};
-          if (allVisitsData) {
-            allVisitsData.forEach((v: any) => {
-              if (v.patient_id && v.date) {
-                const currentDate = visitsMap[v.patient_id];
-                const cleanDate = v.date.split('T')[0];
-                if (!currentDate || cleanDate > currentDate) {
-                  visitsMap[v.patient_id] = cleanDate;
-                }
-              }
-            });
-          }
-
-          allData = allData.map(p => {
-            const clinicalVisitMax = getPatientLastVisitAt({ ...p, last_visit_at: null });
-            const dbVisitMax = visitsMap[p.id] || null;
-            
-            let trueAcsVisitDateStr = p.last_visit_at ? p.last_visit_at.split('T')[0] : null;
-            
-            if (clinicalVisitMax) {
-              const cleanClinical = clinicalVisitMax.split('T')[0];
-              if (!trueAcsVisitDateStr || cleanClinical > trueAcsVisitDateStr) {
-                trueAcsVisitDateStr = cleanClinical;
-              }
-            }
-            
-            if (dbVisitMax) {
-              if (!trueAcsVisitDateStr || dbVisitMax > trueAcsVisitDateStr) {
-                trueAcsVisitDateStr = dbVisitMax;
-              }
-            }
-
-            if (trueAcsVisitDateStr && trueAcsVisitDateStr !== (p.last_visit_at ? p.last_visit_at.split('T')[0] : null)) {
-              (async () => {
-                try {
-                  const { error } = await supabase.from('patients')
-                    .update({ last_visit_at: trueAcsVisitDateStr })
-                    .eq('id', p.id);
-                  if (error) console.error(`Error syncing last_visit_at for patient ${p.id}:`, error);
-                } catch (err) {
-                  console.warn(`Silent error catching on background patients sync for patient ${p.id}:`, err);
-                }
-              })();
-
-              return {
-                ...p,
-                last_visit_at: trueAcsVisitDateStr
-              };
-            }
-            return p;
-          });
-        } catch (syncErr) {
-          console.error("Error healing patient visit dates:", syncErr);
-        }
-
-        setPatients(allData);
-      } catch (error) {
-        console.error("Error fetching patients:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPatients();
-  }, [user?.microarea, user?.id, user?.role, user?.color]);
 
   const getPatientAddress = (p: any) => {
     if (p.household_id && householdsMap[p.household_id]) {
@@ -328,7 +324,7 @@ export function usePatientList(user: any) {
       );
     }
 
-    if (activeFilter === 'diabeticos') {
+    if (activeFilter === 'diabeticos' || activeFilter === 'diabéticos') {
       const clinical = p.clinical_data || {};
       return matchesSearch && (
         clinical.chronic?.diabetes === 'Sim' ||
@@ -372,7 +368,13 @@ export function usePatientList(user: any) {
         await syncService.addToQueue('visits', 'DELETE', { filter: { patient_id: deleteConfirm } });
         await syncService.addToQueue('patients', 'DELETE', { id: deleteConfirm });
         
-        setPatients(patients.filter(p => p.id !== deleteConfirm));
+        queryClient.setQueryData(['patientList', user?.id, user?.role, user?.color, user?.microarea], (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            patients: old.patients.filter((p: any) => p.id !== deleteConfirm)
+          };
+        });
         setDeleteConfirm(null);
         info('Exclusão agendada para sincronização.');
         return;
@@ -402,7 +404,14 @@ export function usePatientList(user: any) {
 
       if (pError) throw pError;
 
-      setPatients(patients.filter(p => p.id !== deleteConfirm));
+      queryClient.setQueryData(['patientList', user?.id, user?.role, user?.color, user?.microarea], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          patients: old.patients.filter((p: any) => p.id !== deleteConfirm)
+        };
+      });
+      queryClient.invalidateQueries({ queryKey: ['patientList'] });
       setDeleteConfirm(null);
     } catch (error) {
       console.error("Error deleting patient:", error);
