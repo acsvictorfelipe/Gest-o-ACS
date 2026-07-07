@@ -405,6 +405,95 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
     }
   };
 
+  // Mass rename/correct microareas (e.g., "3" -> "03")
+  const handleRenameMicroarea = async (agentId: string, oldMa: string, newMa: string): Promise<boolean> => {
+    if (!oldMa.trim() || !newMa.trim()) {
+      warning("Por favor, preencha a microárea de origem e de destino.");
+      return false;
+    }
+    if (oldMa.trim() === newMa.trim()) {
+      warning("Os nomes de microárea de origem e destino devem ser diferentes.");
+      return false;
+    }
+
+    const trimmedOld = oldMa.trim();
+    const trimmedNew = newMa.trim();
+
+    const selectedAgent = users.find(u => u.id === agentId);
+    const confirmMsg = agentId === 'all'
+      ? `Confirma a alteração em MASSA de todas as microáreas "${trimmedOld}" para "${trimmedNew}" em todo o sistema (afetará todos os agentes, domicílios, cidadãos e visitas)?`
+      : `Confirma a alteração das microáreas "${trimmedOld}" para "${trimmedNew}" para o ACS "${selectedAgent?.name || agentId}"?`;
+
+    if (!window.confirm(confirmMsg)) {
+      return false;
+    }
+
+    try {
+      let countHouseholds = 0;
+      let countPatients = 0;
+      let countVisits = 0;
+      let countProfiles = 0;
+
+      // 1. Update households
+      let queryHouseholds = supabase.from('households').update({ microarea: trimmedNew }).eq('microarea', trimmedOld);
+      if (agentId !== 'all') {
+        queryHouseholds = queryHouseholds.eq('agent_id', agentId);
+      }
+      const { data: hData, error: hError } = await queryHouseholds.select('id');
+      if (hError) throw hError;
+      countHouseholds = hData ? hData.length : 0;
+
+      // 2. Update patients
+      let queryPatients = supabase.from('patients').update({ microarea: trimmedNew }).eq('microarea', trimmedOld);
+      if (agentId !== 'all') {
+        queryPatients = queryPatients.eq('agent_id', agentId);
+      }
+      const { data: pData, error: pError } = await queryPatients.select('id');
+      if (pError) throw pError;
+      countPatients = pData ? pData.length : 0;
+
+      // 3. Update visits
+      let queryVisits = supabase.from('visits').update({ microarea: trimmedNew }).eq('microarea', trimmedOld);
+      if (agentId !== 'all') {
+        queryVisits = queryVisits.eq('agent_id', agentId);
+      }
+      const { data: vData, error: vError } = await queryVisits.select('id');
+      if (vError) throw vError;
+      countVisits = vData ? vData.length : 0;
+
+      // 4. Update profiles (Agent profile)
+      let queryProfiles = supabase.from('profiles').update({ microarea: trimmedNew });
+      if (agentId !== 'all') {
+        queryProfiles = queryProfiles.eq('id', agentId);
+      } else {
+        queryProfiles = queryProfiles.eq('microarea', trimmedOld).eq('role', 'Agente');
+      }
+      const { data: profData, error: profError } = await queryProfiles.select('id');
+      if (profError) throw profError;
+      countProfiles = profData ? profData.length : 0;
+
+      // Log activity
+      const agentLabel = agentId === 'all' ? 'Todos os Agentes' : (selectedAgent?.name || agentId);
+      await logActivity(
+        currentUser.id,
+        'Renomeação de Microárea',
+        `Renomeou microárea "${trimmedOld}" para "${trimmedNew}" (${agentLabel}). Afetados: ${countHouseholds} domicílios, ${countPatients} cidadãos, ${countVisits} visitas, ${countProfiles} perfis.`
+      );
+
+      setMessage({
+        type: 'success',
+        text: `Sucesso! Ajustados: ${countHouseholds} domicílios, ${countPatients} cidadãos, ${countVisits} visitas, ${countProfiles} perfis de microárea.`
+      });
+
+      fetchData();
+      return true;
+    } catch (err: any) {
+      console.error("Error renaming microarea:", err);
+      setMessage({ type: 'error', text: `Erro ao renomear microárea: ${err.message || err}` });
+      return false;
+    }
+  };
+
   // Tab 5: Create Campaign
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -723,6 +812,7 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
             sourceAgentHouseholds={sourceAgentHouseholds}
             sourceAgentMicroareas={sourceAgentMicroareas}
             filteredHouseholds={filteredHouseholds}
+            handleRenameMicroarea={handleRenameMicroarea}
           />
         )}
 
