@@ -27,6 +27,27 @@ import { FormActions } from './patient-form/FormActions';
 
 
 
+const sanitizeNulls = (obj: any): any => {
+  if (obj === null || obj === undefined) return '';
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeNulls);
+  }
+  if (typeof obj === 'object') {
+    const newObj: any = {};
+    for (const key of Object.keys(obj)) {
+      if (obj[key] === null || obj[key] === undefined) {
+        newObj[key] = '';
+      } else if (typeof obj[key] === 'object') {
+        newObj[key] = sanitizeNulls(obj[key]);
+      } else {
+        newObj[key] = obj[key];
+      }
+    }
+    return newObj;
+  }
+  return obj;
+};
+
 export function PatientForm({ user }: { user: any }) {
   const navigate = useNavigate();
   const { success, warning, error: toastError } = useToast();
@@ -94,105 +115,107 @@ export function PatientForm({ user }: { user: any }) {
           setOriginalLastVisitAt(data.last_visit_at || null);
           const hData = data.households || {};
           
+          const cleanClinical = sanitizeNulls(data.clinical_data || {});
+          
           setFormData({
             name: data.name || '',
             cns: data.cns || '',
             createdAt: data.created_at || '',
-            responsibleCns: hData.responsible_cns || data.clinical_data?.responsible_cns || '',
+            responsibleCns: hData.responsible_cns || cleanClinical.responsible_cns || '',
             isFamilyResponsible: data.is_family_responsible || false,
             birthDate: data.birth_date || '',
             gender: data.gender || 'Feminino',
             visitDate: '',
             visitType: 'Rotina',
             visitSummary: '',
-            address: hData.address || data.clinical_data?.address || '',
-            number: hData.number || data.clinical_data?.address_number || '',
-            complement: hData.complement || data.clinical_data?.address_complement || '',
-            contact: data.clinical_data?.contact || '',
-            contact2: data.clinical_data?.contact2 || '',
-            messageContact: data.clinical_data?.message_contact || '',
+            address: hData.address || cleanClinical.address || '',
+            number: hData.number || cleanClinical.address_number || '',
+            complement: hData.complement || cleanClinical.address_complement || '',
+            contact: cleanClinical.contact || '',
+            contact2: cleanClinical.contact2 || '',
+            messageContact: cleanClinical.message_contact || '',
             householdId: data.household_id || '',
             categories: data.categories || [],
             clinicalData: {
               ...formData.clinicalData,
-              ...data.clinical_data,
-              saudeMental: data.clinical_data?.saudeMental || { notes: '' },
+              ...cleanClinical,
+              saudeMental: cleanClinical.saudeMental || { notes: '' },
               rastreamento: {
                 exameCitopatologico: 'Não',
                 saudeSexualReprodutiva: 'Não',
                 mamografia: 'Não',
                 vacinaHpv: 'Não',
-                ...(data.clinical_data?.rastreamento || {})
+                ...(cleanClinical.rastreamento || {})
               },
-              chronic: data.clinical_data?.chronic || {
-                diabetes: data.clinical_data?.chronic?.diabetes || data.clinical_data?.adulto?.diabetes || data.clinical_data?.idoso?.diabetes || data.clinical_data?.gestante?.diabetes || data.clinical_data?.acamadodomiciliado?.diabetes || 'Não',
-                diabetesData: data.clinical_data?.chronic?.diabetesData || data.clinical_data?.adulto?.diabetesData || data.clinical_data?.idoso?.diabetesData || data.clinical_data?.gestante?.diabetesData || data.clinical_data?.acamadodomiciliado?.diabetesData || formData.clinicalData.chronic.diabetesData,
-                hipertensao: data.clinical_data?.chronic?.hipertensao || data.clinical_data?.adulto?.hipertensao || data.clinical_data?.idoso?.hipertensao || data.clinical_data?.gestante?.hipertensao || data.clinical_data?.acamadodomiciliado?.hipertensao || data.clinical_data?.adulto?.pressaoAlta || data.clinical_data?.idoso?.pressaoAlta || data.clinical_data?.gestante?.pressaoAlta || data.clinical_data?.acamadodomiciliado?.pressaoAlta || 'Não',
-                hipertensaoData: data.clinical_data?.chronic?.hipertensaoData || data.clinical_data?.adulto?.hipertensaoData || data.clinical_data?.idoso?.hipertensaoData || data.clinical_data?.gestante?.hipertensaoData || data.clinical_data?.acamadodomiciliado?.hipertensaoData || formData.clinicalData.chronic.hipertensaoData,
+              chronic: cleanClinical.chronic || {
+                diabetes: cleanClinical.chronic?.diabetes || cleanClinical.adulto?.diabetes || cleanClinical.idoso?.diabetes || cleanClinical.gestante?.diabetes || cleanClinical.acamadodomiciliado?.diabetes || 'Não',
+                diabetesData: cleanClinical.chronic?.diabetesData || cleanClinical.adulto?.diabetesData || cleanClinical.idoso?.diabetesData || cleanClinical.gestante?.diabetesData || cleanClinical.acamadodomiciliado?.diabetesData || formData.clinicalData.chronic.diabetesData,
+                hipertensao: cleanClinical.chronic?.hipertensao || cleanClinical.adulto?.hipertensao || cleanClinical.idoso?.hipertensao || cleanClinical.gestante?.hipertensao || cleanClinical.acamadodomiciliado?.hipertensao || cleanClinical.adulto?.pressaoAlta || cleanClinical.idoso?.pressaoAlta || cleanClinical.gestante?.pressaoAlta || cleanClinical.acamadodomiciliado?.pressaoAlta || 'Não',
+                hipertensaoData: cleanClinical.chronic?.hipertensaoData || cleanClinical.adulto?.hipertensaoData || cleanClinical.idoso?.hipertensaoData || cleanClinical.gestante?.hipertensaoData || cleanClinical.acamadodomiciliado?.hipertensaoData || formData.clinicalData.chronic.hipertensaoData,
               },
               // Ensure nested arrays exist even if missing in DB
               gestante: {
                 ...formData.clinicalData.gestante,
-                ...(data.clinical_data?.gestante || {}),
-                consultas: data.clinical_data?.gestante?.consultas || [],
-                visitasAcs: data.clinical_data?.gestante?.visitasAcs || [],
-                visitasAcsDiabetes: data.clinical_data?.gestante?.visitasAcsDiabetes || [],
-                planejamentoFamiliar: data.clinical_data?.gestante?.planejamentoFamiliar || 'Não',
+                ...(cleanClinical.gestante || {}),
+                consultas: cleanClinical.gestante?.consultas || [],
+                visitasAcs: cleanClinical.gestante?.visitasAcs || [],
+                visitasAcsDiabetes: cleanClinical.gestante?.visitasAcsDiabetes || [],
+                planejamentoFamiliar: cleanClinical.gestante?.planejamentoFamiliar || 'Não',
                 diabetesData: {
                   ...formData.clinicalData.gestante.diabetesData,
-                  ...(data.clinical_data?.gestante?.diabetesData || {})
+                  ...(cleanClinical.gestante?.diabetesData || {})
                 },
                 hipertensaoData: {
                   ...formData.clinicalData.gestante.hipertensaoData,
-                  ...(data.clinical_data?.gestante?.hipertensaoData || {})
+                  ...(cleanClinical.gestante?.hipertensaoData || {})
                 }
               },
               crianca: {
                 ...formData.clinicalData.crianca,
-                ...(data.clinical_data?.crianca || {}),
-                consultas: data.clinical_data?.crianca?.consultas || [],
+                ...(cleanClinical.crianca || {}),
+                consultas: cleanClinical.crianca?.consultas || [],
                 vacinas: {
                   ...formData.clinicalData.crianca.vacinas,
-                  ...(data.clinical_data?.crianca?.vacinas || {})
+                  ...(cleanClinical.crianca?.vacinas || {})
                 }
               },
               acamadodomiciliado: {
                 ...formData.clinicalData.acamadodomiciliado,
-                ...(data.clinical_data?.acamadodomiciliado || {}),
-                visitasAcsDiabetes: data.clinical_data?.acamadodomiciliado?.visitasAcsDiabetes || [],
+                ...(cleanClinical.acamadodomiciliado || {}),
+                visitasAcsDiabetes: cleanClinical.acamadodomiciliado?.visitasAcsDiabetes || [],
                 diabetesData: {
                   ...formData.clinicalData.acamadodomiciliado.diabetesData,
-                  ...(data.clinical_data?.acamadodomiciliado?.diabetesData || {})
+                  ...(cleanClinical.acamadodomiciliado?.diabetesData || {})
                 },
                 hipertensaoData: {
                   ...formData.clinicalData.acamadodomiciliado.hipertensaoData,
-                  ...(data.clinical_data?.acamadodomiciliado?.hipertensaoData || {})
+                  ...(cleanClinical.acamadodomiciliado?.hipertensaoData || {})
                 }
               },
               adulto: {
                 ...formData.clinicalData.adulto,
-                ...(data.clinical_data?.adulto || {}),
-                visitasAcsDiabetes: data.clinical_data?.adulto?.visitasAcsDiabetes || [],
+                ...(cleanClinical.adulto || {}),
+                visitasAcsDiabetes: cleanClinical.adulto?.visitasAcsDiabetes || [],
                 diabetesData: {
                   ...formData.clinicalData.adulto.diabetesData,
-                  ...(data.clinical_data?.adulto?.diabetesData || {})
+                  ...(cleanClinical.adulto?.diabetesData || {})
                 },
                 hipertensaoData: {
                   ...formData.clinicalData.adulto.hipertensaoData,
-                  ...(data.clinical_data?.adulto?.hipertensaoData || {})
+                  ...(cleanClinical.adulto?.hipertensaoData || {})
                 }
               },
               idoso: {
                 ...formData.clinicalData.idoso,
-                ...(data.clinical_data?.idoso || {}),
-                visitasAcsDiabetes: data.clinical_data?.idoso?.visitasAcsDiabetes || [],
+                ...(cleanClinical.idoso || {}),
+                visitasAcsDiabetes: cleanClinical.idoso?.visitasAcsDiabetes || [],
                 diabetesData: {
                   ...formData.clinicalData.idoso.diabetesData,
-                  ...(data.clinical_data?.idoso?.diabetesData || {})
+                  ...(cleanClinical.idoso?.diabetesData || {})
                 },
                 hipertensaoData: {
                   ...formData.clinicalData.idoso.hipertensaoData,
-                  ...(data.clinical_data?.idoso?.hipertensaoData || {})
+                  ...(cleanClinical.idoso?.hipertensaoData || {})
                 }
               }
             }
@@ -1094,16 +1117,36 @@ export function PatientForm({ user }: { user: any }) {
       )}
 
       {Object.keys(methods.formState.errors).length > 0 && (() => {
+        const fieldLabels: Record<string, string> = {
+          'name': 'Nome Completo',
+          'birthDate': 'Data de Nascimento',
+          'gender': 'Gênero',
+          'address': 'Endereço',
+          'number': 'Número',
+          'cns': 'Cartão SUS (CNS)',
+          'responsibleCns': 'CNS do Responsável',
+          'clinicalData -> gestante -> dum': 'Gestante - DUM',
+          'clinicalData -> gestante -> dpp': 'Gestante - DPP',
+          'clinicalData -> gestante -> puerperioConsulta': 'Gestante - Consulta do Puerpério',
+          'clinicalData -> gestante -> puerperioVisita': 'Gestante - Visita do Puerpério',
+          'clinicalData -> gestante -> notes': 'Gestante - Observações/Anotações',
+          'clinicalData -> crianca -> notes': 'Criança - Observações/Anotações',
+          'clinicalData -> adulto -> notes': 'Adulto - Observações/Anotações',
+          'clinicalData -> idoso -> notes': 'Idoso - Observações/Anotações',
+        };
+
         const getErrorMessages = (errors: any): string[] => {
           const messages: string[] = [];
-          const traverse = (obj: any) => {
+          const traverse = (obj: any, path: string = '') => {
             if (!obj || typeof obj !== 'object') return;
             if (typeof obj.message === 'string' && obj.message) {
-              messages.push(obj.message);
+              const friendlyField = fieldLabels[path] || path;
+              messages.push(friendlyField ? `${friendlyField}: ${obj.message}` : obj.message);
               return;
             }
             for (const key of Object.keys(obj)) {
-              traverse(obj[key]);
+              const nextPath = path ? `${path} -> ${key}` : key;
+              traverse(obj[key], nextPath);
             }
           };
           traverse(errors);

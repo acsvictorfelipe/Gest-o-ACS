@@ -291,6 +291,69 @@ async function startServer() {
     }
   });
 
+  // API Route to ensure a profile exists for an authenticated user
+  app.post('/api/profile/ensure', async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Acesso negado: Token de autenticação ausente' });
+    }
+
+    const token = authHeader.substring(7);
+
+    try {
+      // 1. Verify user's session with Supabase using supabaseAdmin.auth.getUser
+      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+      if (authError || !user) {
+        return res.status(401).json({ error: 'Acesso negado: Sessão inválida ou expirada' });
+      }
+
+      // 2. Check if profile exists
+      const { data: profile, error: profileFetchError } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profile) {
+        // Profile already exists, return it!
+        return res.status(200).json({ profile });
+      }
+
+      // 3. Profile does not exist, let's create it with sensible defaults!
+      const name = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário';
+      const email = user.email || '';
+      const microarea = user.user_metadata?.microarea || '001';
+      const role = user.user_metadata?.role || 'Agente';
+      const color = user.user_metadata?.color || '#00488d';
+
+      console.log(`Auto-creating missing profile for user ${user.id} (${email}) with role ${role}, microarea ${microarea}`);
+
+      const { data: newProfile, error: insertError } = await supabaseAdmin
+        .from('profiles')
+        .insert({
+          id: user.id,
+          name,
+          email,
+          microarea,
+          role,
+          color,
+          last_login: new Date().toISOString()
+        })
+        .select('*')
+        .single();
+
+      if (insertError) {
+        console.error('Failed to auto-create profile:', insertError);
+        throw insertError;
+      }
+
+      return res.status(200).json({ profile: newProfile });
+    } catch (err: any) {
+      console.error('Error in /api/profile/ensure:', err);
+      return res.status(500).json({ error: 'Erro ao garantir existência de perfil', details: err.message });
+    }
+  });
+
   // Catch-all for /api routes to prevent SPA fallback
   app.all('/api/*', (req, res) => {
     console.warn(`404 - API route not found: ${req.method} ${req.url}`);

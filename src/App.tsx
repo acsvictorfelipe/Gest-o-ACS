@@ -127,7 +127,30 @@ export default function App() {
 
         setUser({ ...supabaseUser, ...data, name });
       } else {
-        console.error("Profile not found in database:", error);
+        console.error("Profile not found in database, trying to auto-create:", error);
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (token) {
+          try {
+            const response = await fetch('/api/profile/ensure', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            if (response.ok) {
+              const resData = await response.json();
+              if (resData.profile) {
+                const name = resData.profile.name || supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
+                setUser({ ...supabaseUser, ...resData.profile, name });
+                return;
+              }
+            }
+          } catch (ensureErr) {
+            console.error("Failed to auto-create profile via /api/profile/ensure:", ensureErr);
+          }
+        }
         const name = supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
         setUser({ ...supabaseUser, name });
       }
