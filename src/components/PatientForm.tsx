@@ -463,54 +463,54 @@ export function PatientForm({ user }: { user: any }) {
     const ageNum = getAgeNumber(formData.birthDate);
     const ageInMonths = getAgeInMonths(formData.birthDate);
     
-    setFormData((prev: any) => {
-      const currentCategories = [...prev.categories];
-      let changed = false;
+    // Use setValue (not reset) to update only the categories field.
+    // Using reset() causes a cascade re-render that can restore removed categories.
+    const currentCategories = [...(methods.getValues('categories') || [])];
+    let changed = false;
 
-      // Rule for Idoso (60+ years)
-      if (ageNum >= 60) {
-        if (!currentCategories.includes('Idoso')) {
-          currentCategories.push('Idoso');
-          changed = true;
-        }
-      } else {
-        if (currentCategories.includes('Idoso')) {
-          const index = currentCategories.indexOf('Idoso');
-          if (index > -1) {
-            currentCategories.splice(index, 1);
-            changed = true;
-          }
-        }
+    // Rule for Idoso (60+ years)
+    if (ageNum >= 60) {
+      if (!currentCategories.includes('Idoso')) {
+        currentCategories.push('Idoso');
+        changed = true;
+      }
+      // Remove Adulto and Criança if present
+      ['Adulto', 'Criança'].forEach(cat => {
+        const idx = currentCategories.indexOf(cat);
+        if (idx > -1) { currentCategories.splice(idx, 1); changed = true; }
+      });
+    } else {
+      // Remove Idoso if age drops below 60
+      const idosoIdx = currentCategories.indexOf('Idoso');
+      if (idosoIdx > -1) {
+        currentCategories.splice(idosoIdx, 1);
+        changed = true;
       }
 
-      // Rule for Criança (0-24 months)
+      // Rule for Criança (0–24 months)
       if (ageInMonths <= 24) {
         if (!currentCategories.includes('Criança')) {
           currentCategories.push('Criança');
           changed = true;
         }
-        if (currentCategories.includes('Adulto')) {
-          currentCategories.splice(currentCategories.indexOf('Adulto'), 1);
-          changed = true;
-        }
-      } 
-      // Rule for Adulto (24 months to 60 years)
-      else if (ageNum < 60) {
+        const adultoIdx = currentCategories.indexOf('Adulto');
+        if (adultoIdx > -1) { currentCategories.splice(adultoIdx, 1); changed = true; }
+      } else {
+        // Rule for Adulto (24 months – 59 years)
         if (!currentCategories.includes('Adulto')) {
           currentCategories.push('Adulto');
           changed = true;
         }
-        if (currentCategories.includes('Criança')) {
-          currentCategories.splice(currentCategories.indexOf('Criança'), 1);
-          changed = true;
-        }
+        const criancaIdx = currentCategories.indexOf('Criança');
+        if (criancaIdx > -1) { currentCategories.splice(criancaIdx, 1); changed = true; }
       }
+    }
 
-      if (changed) {
-        return { ...prev, categories: currentCategories };
-      }
-      return prev;
-    });
+    if (changed) {
+      // setValue with shouldDirty:false avoids triggering the dirty prompt on initial load
+      methods.setValue('categories', currentCategories, { shouldDirty: true });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.birthDate]);
 
   const handleChange = (updater: any) => {
@@ -683,10 +683,9 @@ export function PatientForm({ user }: { user: any }) {
 
         const patientAgeNum = getAgeNumber(formData.birthDate);
         
-        let finalCategories = [...(formData.categories || [])];
-        if (patientAgeNum >= 60 && !finalCategories.includes('Idoso')) {
-          finalCategories.push('Idoso');
-        }
+        // Always read categories from react-hook-form's internal store (getValues)
+        // formData (from watch()) can be stale when setValue was used to update categories
+        let finalCategories = [...(methods.getValues('categories') || [])];
 
         const patientData = {
           id: id || generateUUID(),
@@ -836,7 +835,7 @@ export function PatientForm({ user }: { user: any }) {
         birth_date: formData.birthDate,
         gender: formData.gender,
         household_id: householdId,
-        categories: formData.categories,
+        categories: methods.getValues('categories'),
         microarea: user.microarea,
         area_color: user.color || '#00488d',
         agent_id: user.id,
