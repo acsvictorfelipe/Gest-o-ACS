@@ -8,8 +8,15 @@ import { useToast } from '../components/Toast';
 import { safeStorage } from '../lib/safeStorage';
 import { isSameDay } from 'date-fns';
 import { getAgeInMonths, VACCINE_SCHEDULE, getPatientLastVisitAt } from '../lib/dateUtils';
+import { AppUser, Patient, Household } from '../types';
 
-export function usePatientList(user: any) {
+export interface DailyAgendaItem {
+  id: string;
+  name: string;
+  done: boolean;
+}
+
+export function usePatientList(user: AppUser | null | undefined) {
   const { info, error: toastError } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -19,7 +26,7 @@ export function usePatientList(user: any) {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [selectedStreet, setSelectedStreet] = useState('');
-  const [dailyAgenda, setDailyAgenda] = useState<any[]>([]);
+  const [dailyAgenda, setDailyAgenda] = useState<DailyAgendaItem[]>([]);
 
   const { data: queryData, isLoading: loading } = useQuery({
     queryKey: ['patientList', user?.id, user?.role, user?.color, user?.microarea],
@@ -34,7 +41,7 @@ export function usePatientList(user: any) {
         .from('households')
         .select('id, address, number, complement');
       
-      const map: Record<string, any> = {};
+      const map: Record<string, { address: string; number: string; complement: string }> = {};
       if (hData) {
         hData.forEach(h => {
           map[h.id] = {
@@ -45,7 +52,7 @@ export function usePatientList(user: any) {
         });
       }
 
-      let allData: any[] = await fetchTableWithFilters<any>('patients', user);
+      let allData: Patient[] = await fetchTableWithFilters<Patient>('patients', user);
       
       // HEALING LOGIC: SINCERELY UPDATE LATENCY AND RECENT VISITS
       try {
@@ -60,7 +67,7 @@ export function usePatientList(user: any) {
         
         const visitsMap: Record<string, string> = {};
         if (allVisitsData) {
-          allVisitsData.forEach((v: any) => {
+          allVisitsData.forEach((v: { patient_id: string; date: string; type?: string }) => {
             if (v.patient_id && v.date) {
               const currentDate = visitsMap[v.patient_id];
               const cleanDate = v.date.split('T')[0];

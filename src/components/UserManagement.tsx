@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, fetchTableWithFilters } from '../lib/supabase';
 import { useToast } from './Toast';
+import { useConfirm } from './ui/ConfirmDialog';
 import { logActivity } from '../lib/auditLogger';
 import { AppUser, UserProfile, Patient, Household, Visit, Campaign, SystemLog } from '../types';
 import { 
@@ -53,6 +54,7 @@ const getIndicatorStatus = (percentage: number, target: number) => {
 export function UserManagement({ currentUser }: { currentUser: AppUser | null }) {
   const navigate = useNavigate();
   const { warning, error: toastError } = useToast();
+  const confirm = useConfirm();
   const [activeTab, setActiveTab] = useState('equipe');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -268,9 +270,14 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
       return;
     }
 
-    if (!window.confirm(`Tem certeza que deseja excluir o usuário "${userName}"? Isso removerá permanentemente o acesso e o perfil.`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Excluir Usuário',
+      message: `Tem certeza que deseja excluir o usuário "${userName}"? Isso removerá permanentemente o acesso e o perfil.`,
+      variant: 'danger',
+      confirmLabel: 'Excluir',
+      cancelLabel: 'Cancelar'
+    });
+    if (!ok) return;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -313,9 +320,14 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
 
     if (!sourceAgent || !targetAgent) return;
 
-    if (!window.confirm(`Confirma a transferência dos domicílios e pacientes do ACS ${sourceAgent.name} para o ACS ${targetAgent.name}?`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Confirmar Transferência',
+      message: `Confirma a transferência dos domicílios e pacientes do ACS ${sourceAgent.name} para o ACS ${targetAgent.name}?`,
+      variant: 'warning',
+      confirmLabel: 'Transferir',
+      cancelLabel: 'Cancelar'
+    });
+    if (!ok) return;
 
     setTransferring(true);
     try {
@@ -424,7 +436,14 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
       ? `Confirma a alteração em MASSA de todas as microáreas "${trimmedOld}" para "${trimmedNew}" em todo o sistema (afetará todos os agentes, domicílios, cidadãos e visitas)?`
       : `Confirma a alteração das microáreas "${trimmedOld}" para "${trimmedNew}" para o ACS "${selectedAgent?.name || agentId}"?`;
 
-    if (!window.confirm(confirmMsg)) {
+    const ok = await confirm({
+      title: 'Confirmar Ação',
+      message: confirmMsg,
+      variant: 'warning',
+      confirmLabel: 'Confirmar',
+      cancelLabel: 'Cancelar'
+    });
+    if (!ok) {
       return false;
     }
 

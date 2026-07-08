@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Activity, Loader2, ArrowRight, Search, Sliders, RefreshCw } from 'lucide-react';
 import { UserProfile, Patient, Household } from '../../types';
+import { useConfirm } from '../ui/ConfirmDialog';
 
 interface RedistribuicaoTabProps {
   users: UserProfile[];
@@ -47,6 +48,7 @@ export function RedistribuicaoTab({
   filteredHouseholds,
   handleRenameMicroarea
 }: RedistribuicaoTabProps) {
+  const confirm = useConfirm();
   const [renameAgentId, setRenameAgentId] = useState('all');
   const [oldMicroareaInput, setOldMicroareaInput] = useState('');
   const [newMicroareaInput, setNewMicroareaInput] = useState('');
@@ -293,7 +295,14 @@ export function RedistribuicaoTab({
           <button
             type="button"
             onClick={async () => {
-              if (window.confirm("Deseja padronizar automaticamente todas as microáreas de 1 a 9 para 01 a 09 no sistema?")) {
+              const ok = await confirm({
+                title: 'Padronizar Microáreas',
+                message: 'Deseja padronizar automaticamente todas as microáreas de 1 a 9 para 01 a 09 no sistema?',
+                variant: 'warning',
+                confirmLabel: 'Padronizar',
+                cancelLabel: 'Cancelar'
+              });
+              if (ok) {
                 setRenaming(true);
                 try {
                   for (let i = 1; i <= 9; i++) {

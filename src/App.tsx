@@ -1,9 +1,11 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './lib/queryClient';
 import { supabase } from './lib/supabase';
 import { Layout } from './components/Layout';
 import { ToastProvider } from './components/Toast';
+import { ConfirmDialogProvider } from './components/ui/ConfirmDialog';
 import { syncService } from './lib/syncService';
 import { encryptionService } from './lib/encryption';
 import { safeStorage } from './lib/safeStorage';
@@ -22,14 +24,6 @@ const UserManagement = lazy(() => import('./components/UserManagement').then(mod
 const VisitHistory = lazy(() => import('./components/VisitHistory').then(module => ({ default: module.VisitHistory })));
 const ExportTool = lazy(() => import('./components/ExportTool').then(module => ({ default: module.ExportTool })));
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      staleTime: 1000 * 60 * 5, // 5 minutes of cache lifetime
-    },
-  },
-});
 
 export default function App() {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -175,36 +169,38 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
-        <Router>
-          <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-surface">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-            </div>
-          }>
-            <Routes>
-              <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-              
-              {user ? (
-                <Route element={<Layout user={user} theme={theme} toggleTheme={toggleTheme} onProfileUpdate={() => user && fetchProfile(user)} />}>
-                  <Route path="/" element={<Dashboard user={user} />} />
-                  <Route path="/pacientes" element={<PatientList user={user} />} />
-                  <Route path="/domicilios" element={<HouseholdList user={user} />} />
-                  <Route path="/configuracoes" element={<Settings user={user} onProfileUpdate={() => user && fetchProfile(user)} />} />
-                  <Route path="/relatorios" element={<Reports user={user} />} />
-                  <Route path="/historico" element={<VisitHistory user={user} />} />
-                  <Route path="/novo-cadastro" element={<PatientForm user={user} />} />
-                  <Route path="/editar-paciente/:id" element={<PatientForm user={user} />} />
-                  <Route path="/domicilio/:id" element={<HouseholdView user={user} />} />
-                  <Route path="/usuarios" element={<UserManagement currentUser={user} />} />
-                  <Route path="/exportar" element={<ExportTool user={user} />} />
-                  <Route path="*" element={<Navigate to="/" />} />
-                </Route>
-              ) : (
-                <Route path="*" element={<Navigate to="/login" />} />
-              )}
-            </Routes>
-          </Suspense>
-        </Router>
+        <ConfirmDialogProvider>
+          <Router>
+            <Suspense fallback={
+              <div className="min-h-screen flex items-center justify-center bg-surface">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            }>
+              <Routes>
+                <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+                
+                {user ? (
+                  <Route element={<Layout user={user} theme={theme} toggleTheme={toggleTheme} onProfileUpdate={() => user && fetchProfile(user)} />}>
+                    <Route path="/" element={<Dashboard user={user} />} />
+                    <Route path="/pacientes" element={<PatientList user={user} />} />
+                    <Route path="/domicilios" element={<HouseholdList user={user} />} />
+                    <Route path="/configuracoes" element={<Settings user={user} onProfileUpdate={() => user && fetchProfile(user)} />} />
+                    <Route path="/relatorios" element={<Reports user={user} />} />
+                    <Route path="/historico" element={<VisitHistory user={user} />} />
+                    <Route path="/novo-cadastro" element={<PatientForm user={user} />} />
+                    <Route path="/editar-paciente/:id" element={<PatientForm user={user} />} />
+                    <Route path="/domicilio/:id" element={<HouseholdView user={user} />} />
+                    <Route path="/usuarios" element={<UserManagement currentUser={user} />} />
+                    <Route path="/exportar" element={<ExportTool user={user} />} />
+                    <Route path="*" element={<Navigate to="/" />} />
+                  </Route>
+                ) : (
+                  <Route path="*" element={<Navigate to="/login" />} />
+                )}
+              </Routes>
+            </Suspense>
+          </Router>
+        </ConfirmDialogProvider>
       </ToastProvider>
     </QueryClientProvider>
   );

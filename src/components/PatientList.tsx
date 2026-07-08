@@ -39,13 +39,14 @@ import {
 } from 'lucide-react';
 import { UI_CONFIG } from '../constants';
 import { safeStorage } from '../lib/safeStorage';
+import { AppUser, Patient } from '../types';
 
 import { format, isSameDay } from 'date-fns';
 import { calculateAge, getAgeInMonths, getAgeNumber, VACCINE_SCHEDULE, formatDate, parseDate, getPatientLastVisitAt, isVisitLate } from '../lib/dateUtils';
 
 import { usePatientList } from '../hooks/usePatientList';
 
-export function PatientList({ user }: { user: any }) {
+export function PatientList({ user }: { user: AppUser | null }) {
   const navigate = useNavigate();
   const {
     patients,
@@ -302,7 +303,7 @@ export function PatientList({ user }: { user: any }) {
                                    <p className="text-[11px] text-text-muted font-medium">{p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}</p>
                                    {p.clinical_data?.contact && (
                                      <button 
-                                       onClick={(e) => handleWhatsApp(e, p.clinical_data.contact)}
+                                       onClick={(e) => handleWhatsApp(e, p.clinical_data?.contact || '')}
                                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors border border-emerald-100"
                                      >
                                        <MessageCircle className="w-3 h-3" />
@@ -390,9 +391,9 @@ export function PatientList({ user }: { user: any }) {
                             {/* Indicador de Pré-Natal e Visita ACS para Gestantes */}
                             {(() => {
                               if (!p.categories?.includes('Gestante')) return null;
-                              const g = p.clinical_data?.gestante || {};
-                              const validConsultas = g.consultas?.filter((c: string) => c && c.trim() !== '').length || 0;
-                              const validVisitas = g.visitasAcs?.filter((v: string) => v && v.trim() !== '').length || 0;
+                              const g = p.clinical_data?.gestante;
+                              const validConsultas = g?.consultas?.filter((c: string) => c && c.trim() !== '').length || 0;
+                              const validVisitas = g?.visitasAcs?.filter((v: string) => v && v.trim() !== '').length || 0;
                               const pctCol = validConsultas >= 9 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-pink-50 text-pink-600 border-pink-100 dark:bg-pink-950/20 dark:text-pink-400 dark:border-pink-900/35';
                               const pctVis = validVisitas >= 3 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/35';
                               return (
@@ -549,7 +550,7 @@ export function PatientList({ user }: { user: any }) {
                           <div className="flex flex-wrap gap-2 mt-2">
                             {p.clinical_data?.contact && (
                               <button 
-                                onClick={(e) => handleWhatsApp(e, p.clinical_data.contact)}
+                                onClick={(e) => handleWhatsApp(e, p.clinical_data?.contact || '')}
                                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500 text-white shadow-sm shadow-emerald-500/20 active:scale-95 transition-all w-fit"
                               >
                                 <MessageCircle className="w-4 h-4" />
@@ -652,9 +653,9 @@ export function PatientList({ user }: { user: any }) {
                     {/* Indicador de Pré-Natal e Visita ACS para Gestantes (mobile) */}
                     {(() => {
                       if (!p.categories?.includes('Gestante')) return null;
-                      const g = p.clinical_data?.gestante || {};
-                      const validConsultas = g.consultas?.filter((c: string) => c && c.trim() !== '').length || 0;
-                      const validVisitas = g.visitasAcs?.filter((v: string) => v && v.trim() !== '').length || 0;
+                      const g = p.clinical_data?.gestante;
+                      const validConsultas = g?.consultas?.filter((c: string) => c && c.trim() !== '').length || 0;
+                      const validVisitas = g?.visitasAcs?.filter((v: string) => v && v.trim() !== '').length || 0;
                       const pctCol = validConsultas >= 9 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-pink-50 text-pink-600 border-pink-100 dark:bg-pink-950/20 dark:text-pink-400 dark:border-pink-900/35';
                       const pctVis = validVisitas >= 3 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/35';
                       return (

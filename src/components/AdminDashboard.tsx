@@ -34,21 +34,22 @@ import {
 } from 'recharts';
 import { visitRequestService } from '../lib/visitRequests';
 import { Bell, Send, ClipboardCheck, Mail } from 'lucide-react';
+import { AppUser, Patient, Household, Visit, UserProfile, SystemLog } from '../types';
 
 import { SystemStats } from './admin-dashboard/SystemStats';
 import { VisitRequestManager } from './admin-dashboard/VisitRequestManager';
 import { ActivityTimeline } from './admin-dashboard/ActivityTimeline';
 
-export function AdminDashboard({ user }: { user: any }) {
+export function AdminDashboard({ user }: { user: AppUser | null }) {
   const navigate = useNavigate();
   const { warning, error: toastError } = useToast();
   
   const [loading, setLoading] = React.useState(true);
-  const [profiles, setProfiles] = React.useState<any[]>([]);
-  const [patients, setPatients] = React.useState<any[]>([]);
-  const [households, setHouseholds] = React.useState<any[]>([]);
-  const [visits, setVisits] = React.useState<any[]>([]);
-  const [systemLogs, setSystemLogs] = React.useState<any[]>([]);
+  const [profiles, setProfiles] = React.useState<UserProfile[]>([]);
+  const [patients, setPatients] = React.useState<Patient[]>([]);
+  const [households, setHouseholds] = React.useState<Household[]>([]);
+  const [visits, setVisits] = React.useState<Visit[]>([]);
+  const [systemLogs, setSystemLogs] = React.useState<SystemLog[]>([]);
   
   // Visit Request States
   const [visitRequests, setVisitRequests] = React.useState<any[]>([]);
@@ -161,7 +162,7 @@ export function AdminDashboard({ user }: { user: any }) {
       const actor = userMap[log.user_id] || { name: 'Sistema / Sync', role: 'Robô' };
       list.push({
         id: log.id || `sys-${log.created_at}-${Math.random()}`,
-        timestamp: new Date(log.created_at),
+        timestamp: new Date(log.created_at || ''),
         agentName: actor.name,
         agentId: log.user_id,
         role: actor.role,
@@ -179,7 +180,7 @@ export function AdminDashboard({ user }: { user: any }) {
       const patient = patients.find(p => p.id === v.patient_id);
       list.push({
         id: `vis-${v.id}`,
-        timestamp: new Date(v.created_at || v.date),
+        timestamp: new Date(v.created_at || v.date || ''),
         agentName: actor.name,
         agentId: v.agent_id,
         role: actor.role || 'Agente',
@@ -196,7 +197,7 @@ export function AdminDashboard({ user }: { user: any }) {
       const actor = userMap[p.agent_id] || { name: 'Agente Desconhecido', role: 'Agente', microarea: p.microarea, color: p.area_color };
       list.push({
         id: `pat-${p.id}`,
-        timestamp: new Date(p.created_at),
+        timestamp: new Date(p.created_at || ''),
         agentName: actor.name,
         agentId: p.agent_id,
         role: actor.role || 'Agente',
@@ -213,7 +214,7 @@ export function AdminDashboard({ user }: { user: any }) {
       const actor = userMap[h.agent_id] || { name: 'Agente Desconhecido', role: 'Agente', microarea: h.microarea, color: h.area_color };
       list.push({
         id: `hse-${h.id}`,
-        timestamp: new Date(h.created_at),
+        timestamp: new Date(h.created_at || ''),
         agentName: actor.name,
         agentId: h.agent_id,
         role: actor.role || 'Agente',
@@ -238,9 +239,9 @@ export function AdminDashboard({ user }: { user: any }) {
       
       // Get last active date
       const dates = [
-        ...agentVisits.map(v => new Date(v.created_at || v.date).getTime()),
-        ...agentPatients.map(p => new Date(p.created_at).getTime()),
-        ...agentHouseholds.map(h => new Date(h.created_at).getTime())
+        ...agentVisits.map(v => new Date(v.created_at || v.date || '').getTime()),
+        ...agentPatients.map(p => new Date(p.created_at || '').getTime()),
+        ...agentHouseholds.map(h => new Date(h.created_at || '').getTime())
       ];
       const lastActiveTime = dates.length > 0 ? Math.max(...dates) : null;
 
@@ -362,7 +363,7 @@ export function AdminDashboard({ user }: { user: any }) {
         statsMap[key] = {
           count: 0,
           microarea: agent.microarea || 'Sem Área',
-          agentName: agent.name,
+          agentName: agent.name || 'Agente Sem Nome',
           agentColor: agent.color || '#64748b'
         };
       }
@@ -384,7 +385,7 @@ export function AdminDashboard({ user }: { user: any }) {
         statsMap[key] = {
           count: 0,
           microarea: ma,
-          agentName: pAgent ? pAgent.name : 'Agente não designado',
+          agentName: pAgent ? (pAgent.name || 'Agente Desconhecido') : 'Agente não designado',
           agentColor: pAgent?.color || '#cbd5e1'
         };
       }
@@ -431,14 +432,14 @@ export function AdminDashboard({ user }: { user: any }) {
   // Calculate high level metrics
   const totalVisitsCount = visits.length;
   const activeAgentsCount = profiles.filter(p => p.role === 'Agente').length;
-  const totalGestoresCount = profiles.filter(p => ['Gestor', 'Administrador', 'admin'].includes(p.role)).length;
+  const totalGestoresCount = profiles.filter(p => ['Gestor', 'Administrador', 'admin'].includes(p.role || '')).length;
 
   // Chart source data: visits per agent
   const chartVisitsPerAgent = React.useMemo(() => {
     return agentsData
       .filter(a => a.role === 'Agente')
       .map(a => ({
-        name: a.name.split(' ')[0],
+        name: (a.name || 'Agente').split(' ')[0],
         'Visitas': a.totalVisits,
         'Cidadãos': a.totalPatients,
       }))
@@ -550,10 +551,10 @@ export function AdminDashboard({ user }: { user: any }) {
                         className="w-9 h-9 rounded-full flex items-center justify-center text-white font-extrabold text-[13px] shadow-inner shrink-0"
                         style={{ backgroundColor: agent.color || '#64748b' }}
                       >
-                        {agent.name.charAt(0).toUpperCase()}
+                        {(agent.name || 'Agente').charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <h4 className="text-xs font-extrabold text-text-primary uppercase tracking-tight truncate" title={agent.name}>
+                        <h4 className="text-xs font-extrabold text-text-primary uppercase tracking-tight truncate" title={agent.name || 'Agente'}>
                           {agent.name}
                         </h4>
                         <span className="inline-flex items-center gap-1 text-[9px] font-bold text-text-muted mt-0.5 uppercase">
@@ -859,11 +860,11 @@ export function AdminDashboard({ user }: { user: any }) {
                                 className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-inner"
                                 style={{ backgroundColor: agent.color || '#64748b' }}
                               >
-                                {agent.name.charAt(0).toUpperCase()}
+                                {(agent.name || 'Agente').charAt(0).toUpperCase()}
                               </div>
                               <div className="min-w-0">
                                 <p className="font-extrabold text-text-primary uppercase tracking-tight text-xs truncate">
-                                  {agent.name}
+                                  {agent.name || 'Agente'}
                                 </p>
                                 <p className="text-[10px] text-text-muted truncate lowercase font-semibold mt-0.5">
                                   {agent.email}
