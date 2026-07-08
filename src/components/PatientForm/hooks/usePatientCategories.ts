@@ -1,10 +1,23 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { getAgeNumber, getAgeInMonths } from '../../../lib/dateUtils';
 
-export function usePatientCategories(birthDate: string, setFormData: (updater: any) => void) {
+export function usePatientCategories(birthDate: string, setFormData: (updater: any) => void, isEdit: boolean) {
+  const initialBirthDateRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!birthDate) return;
     
+    // Capture the first loaded birth date for existing patients
+    if (isEdit && initialBirthDateRef.current === null) {
+      initialBirthDateRef.current = birthDate;
+      return; // Do not auto-calculate on initial load for existing patients
+    }
+
+    // For existing patients, if the birth date has not changed from the initial loaded one, do nothing
+    if (isEdit && birthDate === initialBirthDateRef.current) {
+      return;
+    }
+
     const ageNum = getAgeNumber(birthDate);
     const ageInMonths = getAgeInMonths(birthDate);
     
@@ -56,5 +69,5 @@ export function usePatientCategories(birthDate: string, setFormData: (updater: a
       }
       return prev;
     });
-  }, [birthDate, setFormData]);
+  }, [birthDate, setFormData, isEdit]);
 }

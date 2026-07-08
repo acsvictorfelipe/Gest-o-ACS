@@ -404,7 +404,7 @@ export function PatientForm({ user }: { user: any }) {
   }, [showHouseholdDrawer, formData.householdId]);
 
   // Hook for category automation by age
-  usePatientCategories(formData.birthDate, setFormData);
+  usePatientCategories(formData.birthDate, setFormData, !!id);
 
   // Hook for form submit & save
   const { onSubmit, loading: saveLoading } = usePatientFormSave({
