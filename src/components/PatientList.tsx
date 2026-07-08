@@ -101,6 +101,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
              activeFilter === 'visitas-atraso' ? 'Visitas em Atraso' :
              activeFilter === 'receitas_vencendo' ? 'Receitas a Vencer' :
              activeFilter === 'sus_atualizado' ? 'SUS Atualizado' :
+             activeFilter === 'falecidos' ? 'Falecidos / Óbitos' :
              'Pacientes'}
           </h2>
           <p className="text-[12px] text-slate-500 font-medium mt-1">Gerencie os atendimentos e registros da sua microárea.</p>
@@ -163,6 +164,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
                   { id: 'acamados', label: 'Acamados' },
                   { id: 'receitas_vencendo', label: 'Receitas a Vencer' },
                   { id: 'sus_atualizado', label: 'SUS Atualizado' },
+                  { id: 'falecidos', label: '💀 Falecidos / Óbitos' },
                 ].map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.label}
@@ -278,6 +280,11 @@ export function PatientList({ user }: { user: AppUser | null }) {
                                         SUS Atualizado
                                       </span>
                                     )}
+                                    {p.clinical_data?.obito?.flg_obito && (
+                                      <span className="flex items-center gap-1 px-2 py-0.5 bg-rose-100 dark:bg-rose-950/40 text-rose-800 dark:text-rose-400 border border-rose-200 dark:border-rose-900/35 text-[9px] font-bold uppercase rounded-md shrink-0">
+                                        💀 Óbito {p.clinical_data.obito.data_obito ? formatDate(p.clinical_data.obito.data_obito) : ''}
+                                      </span>
+                                    )}
                                    {(() => {
                                      const status = getPrescriptionStatus(p);
                                      if (status === 'vencida') {
@@ -329,14 +336,14 @@ export function PatientList({ user }: { user: AppUser | null }) {
                               const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
                               const displayCategories = [...(p.categories || [])];
                               
-                              if (ageNum >= 60 && !displayCategories.includes('Idoso')) {
-                                displayCategories.push('Idoso');
-                              }
-                              if (ageInMonths > 24 && ageNum < 60 && !displayCategories.includes('Adulto')) {
-                                displayCategories.push('Adulto');
-                              }
-                              if (ageInMonths <= 24 && !displayCategories.includes('Criança')) {
-                                displayCategories.push('Criança');
+                              if (displayCategories.length === 0) {
+                                if (ageNum >= 60) {
+                                  displayCategories.push('Idoso');
+                                } else if (ageInMonths <= 24) {
+                                  displayCategories.push('Criança');
+                                } else {
+                                  displayCategories.push('Adulto');
+                                }
                               }
 
                               return displayCategories.slice(0, 4).map((cat: string) => {
@@ -503,6 +510,11 @@ export function PatientList({ user }: { user: AppUser | null }) {
                               SUS Atualizado
                             </span>
                           )}
+                          {p.clinical_data?.obito?.flg_obito && (
+                            <span className="flex items-center gap-1 px-1.5 py-0.5 bg-rose-100 dark:bg-rose-950/40 text-rose-800 dark:text-rose-400 border border-rose-200 dark:border-rose-900/35 text-[9px] font-bold uppercase rounded shrink-0">
+                              💀 Óbito {p.clinical_data.obito.data_obito ? formatDate(p.clinical_data.obito.data_obito) : ''}
+                            </span>
+                          )}
                           {(() => {
                             const realVisitAtMobile = getPatientLastVisitAt(p);
                             const isAtrasoMobile = isVisitLate(realVisitAtMobile);
@@ -584,14 +596,14 @@ export function PatientList({ user }: { user: AppUser | null }) {
                       const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
                       const displayCategories = [...(p.categories || [])];
                       
-                      if (ageNum >= 60 && !displayCategories.includes('Idoso')) {
-                        displayCategories.push('Idoso');
-                      }
-                      if (ageInMonths > 24 && ageNum < 60 && !displayCategories.includes('Adulto')) {
-                        displayCategories.push('Adulto');
-                      }
-                      if (ageInMonths <= 24 && !displayCategories.includes('Criança')) {
-                        displayCategories.push('Criança');
+                      if (displayCategories.length === 0) {
+                        if (ageNum >= 60) {
+                          displayCategories.push('Idoso');
+                        } else if (ageInMonths <= 24) {
+                          displayCategories.push('Criança');
+                        } else {
+                          displayCategories.push('Adulto');
+                        }
                       }
 
                       return displayCategories.map((cat: string) => {

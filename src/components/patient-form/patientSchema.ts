@@ -304,6 +304,15 @@ export const patientFormSchema = z.object({
       saudeSexualReprodutiva: 'Não',
       mamografia: 'Não',
       vacinaHpv: 'Não'
+    }),
+    obito: z.object({
+      flg_obito: z.boolean().default(false),
+      data_obito: z.string().default(''),
+      observacoes: z.string().default('')
+    }).default({
+      flg_obito: false,
+      data_obito: '',
+      observacoes: ''
     })
   }).default({
     sus_atualizado: 'Não',
@@ -431,6 +440,11 @@ export const patientFormSchema = z.object({
       saudeSexualReprodutiva: 'Não',
       mamografia: 'Não',
       vacinaHpv: 'Não'
+    },
+    obito: {
+      flg_obito: false,
+      data_obito: '',
+      observacoes: ''
     }
   })
 });
@@ -584,6 +598,11 @@ export const initialDefaultValues: PatientFormValues = {
       saudeSexualReprodutiva: 'Não',
       mamografia: 'Não',
       vacinaHpv: 'Não'
+    },
+    obito: {
+      flg_obito: false,
+      data_obito: '',
+      observacoes: ''
     }
   }
 };

@@ -152,6 +152,12 @@ export interface ConsultaGeralData {
   summary?: string;
 }
 
+export interface ObitoData {
+  flg_obito: boolean;
+  data_obito?: string;
+  observacoes?: string;
+}
+
 export interface ClinicalData {
   sus_atualizado?: string;
   historicoGestacoes?: any[];
@@ -167,6 +173,7 @@ export interface ClinicalData {
   adulto?: AdultoData;
   idoso?: IdosoData;
   rastreamento?: RastreamentoData;
+  obito?: ObitoData;
   contact?: string;
   contact2?: string;
   message_contact?: string;

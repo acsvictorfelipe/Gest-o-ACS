@@ -189,13 +189,15 @@ export function useDashboard(user: any) {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
+    const activePatients = allPatients.filter(p => !p.clinical_data?.obito?.flg_obito);
+
     const newStats = {
       ...defaultStats,
-      totalPatients: allPatients.length,
+      totalPatients: activePatients.length,
       totalHouseholds: queryData.hCount,
     };
 
-    allPatients.forEach(p => {
+    activePatients.forEach(p => {
       const clinical = p.clinical_data || {};
       const categories = p.categories || [];
 
@@ -295,7 +297,7 @@ export function useDashboard(user: any) {
       }
     });
 
-    const recentSorted = [...allPatients].sort((a, b) => {
+    const recentSorted = [...activePatients].sort((a, b) => {
       const aVisit = getPatientLastVisitAt(a);
       const bVisit = getPatientLastVisitAt(b);
       return new Date(bVisit || 0).getTime() - new Date(aVisit || 0).getTime();

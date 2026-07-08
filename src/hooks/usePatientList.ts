@@ -249,6 +249,16 @@ export function usePatientList(user: AppUser | null | undefined) {
                          p.cns?.includes(searchTerm) ||
                          (addr.address && addr.address.toLowerCase().includes(searchTerm.toLowerCase()));
     
+    const isDeceased = p.clinical_data?.obito?.flg_obito || false;
+
+    if (activeFilter === 'falecidos') {
+      return matchesSearch && isDeceased;
+    }
+
+    if (isDeceased) {
+      return false;
+    }
+    
     if (selectedStreet) {
       if ((addr.address || '').trim().toUpperCase() !== selectedStreet) return false;
     }

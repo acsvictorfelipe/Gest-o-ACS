@@ -13,7 +13,8 @@ import {
   Plus,
   Loader2,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  UserPlus
 } from 'lucide-react';
 
 export function HouseholdList({ user }: { user: any }) {
@@ -231,10 +232,10 @@ export function HouseholdList({ user }: { user: any }) {
                 {/* Header or column titles for desktop */}
                 <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3.5 bg-bg-primary/50 dark:bg-slate-800/30 text-[10px] font-bold uppercase tracking-wider text-text-muted border-b border-border dark:border-slate-800">
                   <div className="col-span-4">Endereço</div>
-                  <div className="col-span-4">Responsável Familiar</div>
+                  <div className="col-span-3">Responsável Familiar</div>
                   <div className="col-span-2">CNS</div>
                   <div className="col-span-1 text-center">Cidadãos</div>
-                  <div className="col-span-1 text-right">Ações</div>
+                  <div className="col-span-2 text-right">Ações</div>
                 </div>
 
                 <div className="divide-y divide-border dark:divide-slate-800">
@@ -264,7 +265,7 @@ export function HouseholdList({ user }: { user: any }) {
                         </div>
 
                         {/* Responsible */}
-                        <div className="col-span-1 md:col-span-4 flex items-center gap-2">
+                        <div className="col-span-1 md:col-span-3 flex items-center gap-2">
                           <User className="w-3.5 h-3.5 text-text-muted md:hidden shrink-0" />
                           <div className="min-w-0">
                             <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
@@ -298,9 +299,22 @@ export function HouseholdList({ user }: { user: any }) {
                         </div>
 
                         {/* Actions */}
-                        <div className="col-span-1 md:col-span-1 flex items-center justify-between md:justify-end gap-2 mt-2 md:mt-0">
+                        <div className="col-span-1 md:col-span-2 flex items-center justify-between md:justify-end gap-2 mt-2 md:mt-0">
                           <span className="text-[10px] text-text-muted font-medium md:hidden">Toque para ver detalhes</span>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
+                            {user.role !== 'Gestor' && (
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/novo-cadastro?household=${h.id}`);
+                                }}
+                                className="px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/20 dark:hover:bg-teal-900/30 text-teal-600 dark:text-teal-400 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold shadow-sm"
+                                title="Adicionar Novo Membro da Família"
+                              >
+                                <UserPlus className="w-3.5 h-3.5" />
+                                <span className="text-[10.5px] tracking-tight uppercase">Membro</span>
+                              </button>
+                            )}
                             {(user.role === 'Administrador' || (user.role === 'Agente' && h.agent_id === user.id)) && (
                               <button 
                                 onClick={(e) => {

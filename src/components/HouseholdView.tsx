@@ -19,7 +19,8 @@ import {
   AlertTriangle,
   Loader2,
   X,
-  Eye
+  Eye,
+  Plus
 } from 'lucide-react';
 
 export function HouseholdView({ user }: { user: any }) {
@@ -244,9 +245,20 @@ export function HouseholdView({ user }: { user: any }) {
         <div className="lg:col-span-7 space-y-8">
           {/* Residents */}
           <div className="bg-bg-secondary dark:bg-slate-900 p-8 rounded-[2rem] shadow-sm border border-border dark:border-slate-800">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
               <h3 className="text-xl font-bold font-headline text-text-primary">Moradores Dependentes</h3>
-              <span className="bg-primary/10 text-primary text-xs px-3 py-1 rounded-full font-bold">{residents.length} Residentes</span>
+              <div className="flex items-center gap-2">
+                {user.role !== 'Gestor' && (
+                  <button 
+                    onClick={() => navigate(`/novo-cadastro?household=${household.id}`)}
+                    className="bg-primary hover:bg-primary/90 text-white text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Adicionar Morador
+                  </button>
+                )}
+                <span className="bg-primary/10 text-primary text-xs px-3 py-1.5 rounded-full font-bold">{residents.length} Residentes</span>
+              </div>
             </div>
             <div className="space-y-2">
               {residents.map(r => (

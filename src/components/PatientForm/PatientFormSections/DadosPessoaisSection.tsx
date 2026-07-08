@@ -99,6 +99,80 @@ export function DadosPessoaisSection({ formData, setFormData, isReadOnly }: Dado
             />
           </div>
         </div>
+
+        {/* Discrete Deceased (Óbito) Toggle & Details */}
+        <div className="border-t border-border dark:border-slate-800/60 pt-4 mt-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="flg_obito"
+              disabled={isReadOnly}
+              checked={formData.clinicalData?.obito?.flg_obito || false}
+              onChange={e => {
+                const checked = e.target.checked;
+                setFormData((prev: any) => ({
+                  ...prev,
+                  clinicalData: {
+                    ...prev.clinicalData,
+                    obito: {
+                      ...prev.clinicalData?.obito,
+                      flg_obito: checked,
+                      data_obito: checked ? (prev.clinicalData?.obito?.data_obito || new Date().toISOString().split('T')[0]) : ''
+                    }
+                  }
+                }));
+              }}
+              className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-4 w-4 cursor-pointer"
+            />
+            <label htmlFor="flg_obito" className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+              Marcar paciente como falecido (Óbito)
+            </label>
+          </div>
+
+          {formData.clinicalData?.obito?.flg_obito && (
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mt-4 p-4 bg-rose-50/50 dark:bg-rose-950/10 border border-rose-100 dark:border-rose-950/30 rounded-lg animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="md:col-span-4 space-y-1.5">
+                <label className="text-[10px] font-semibold uppercase tracking-widest text-rose-800 dark:text-rose-400">Data do Óbito</label>
+                <input
+                  type="date"
+                  disabled={isReadOnly}
+                  value={formData.clinicalData?.obito?.data_obito || ''}
+                  onChange={e => setFormData((prev: any) => ({
+                    ...prev,
+                    clinicalData: {
+                      ...prev.clinicalData,
+                      obito: {
+                        ...prev.clinicalData?.obito,
+                        data_obito: e.target.value
+                      }
+                    }
+                  }))}
+                  className="w-full bg-bg-primary dark:bg-slate-800 border border-rose-200 dark:border-rose-950/40 rounded-lg py-2 px-3 text-sm font-medium text-rose-900 dark:text-rose-100 focus:ring-2 focus:ring-rose-500/20"
+                />
+              </div>
+              <div className="md:col-span-8 space-y-1.5">
+                <label className="text-[10px] font-semibold uppercase tracking-widest text-rose-800 dark:text-rose-400">Observações / Causa (Opcional)</label>
+                <input
+                  type="text"
+                  disabled={isReadOnly}
+                  value={formData.clinicalData?.obito?.observacoes || ''}
+                  placeholder="Ex: Falecimento por causas naturais, infarto, etc..."
+                  onChange={e => setFormData((prev: any) => ({
+                    ...prev,
+                    clinicalData: {
+                      ...prev.clinicalData,
+                      obito: {
+                        ...prev.clinicalData?.obito,
+                        observacoes: e.target.value
+                      }
+                    }
+                  }))}
+                  className="w-full bg-bg-primary dark:bg-slate-800 border border-rose-200 dark:border-rose-950/40 rounded-lg py-2 px-3 text-sm font-medium text-rose-900 dark:text-rose-100 focus:ring-2 focus:ring-rose-500/20 shadow-sm"
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );

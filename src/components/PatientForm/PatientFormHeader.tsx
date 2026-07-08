@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, Download, UserPlus, X, AlertCircle } from 'lucide-react';
+import { formatDate } from '../../lib/dateUtils';
 
 interface PatientFormHeaderProps {
   id: string | undefined;
@@ -33,6 +34,16 @@ export function PatientFormHeader({
 
   return (
     <div className="space-y-6">
+      {formData.clinicalData?.obito?.flg_obito && (
+        <div className="flex items-center gap-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 rounded-xl p-4 text-rose-700 dark:text-rose-400">
+          <AlertCircle className="w-5 h-5 shrink-0 text-rose-600 dark:text-rose-400 animate-pulse" />
+          <div className="text-xs font-bold uppercase tracking-wider">
+            Atenção: Este cidadão está registrado como FALECIDO (Óbito) em {formData.clinicalData.obito.data_obito ? formatDate(formData.clinicalData.obito.data_obito) : 'data não informada'}.
+            {formData.clinicalData.obito.observacoes && ` Observação: ${formData.clinicalData.obito.observacoes}`}
+          </div>
+        </div>
+      )}
+
       {hasExpiredPrescription && (
         <div className="flex items-center gap-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-xl p-4 text-red-700 dark:text-red-400">
           <AlertCircle className="w-5 h-5 shrink-0 text-red-600 dark:text-red-400 animate-pulse" />
