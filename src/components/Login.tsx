@@ -1,30 +1,43 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Mail, Lock, LogIn, UserCircle, Loader2 } from 'lucide-react';
+import { Mail, Lock, LogIn, UserCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 
 export function Login() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
     try {
       const { error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password
+        email: cleanEmail,
+        password: cleanPassword
       });
 
       if (authError) throw authError;
     } catch (err: any) {
       console.error("Login error:", err);
-      if (err.message === 'Invalid login credentials') {
-        setError('E-mail ou senha incorretos.');
+      const msg = err?.message || '';
+
+      if (msg === 'Invalid login credentials') {
+        setError('E-mail ou senha incorretos. Verifique se digitou o e-mail e a senha corretamente (atenção a maiúsculas e minúsculas).');
+      } else if (msg.includes('Email not confirmed')) {
+        setError('E-mail não confirmado no Supabase. Por favor, verifique a sua caixa de entrada para confirmar o e-mail ou confirme a conta pelo painel do Supabase.');
+      } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        setError('Erro de conexão com o Supabase. Verifique sua conexão com a internet ou se as chaves do Supabase estão configuradas.');
+      } else if (msg.includes('rate limit') || msg.includes('Too many requests')) {
+        setError('Muitas tentativas malsucedidas. Aguarde alguns minutos antes de tentar novamente.');
       } else {
-        setError(err.message || 'Ocorreu um erro ao tentar entrar.');
+        setError(msg || 'Ocorreu um erro ao tentar entrar. Tente novamente.');
       }
     } finally {
       setLoading(false);
@@ -75,13 +88,21 @@ export function Login() {
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
                   <input 
-                    type="password" 
+                    type={showPassword ? 'text' : 'password'} 
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-bg-primary border border-border rounded-xl py-3.5 pl-11 pr-4 text-sm focus:ring-2 focus:ring-[#14B8A6]/20 text-text-primary placeholder:text-text-muted outline-none transition-all" 
+                    className="w-full bg-bg-primary border border-border rounded-xl py-3.5 pl-11 pr-11 text-sm focus:ring-2 focus:ring-[#14B8A6]/20 text-text-primary placeholder:text-text-muted outline-none transition-all" 
                     placeholder="••••••••" 
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary focus:outline-none"
+                    title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
