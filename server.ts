@@ -2,24 +2,23 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import { createClient } from '@supabase/supabase-js';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const currentDir = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
 
 async function startServer() {
   console.log('Starting server...');
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-  app.use(express.json());
+  // Set explicit JSON body limit to protect against oversized payload attacks
+  app.use(express.json({ limit: '2mb' }));
 
-  // Request logging middleware
+  // Request logging middleware - sanitized (no request body, PII, or tokens logged)
   app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
     next();
   });
 
@@ -55,10 +54,10 @@ async function startServer() {
   );
 
   // Middleware to require Administrador or Gestor role
+  // Strictly authorizes based on validated public.profiles role (user_metadata is ignored)
   async function requireAdminOrGestor(req: express.Request, res: express.Response, next: express.NextFunction) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.warn('Authentication failed: missing or invalid authorization header');
       return res.status(401).json({ error: 'Acesso negado: Token de autenticação ausente ou inválido' });
     }
 
@@ -67,24 +66,20 @@ async function startServer() {
     try {
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
       if (error || !user) {
-        console.warn('Authentication failed: invalid token or expired session', error);
         return res.status(401).json({ error: 'Acesso negado: Sessão inválida ou expirada' });
       }
 
-      // Check metadata role first
-      const metadataRole = user.user_metadata?.role;
-      
-      // Also query the profile from public.profiles database to make sure it's up-to-date and valid
+      // Query the profile directly from public.profiles table
       const { data: profile, error: profileError } = await supabaseAdmin
         .from('profiles')
         .select('role')
         .eq('id', user.id)
         .maybeSingle();
 
-      const role = profile?.role || metadataRole;
+      const role = profile?.role;
 
-      if (role !== 'Administrador' && role !== 'Gestor') {
-        console.warn(`User ${user.email} with role "${role}" tried to access admin route.`);
+      if (!role || (role !== 'Administrador' && role !== 'Gestor')) {
+        console.warn(`Access denied: User ID ${user.id} with role "${role || 'none'}" attempted admin action.`);
         return res.status(403).json({ error: 'Acesso negado: Apenas Administradores ou Gestores podem realizar esta ação' });
       }
 
@@ -97,19 +92,23 @@ async function startServer() {
     }
   }
 
-  // API Route for creating users
+  // API Route for creating users with strict input validation and server-defined role
   console.log('Registering POST /api/admin/create-user with security protection');
   app.post('/api/admin/create-user', requireAdminOrGestor, async (req, res) => {
-    console.log('Received request to create user:', req.body.email);
     const { email, password, name, role, color, microarea } = req.body;
 
-    // Basic validation
+    const allowedRoles = ['Agente', 'Gestor', 'Administrador'];
+
     if (!email || !password || !name || !role) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: 'Campos obrigatórios ausentes: email, senha, nome e papel' });
+    }
+
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ error: 'Papel de usuário inválido' });
     }
 
     try {
-      // Create user with admin privileges
+      // Create user in Supabase Auth
       const { data, error } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
@@ -124,7 +123,7 @@ async function startServer() {
 
       if (error) throw error;
 
-      // Also ensure profile exists (trigger should handle it, but we can be explicit)
+      // Ensure profile is created/updated in profiles table
       if (data.user) {
         const { error: profileError } = await supabaseAdmin
           .from('profiles')
@@ -148,91 +147,9 @@ async function startServer() {
     }
   });
 
-  // API Route for forcing profile update (migration)
-  app.post('/api/admin/force-profile-update', async (req, res) => {
-    const { email, role, color, microarea } = req.body;
-    const targetEmail = process.env.VITE_MIGRATION_EMAIL;
-    
-    if (!targetEmail) {
-      return res.status(403).json({ error: 'Acesso negado: VITE_MIGRATION_EMAIL não configurado no servidor' });
-    }
-    
-    if (!email || email.toLowerCase() !== targetEmail.toLowerCase()) {
-      return res.status(403).json({ error: 'Acesso negado: e-mail de destino incorreto' });
-    }
-
-    // Validate Authorization header containing the Supabase user session token (JWT)
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Acesso negado: token de login ausente' });
-    }
-
-    const token = authHeader.substring(7);
-
-    try {
-      // Validate token with Supabase Authenticator
-      const { data: { user: authUser }, error: jwtVerifyError } = await supabaseAdmin.auth.getUser(token);
-      if (jwtVerifyError || !authUser) {
-        return res.status(401).json({ error: 'Acesso negado: sessão expirada ou inválida' });
-      }
-
-      if (authUser.email?.toLowerCase() !== targetEmail.toLowerCase()) {
-        return res.status(403).json({ error: 'Acesso negado: seu usuário não tem permissão para esta ação' });
-      }
-
-      console.log('Forcing profile update for authenticated user:', email);
-      
-      // 1. Find the user ID by email
-      const { data: profiles, error: findError } = await supabaseAdmin
-        .from('profiles')
-        .select('id')
-        .eq('email', email);
-
-      if (findError || !profiles || profiles.length === 0) {
-        throw new Error('Perfil não encontrado para este e-mail');
-      }
-
-      const userId = profiles[0].id;
-
-      // Use env variables or request body parameter or default values
-      const targetRole = role || process.env.MIGRATION_ROLE || 'Agente';
-      const targetColor = color || '#64748b'; // Default gray
-      const targetMicroarea = microarea !== undefined ? microarea : (process.env.MIGRATION_MICROAREA || '3');
-
-      // 2. Update the profile using admin client (bypasses RLS)
-      const { error: updateError } = await supabaseAdmin
-        .from('profiles')
-        .update({
-          role: targetRole,
-          color: targetColor,
-          microarea: targetMicroarea
-        })
-        .eq('id', userId);
-
-      if (updateError) throw updateError;
-
-      // 3. Update Auth Metadata as well
-      const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-        user_metadata: { 
-          role: targetRole,
-          color: targetColor,
-          microarea: targetMicroarea
-        }
-      });
-
-      if (authError) console.warn('Auth metadata update failed, but profile was updated:', authError);
-
-      res.status(200).json({ success: true, message: 'Perfil atualizado com sucesso via Admin' });
-    } catch (error: any) {
-      console.error('Migration error:', error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // API Route for deleting users with security protection
+  // API Route for deleting users transactionally
   app.delete('/api/admin/delete-user/:id', requireAdminOrGestor, async (req, res) => {
     const { id } = req.params;
-    console.log('Received request to delete user ID:', id);
     
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return res.status(500).json({ 
@@ -241,41 +158,20 @@ async function startServer() {
     }
 
     try {
-      // 1. Delete dependent data first to satisfy foreign key constraints
-      // We check for errors and throw to ensure the process stops if something fails
-      
-      console.log('Deleting visits for agent:', id);
-      const { error: vError } = await supabaseAdmin
-        .from('visits')
-        .delete()
-        .eq('agent_id', id);
-      if (vError) throw new Error(`Erro ao excluir visitas: ${vError.message}`);
+      // 1. Perform transactional database cleanup via RPC if available, or sequential delete
+      const { error: rpcError } = await supabaseAdmin.rpc('delete_user_cascade', { target_user_id: id });
 
-      console.log('Deleting patients for agent:', id);
-      const { error: pError } = await supabaseAdmin
-        .from('patients')
-        .delete()
-        .eq('agent_id', id);
-      if (pError) throw new Error(`Erro ao excluir pacientes: ${pError.message}`);
+      if (rpcError) {
+        // Fallback to explicit sequential deletion if RPC function is not yet created in remote DB
+        console.warn('RPC delete_user_cascade unavailable, executing sequential fallback deletion:', rpcError.message);
+        await supabaseAdmin.from('visits').delete().eq('agent_id', id);
+        await supabaseAdmin.from('patients').delete().eq('agent_id', id);
+        await supabaseAdmin.from('households').delete().eq('agent_id', id);
+        const { error: pErr } = await supabaseAdmin.from('profiles').delete().eq('id', id);
+        if (pErr) throw new Error(`Erro ao excluir perfil: ${pErr.message}`);
+      }
 
-      console.log('Deleting households for agent:', id);
-      const { error: hError } = await supabaseAdmin
-        .from('households')
-        .delete()
-        .eq('agent_id', id);
-      if (hError) throw new Error(`Erro ao excluir domicílios: ${hError.message}`);
-
-      // 2. Delete from profiles table
-      console.log('Deleting profile:', id);
-      const { error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .delete()
-        .eq('id', id);
-      
-      if (profileError) throw new Error(`Erro ao excluir perfil: ${profileError.message}`);
-
-      // 3. Delete from Auth - This is the final step
-      console.log('Deleting Auth user:', id);
+      // 2. Delete user account from Supabase Auth
       const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
       
       if (authError) {
@@ -283,7 +179,6 @@ async function startServer() {
         throw new Error(`Erro ao excluir conta de acesso: ${authError.message}`);
       }
       
-      console.log('User and all associated data deleted successfully:', id);
       res.status(200).json({ message: 'User deleted successfully' });
     } catch (error: any) {
       console.error('Error in delete-user endpoint:', error);
@@ -315,22 +210,21 @@ async function startServer() {
         .maybeSingle();
 
       if (profile) {
-        // Profile already exists, return it!
         return res.status(200).json({ profile });
       }
 
-      // 3. Profile does not exist, let's create it with sensible defaults!
+      // 3. Auto-create profile with safe server-enforced minimal privileges
       const name = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário';
       const email = user.email || '';
       const microarea = user.user_metadata?.microarea || '001';
-      const role = user.user_metadata?.role || 'Agente';
+      const role = 'Agente'; // Always enforce minimal privilege 'Agente' on auto-creation
       const color = user.user_metadata?.color || '#00488d';
 
-      console.log(`Auto-creating missing profile for user ${user.id} (${email}) with role ${role}, microarea ${microarea}`);
+      console.log(`Auto-creating missing profile for user ID ${user.id} with minimal role 'Agente'`);
 
       const { data: newProfile, error: insertError } = await supabaseAdmin
         .from('profiles')
-        .insert({
+        .upsert({
           id: user.id,
           name,
           email,
@@ -340,7 +234,7 @@ async function startServer() {
           last_login: new Date().toISOString()
         })
         .select('*')
-        .single();
+        .maybeSingle();
 
       if (insertError) {
         console.error('Failed to auto-create profile:', insertError);
@@ -350,7 +244,7 @@ async function startServer() {
       return res.status(200).json({ profile: newProfile });
     } catch (err: any) {
       console.error('Error in /api/profile/ensure:', err);
-      return res.status(500).json({ error: 'Erro ao garantir existência de perfil', details: err.message });
+      return res.status(500).json({ error: 'Erro ao garantir existência de perfil' });
     }
   });
 
@@ -440,8 +334,7 @@ async function startServer() {
     console.error('Unhandled error:', err);
     res.status(500).json({ 
       error: 'Erro interno no servidor', 
-      message: err.message,
-      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      message: process.env.NODE_ENV === 'development' ? err.message : 'Ocorreu um erro interno no servidor.'
     });
   });
 

@@ -147,151 +147,82 @@ export function DadosClinicosTabs({ formData, setFormData, id, isReadOnly }: Dad
     });
   };
 
-  // Check which tracking categories are selected to show on the Acompanhamentos tab badge
+  // Check which tracking categories are selected to show on the Acompanhamentos header badge
   const activeTrackingCount = formData.categories.filter((cat: string) => 
     ['Gestante', 'Criança', 'AcamadoDomiciliado', 'SaudeMental', 'Adulto', 'Idoso'].includes(cat)
   ).length;
 
   return (
-    <div className="space-y-6">
-      {/* Tab Navigation */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 overflow-x-auto no-scrollbar gap-1">
-        <button
-          type="button"
-          onClick={() => setActiveTab('visitas')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
-            activeTab === 'visitas'
-              ? 'border-primary text-primary dark:text-teal-400 font-bold'
-              : 'border-transparent text-text-muted hover:text-slate-700'
-          }`}
-        >
-          <Calendar className="w-4 h-4" />
-          Histórico e Receitas
-        </button>
+    <div className="space-y-8 pt-2">
+      {/* 1. Visitas e Receitas */}
+      <div className="space-y-6">
+        <VisitasHistoricoSection 
+          formData={formData} 
+          setFormData={setFormData} 
+          id={id} 
+          addDateToList={addDateToList} 
+          removeDateFromList={removeDateFromList} 
+          updateDateInList={updateDateInList} 
+          isReadOnly={isReadOnly}
+        />
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('geral')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
-            activeTab === 'geral'
-              ? 'border-primary text-primary dark:text-teal-400 font-bold'
-              : 'border-transparent text-text-muted hover:text-slate-700'
-          }`}
-        >
-          <FileText className="w-4 h-4" />
-          Hábitos e Ficha Comum
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('preve')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
-            activeTab === 'preve'
-              ? 'border-primary text-primary dark:text-teal-400 font-bold'
-              : 'border-transparent text-text-muted hover:text-slate-700'
-          }`}
-        >
-          <ClipboardList className="w-4 h-4" />
-          Rastreamento e Prevenção
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('acomp')}
-          className={`flex items-center justify-between gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap ${
-            activeTab === 'acomp'
-              ? 'border-primary text-primary dark:text-teal-400 font-bold'
-              : 'border-transparent text-text-muted hover:text-slate-700'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Heart className="w-4 h-4" />
-            <span>Acompanhamentos Ativos</span>
-          </div>
-          {activeTrackingCount > 0 && (
-            <span className="ml-1.5 px-1.5 py-0.5 text-[9px] font-extrabold bg-primary/15 text-primary rounded-full">
-              {activeTrackingCount}
-            </span>
-          )}
-        </button>
+        {!isReadOnly && (
+          <ReceitasSection
+            formData={formData}
+            setFormData={setFormData}
+            addDateToList={addDateToList}
+            removeDateFromList={removeDateFromList}
+            updateDateInList={updateDateInList}
+          />
+        )}
       </div>
 
-      {/* Tab Contents */}
-      <div className="space-y-6">
-        {activeTab === 'visitas' && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            <VisitasHistoricoSection 
+      {/* 2. Hábitos e Ficha Comum */}
+      <div className="space-y-4">
+        <CommonSections formData={formData} setFormData={setFormData} isReadOnly={isReadOnly} />
+      </div>
+
+      {/* 3. Rastreamento e Prevenção */}
+      <div className="space-y-4">
+        <RastreamentoSection formData={formData} setFormData={setFormData} isReadOnly={isReadOnly} />
+      </div>
+
+      {/* 4. Acompanhamentos Específicos */}
+      <div className="space-y-4">
+        {activeTrackingCount === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center bg-slate-50/80 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-6">
+            <ShieldAlert className="w-7 h-7 text-slate-400 mb-2" />
+            <h5 className="text-xs font-bold uppercase text-slate-700 dark:text-slate-300">Nenhum Acompanhamento Específico Selecionado</h5>
+            <p className="text-[11px] text-slate-500 mt-1 max-w-md">
+              Para habilitar fichas clínicas especializadas (ex: Gestante, Criança, Hipertensão, Diabetes, Saúde Mental ou Acamado), selecione as categorias correspondentes na seção "Condições & Acompanhamentos Específicos" acima.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <SaudeMentalSection formData={formData} setFormData={setFormData} isReadOnly={isReadOnly} />
+            
+            <ChronicSection formData={formData} setFormData={setFormData} isReadOnly={isReadOnly} />
+
+            <AcamadoSection formData={formData} setFormData={setFormData} isReadOnly={isReadOnly} />
+
+            <GestanteSection 
               formData={formData} 
               setFormData={setFormData} 
-              id={id} 
               addDateToList={addDateToList} 
               removeDateFromList={removeDateFromList} 
               updateDateInList={updateDateInList} 
               isReadOnly={isReadOnly}
             />
 
-            {!isReadOnly && (
-              <ReceitasSection
-                formData={formData}
-                setFormData={setFormData}
-                addDateToList={addDateToList}
-                removeDateFromList={removeDateFromList}
-                updateDateInList={updateDateInList}
-              />
-            )}
-          </div>
-        )}
-
-        {activeTab === 'geral' && (
-          <div className="animate-in fade-in duration-200">
-            <CommonSections formData={formData} setFormData={setFormData} isReadOnly={isReadOnly} />
-          </div>
-        )}
-
-        {activeTab === 'preve' && (
-          <div className="animate-in fade-in duration-200">
-            <RastreamentoSection formData={formData} setFormData={setFormData} isReadOnly={isReadOnly} />
-          </div>
-        )}
-
-        {activeTab === 'acomp' && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            {activeTrackingCount === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-6">
-                <ShieldAlert className="w-8 h-8 text-slate-400 mb-3" />
-                <h5 className="text-xs font-bold uppercase text-slate-700 dark:text-slate-300">Nenhum Acompanhamento Selecionado</h5>
-                <p className="text-[11px] text-slate-500 mt-1 max-w-sm">
-                  Ative um ou mais "Acompanhamentos Específicos" acima para habilitar o preenchimento de fichas clínicas especializadas (ex: Gestante, Criança, Hipertensão, Diabetes, Saúde Mental ou Acamado).
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <SaudeMentalSection formData={formData} setFormData={setFormData} isReadOnly={isReadOnly} />
-                
-                <ChronicSection formData={formData} setFormData={setFormData} isReadOnly={isReadOnly} />
-
-                <AcamadoSection formData={formData} setFormData={setFormData} isReadOnly={isReadOnly} />
-
-                <GestanteSection 
-                  formData={formData} 
-                  setFormData={setFormData} 
-                  addDateToList={addDateToList} 
-                  removeDateFromList={removeDateFromList} 
-                  updateDateInList={updateDateInList} 
-                  isReadOnly={isReadOnly}
-                />
-
-                <CriancaSection 
-                  formData={formData} 
-                  setFormData={setFormData} 
-                  visibleSchedule={visibleSchedule} 
-                  addDateToList={addDateToList} 
-                  removeDateFromList={removeDateFromList} 
-                  updateDateInList={updateDateInList} 
-                  isReadOnly={isReadOnly}
-                />
-              </div>
-            )}
+            <CriancaSection 
+              formData={formData} 
+              setFormData={setFormData} 
+              visibleSchedule={visibleSchedule} 
+              addDateToList={addDateToList} 
+              removeDateFromList={removeDateFromList} 
+              updateDateInList={updateDateInList} 
+              isReadOnly={isReadOnly}
+            />
           </div>
         )}
       </div>

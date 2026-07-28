@@ -12,7 +12,7 @@ export function DadosPessoaisSection({ formData, setFormData, isReadOnly }: Dado
   return (
     <div className="space-y-6">
       {/* Seção de Identificação Geral */}
-      <section className="bg-bg-secondary dark:bg-slate-900 rounded-xl p-6 border border-border dark:border-slate-800 shadow-sm space-y-6">
+      <section className="bg-bg-secondary dark:bg-slate-900 rounded-xl p-3.5 sm:p-6 border border-border dark:border-slate-800 shadow-sm space-y-6">
         <div className="flex items-center gap-2 text-primary">
           <User className="w-4 h-4" />
           <h3 className="text-sm font-semibold uppercase tracking-tight">Identificação Geral</h3>

@@ -18,6 +18,7 @@ import { UI_CONFIG } from '../constants';
 import { useDashboardAgenda } from './useDashboardAgenda';
 import { useDashboardWeeklyChart } from './useDashboardWeeklyChart';
 import { useDashboardRequests } from './useDashboardRequests';
+import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 
 export interface SyncItem {
   id: string;
@@ -32,7 +33,7 @@ export function useDashboard(user: any) {
     queryKey: ['dashboard', user?.id, user?.role, user?.color, user?.microarea],
     queryFn: async () => {
       if (!user) return { allPatients: [], hCount: 0, newHCount: 0 };
-      if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') {
+      if (!user.microarea && !isAdminRole(user.role) && !isGestorRole(user.role)) {
         return { allPatients: [], hCount: 0, newHCount: 0 };
       }
 
@@ -45,10 +46,10 @@ export function useDashboard(user: any) {
         .gte('created_at', startOfMonth.toISOString())
         .neq('responsible_name', 'Responsável não cadastrado');
 
-      if (user.role === 'Gestor') {
+      if (isGestorRole(user.role)) {
         householdQuery = householdQuery.eq('area_color', user.color);
         newHouseholdQuery = newHouseholdQuery.eq('area_color', user.color);
-      } else if (user.role !== 'Administrador') {
+      } else if (!isAdminRole(user.role)) {
         householdQuery = householdQuery.eq('agent_id', user.id);
         newHouseholdQuery = newHouseholdQuery.eq('agent_id', user.id);
       }
@@ -62,9 +63,9 @@ export function useDashboard(user: any) {
       // HEALING LOGIC: SINCERELY UPDATE LATENCY AND RECENT VISITS
       try {
         let visitsDataQuery = supabase.from('visits').select('patient_id, date, type');
-        if (user.role === 'Gestor') {
+        if (isGestorRole(user.role)) {
           visitsDataQuery = visitsDataQuery.eq('area_color', user.color);
-        } else if (user.role !== 'Administrador') {
+        } else if (!isAdminRole(user.role)) {
           visitsDataQuery = visitsDataQuery.eq('agent_id', user.id);
         }
         
@@ -103,17 +104,7 @@ export function useDashboard(user: any) {
           }
 
           if (trueAcsVisitDateStr && trueAcsVisitDateStr !== (p.last_visit_at ? p.last_visit_at.split('T')[0] : null)) {
-            (async () => {
-              try {
-                const { error } = await supabase.from('patients')
-                  .update({ last_visit_at: trueAcsVisitDateStr })
-                  .eq('id', p.id);
-                if (error) console.error(`Error syncing last_visit_at in dashboard for patient ${p.id}:`, error);
-              } catch (err) {
-                console.warn(`Silent error catching on background patients sync in dashboard for patient ${p.id}:`, err);
-              }
-            })();
-
+            // In-memory calculation for accurate rendering without firing side-effect writes during reads
             return {
               ...p,
               last_visit_at: trueAcsVisitDateStr
@@ -127,7 +118,7 @@ export function useDashboard(user: any) {
 
       return { allPatients: patientsData, hCount, newHCount };
     },
-    enabled: !!user && (!!user.microarea || user.role === 'Administrador' || user.role === 'Gestor'),
+    enabled: !!user && (!!user.microarea || isAdminRole(user.role) || isGestorRole(user.role)),
   });
 
   const allPatients = queryData?.allPatients || [];

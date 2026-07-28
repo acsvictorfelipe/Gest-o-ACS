@@ -27,7 +27,7 @@ export function CategoriesSection({ formData, setFormData, isReadOnly }: Categor
   };
 
   return (
-    <section className="bg-bg-primary dark:bg-slate-800/50 rounded-xl p-6 border border-border dark:border-slate-800 space-y-4">
+    <section className="bg-bg-primary dark:bg-slate-800/50 rounded-xl p-3.5 sm:p-6 border border-border dark:border-slate-800 space-y-4">
       <div className="flex items-center gap-2 text-primary">
         <CheckCircle2 className="w-4 h-4" />
         <h3 className="text-xs font-semibold uppercase tracking-widest">Acompanhamentos Específicos</h3>

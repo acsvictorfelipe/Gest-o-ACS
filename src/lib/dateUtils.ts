@@ -298,5 +298,33 @@ export function isVisitLate(lastVisitAt: string | null | undefined): boolean {
   }
 }
 
+/**
+ * Explicit, observable, and testable operation to heal/sync a patient's last_visit_at
+ * in the database when explicitly triggered (e.g. after adding a visit or running a manual sync).
+ */
+export async function healPatientVisitDate(
+  supabaseClient: any,
+  patientId: string,
+  targetDate: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!patientId || !targetDate) {
+    return { success: false, error: 'patientId and targetDate are required' };
+  }
+  try {
+    const { error } = await supabaseClient
+      .from('patients')
+      .update({ last_visit_at: targetDate })
+      .eq('id', patientId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+
 
 

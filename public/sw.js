@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gestao-acs-v3';
+const CACHE_NAME = 'gestao-acs-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -7,11 +7,22 @@ const ASSETS_TO_CACHE = [
   '/icon-192.png'
 ];
 
+// List of URL patterns that MUST NEVER be cached in CacheStorage for security and freshness
+const NEVER_CACHE_PATTERNS = [
+  '/api/',
+  'supabase.co',
+  '/auth/',
+  '/rest/v1/',
+  'token',
+  'login',
+  'logout'
+];
+
 // Install Event
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Pre-caching offline assets');
+      console.log('[Service Worker] Pre-caching offline static shell');
       return cache.addAll(ASSETS_TO_CACHE);
     }).then(() => self.skipWaiting())
   );
@@ -24,7 +35,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cache) => {
           if (cache !== CACHE_NAME) {
-            console.log('[Service Worker] Clearing old cache:', cache);
+            console.log('[Service Worker] Clearing old cache version:', cache);
             return caches.delete(cache);
           }
         })
@@ -33,22 +44,24 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event (Network-First falling back to cache)
+// Fetch Event (Network-First falling back to cache for static assets)
 self.addEventListener('fetch', (event) => {
-  // Only handle local requests and GET requests
+  // Only handle local GET requests
   if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
     return;
   }
 
-  // Bypass service worker for api or supabase requests to avoid intercepting live sync data
-  if (event.request.url.includes('/api/') || event.request.url.includes('supabase.co')) {
+  const url = event.request.url;
+
+  // Bypass service worker completely for API, database, or authentication routes
+  if (NEVER_CACHE_PATTERNS.some(pattern => url.includes(pattern))) {
     return;
   }
 
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // If valid response, clone and cache it dynamically
+        // Cache valid static responses (JS, CSS, images, shell)
         if (response && response.status === 200 && response.type === 'basic') {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -58,12 +71,12 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(() => {
-        // Offline: Try to find in cache
+        // Offline: Fallback to Cache Storage
         return caches.match(event.request).then((cachedResponse) => {
           if (cachedResponse) {
             return cachedResponse;
           }
-          // If the request is for a navigation page, return index.html
+          // Navigation fallback to index.html for SPA routes
           if (event.request.mode === 'navigate') {
             return caches.match('/');
           }

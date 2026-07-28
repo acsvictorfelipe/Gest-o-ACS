@@ -1,5 +1,11 @@
 import CryptoJS from 'crypto-js';
 
+/**
+ * EncryptionService provides client-side local obfuscation and payload protection
+ * for localStorage and offline queues using AES-256 (CryptoJS).
+ * Note: This provides protection against casual local inspection on shared devices,
+ * but should not be classified as end-to-end zero-trust encryption.
+ */
 class EncryptionService {
   private key: string | null = null;
   private fallbackKey: string = '';

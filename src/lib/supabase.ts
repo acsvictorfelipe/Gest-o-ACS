@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { isAdminRole, isGestorRole } from './roleUtils';
 import { safeStorage } from './safeStorage';
 
 const getSupabaseConfig = () => {
@@ -95,9 +96,9 @@ export async function fetchTableWithFilters<T>(
       .range(page * pageSize, (page + 1) * pageSize - 1);
 
     if (user) {
-      if (user.role === 'Administrador' || user.role === 'admin') {
+      if (isAdminRole(user.role)) {
         // No filter
-      } else if (user.role === 'Gestor') {
+      } else if (isGestorRole(user.role)) {
         query = query.eq('area_color', user.color);
       } else {
         query = query.eq('agent_id', user.id);
@@ -128,3 +129,78 @@ export async function fetchTableWithFilters<T>(
 
   return allData;
 }
+
+export interface PaginatedResult<T> {
+  data: T[];
+  count: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+export async function fetchPaginatedTable<T>(
+  tableName: string,
+  user: any,
+  options?: {
+    page?: number;
+    pageSize?: number;
+    select?: string;
+    orderBy?: { column: string; ascending?: boolean };
+    searchColumn?: string;
+    searchTerm?: string;
+    countMethod?: 'exact' | 'planned' | 'estimated' | null;
+  }
+): Promise<PaginatedResult<T>> {
+  const page = Math.max(1, options?.page || 1);
+  const pageSize = Math.min(200, Math.max(1, options?.pageSize || 50));
+  const selectQuery = options?.select || '*';
+  const fromIndex = (page - 1) * pageSize;
+  const toIndex = page * pageSize - 1;
+
+  const countOption = options?.countMethod !== undefined ? options.countMethod : 'exact';
+
+  let query = countOption
+    ? supabase.from(tableName).select(selectQuery, { count: countOption as any })
+    : supabase.from(tableName).select(selectQuery);
+
+  if (user) {
+    if (isAdminRole(user.role)) {
+      // No area/agent restriction
+    } else if (isGestorRole(user.role)) {
+      query = query.eq('area_color', user.color);
+    } else {
+      query = query.eq('agent_id', user.id);
+    }
+  }
+
+  if (options?.searchColumn && options?.searchTerm?.trim()) {
+    query = query.ilike(options.searchColumn, `%${options.searchTerm.trim()}%`);
+  }
+
+  if (options?.orderBy) {
+    query = query.order(options.orderBy.column, { ascending: options.orderBy.ascending ?? true });
+  }
+
+  query = query.range(fromIndex, toIndex);
+
+  const { data, count, error } = await query;
+
+  if (error) {
+    console.error(`Error fetching paginated data from ${tableName}:`, error);
+    throw error;
+  }
+
+  const totalCount = count || (data ? data.length : 0);
+  const totalPages = Math.ceil(totalCount / pageSize) || 1;
+
+  return {
+    data: (data || []) as unknown as T[],
+    count: totalCount,
+    page,
+    pageSize,
+    totalPages,
+    hasMore: page < totalPages
+  };
+}
+

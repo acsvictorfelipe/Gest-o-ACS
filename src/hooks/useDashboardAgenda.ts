@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { encryptionService } from '../lib/encryption';
 import { safeStorage } from '../lib/safeStorage';
 import { generateUUID } from '../lib/utils';
+import { healPatientVisitDate } from '../lib/dateUtils';
 
 export interface SyncItem {
   id: string;
@@ -72,9 +73,10 @@ export function useDashboardAgenda(user: any, allPatients: any[], setAllPatients
           area_color: user.color || '#00488d'
         });
 
-        await supabase.from('patients')
-          .update({ last_visit_at: nowISO })
-          .eq('id', patientId);
+        const healResult = await healPatientVisitDate(supabase, patientId, nowISO);
+        if (!healResult.success) {
+          throw new Error(healResult.error || 'Falha ao atualizar data da última visita do paciente');
+        }
       } catch (err) {
         console.error('Error saving routine visit from agenda:', err);
         // Rollback states on error

@@ -3,8 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Loader2, Home, X, CheckCircle2 } from 'lucide-react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 import { supabase } from '../../lib/supabase';
 import { syncService } from '../../lib/syncService';
@@ -498,8 +496,11 @@ export function PatientForm({ user }: { user: any }) {
   };
 
   // Action: Generate PDF Report
-  const generatePatientPDF = () => {
-    const doc = new jsPDF();
+  const generatePatientPDF = async () => {
+    const { default: jsPDFModule } = await import('jspdf');
+    const { default: autoTableModule } = await import('jspdf-autotable');
+    const doc = new jsPDFModule();
+    const autoTable = autoTableModule;
     const pageWidth = doc.internal.pageSize.getWidth();
     
     doc.setFontSize(20);

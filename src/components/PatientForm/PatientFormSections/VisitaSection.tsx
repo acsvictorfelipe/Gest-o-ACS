@@ -41,7 +41,7 @@ export function VisitaSection({ formData, setFormData, isReadOnly }: VisitaSecti
       )}
 
       {formData.visitDate && (
-        <div className="p-5 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/20 space-y-4 animate-in fade-in duration-300" id="secao-visita">
+        <div className="p-3.5 sm:p-5 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/20 space-y-4 animate-in fade-in duration-300" id="secao-visita">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary animate-pulse" />

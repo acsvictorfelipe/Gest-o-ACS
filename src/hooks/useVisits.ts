@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { AppUser, Visit } from '../types';
+import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 
 export function useVisits(user: AppUser | null | undefined) {
   return useQuery<Visit[]>({
@@ -9,9 +10,9 @@ export function useVisits(user: AppUser | null | undefined) {
       if (!user) return [];
       
       let query = supabase.from('visits').select('*');
-      if (user.role === 'Gestor') {
+      if (isGestorRole(user.role)) {
         query = query.eq('area_color', user.color || '');
-      } else if (user.role !== 'Administrador') {
+      } else if (!isAdminRole(user.role)) {
         query = query.eq('agent_id', user.id);
       }
       

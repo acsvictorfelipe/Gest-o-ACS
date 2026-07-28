@@ -102,7 +102,7 @@ export default function App() {
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)
-        .single();
+        .maybeSingle();
 
       if (data) {
         const name = data.name || supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
@@ -121,7 +121,12 @@ export default function App() {
 
         setUser({ ...supabaseUser, ...data, name });
       } else {
-        console.error("Profile not found in database, trying to auto-create:", error);
+        if (error) {
+          console.warn("Profile fetch warning, trying auto-creation via backend:", error.message || error);
+        } else {
+          console.info("Profile not found in database, auto-creating profile...");
+        }
+
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (token) {
@@ -145,8 +150,35 @@ export default function App() {
             console.error("Failed to auto-create profile via /api/profile/ensure:", ensureErr);
           }
         }
+
+        // Fallback: try client-side upsert
         const name = supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário';
-        setUser({ ...supabaseUser, name });
+        const fallbackProfile = {
+          id: supabaseUser.id,
+          name,
+          email: supabaseUser.email || '',
+          microarea: supabaseUser.user_metadata?.microarea || '001',
+          role: 'Agente',
+          color: '#00488d',
+          last_login: new Date().toISOString()
+        };
+
+        try {
+          const { data: createdData } = await supabase
+            .from('profiles')
+            .upsert(fallbackProfile)
+            .select('*')
+            .maybeSingle();
+
+          if (createdData) {
+            setUser({ ...supabaseUser, ...createdData, name: createdData.name || name });
+            return;
+          }
+        } catch (upsertErr) {
+          console.warn("Client fallback upsert failed:", upsertErr);
+        }
+
+        setUser({ ...supabaseUser, ...fallbackProfile, name });
       }
     } catch (err) {
       console.error("Profile fetch error:", err);

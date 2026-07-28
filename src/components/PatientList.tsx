@@ -68,6 +68,12 @@ export function PatientList({ user }: { user: AppUser | null }) {
     availableStreets,
     sortPatientsByAddressNumber,
     filteredPatients,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalCount,
+    totalPages,
     clearFilter,
     handleDelete,
     copyToClipboard,
@@ -709,6 +715,49 @@ export function PatientList({ user }: { user: AppUser | null }) {
               </div>
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {totalCount > 0 && (
+            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900/60 border-t border-border dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-text-muted">
+              <div className="flex items-center gap-2">
+                <span>Exibindo página <strong>{currentPage}</strong> de <strong>{totalPages}</strong> ({totalCount} cidadãos cadastrados)</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  <span>Por página:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-semibold text-slate-700 dark:text-slate-200 focus:outline-none"
+                  >
+                    <option value={15}>15</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                    className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
+                  >
+                    Próxima
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       )}

@@ -175,6 +175,24 @@ export function VisitHistory({ user }: { user: any }) {
     return matchesSearch && matchesType;
   });
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, filterType, period]);
+
+  const totalCount = filteredVisits.length;
+  const totalPages = Math.ceil(totalCount / pageSize) || 1;
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  const paginatedVisits = filteredVisits.slice((page - 1) * pageSize, page * pageSize);
+
   const visitTypes = ['Todas', 'Rotina', 'Acompanhamento', 'Urgência', 'Pós-Parto', 'Recém-Nascido'];
 
   return (
@@ -254,8 +272,8 @@ export function VisitHistory({ user }: { user: any }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredVisits.length > 0 ? (
-                  filteredVisits.map((v) => (
+                {paginatedVisits.length > 0 ? (
+                  paginatedVisits.map((v) => (
                     <tr key={v.id} className="hover:bg-bg-primary/50 dark:hover:bg-slate-800/30 transition-colors group cursor-pointer" onClick={() => navigate(`/editar-paciente/${v.patient_id}`)}>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -351,6 +369,48 @@ export function VisitHistory({ user }: { user: any }) {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {totalCount > 0 && (
+            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900/60 border-t border-border dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-text-muted">
+              <div className="flex items-center gap-2">
+                <span>Exibindo página <strong>{page}</strong> de <strong>{totalPages}</strong> ({totalCount} visitas)</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  <span>Por página:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-semibold text-slate-700 dark:text-slate-200 focus:outline-none"
+                  >
+                    <option value={15}>15</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                    className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
+                  >
+                    Próxima
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

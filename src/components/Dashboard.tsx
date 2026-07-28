@@ -33,15 +33,22 @@ import {
 import { UI_CONFIG } from '../constants';
 
 import { useDashboard } from '../hooks/useDashboard';
-import { AdminDashboard } from './AdminDashboard';
 import { AppUser } from '../types';
+import { isAdminRole, isGestorRole } from '../lib/roleUtils';
+
+const AdminDashboard = React.lazy(() => import('./AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 
 export function Dashboard({ user }: { user: AppUser | null }) {
   const navigate = useNavigate();
 
-  if (user?.role === 'Administrador' || user?.role === 'Gestor') {
-    return <AdminDashboard user={user} />;
+  if (isAdminRole(user?.role) || isGestorRole(user?.role)) {
+    return (
+      <React.Suspense fallback={<div className="flex items-center justify-center p-12 text-slate-500">Carregando painel administrativo...</div>}>
+        <AdminDashboard user={user} />
+      </React.Suspense>
+    );
   }
+
 
   const {
     stats,

@@ -39,6 +39,8 @@ import { AppUser, Patient, Household, Visit, UserProfile, SystemLog } from '../t
 import { SystemStats } from './admin-dashboard/SystemStats';
 import { VisitRequestManager } from './admin-dashboard/VisitRequestManager';
 import { ActivityTimeline } from './admin-dashboard/ActivityTimeline';
+import { AgentMonitoring } from './admin-dashboard/AgentMonitoring';
+import { HealthIndicators } from './admin-dashboard/HealthIndicators';
 
 export function AdminDashboard({ user }: { user: AppUser | null }) {
   const navigate = useNavigate();
@@ -517,285 +519,24 @@ export function AdminDashboard({ user }: { user: AppUser | null }) {
       />
 
       {/* Dynamic ACS Quick Monitoring & Dashboard Tracker */}
-      <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm space-y-5">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-base font-black text-text-primary uppercase tracking-tight">Atividade de Campo dos ACS</h3>
-              <p className="text-xs text-text-muted font-medium">Agentes de Saúde ativos com registros e contribuições de pacientes e domicílios no sistema</p>
-            </div>
-          </div>
-          <span className="text-[10px] bg-teal-500/10 text-teal-600 dark:text-teal-400 px-3 py-1 rounded-full font-black uppercase tracking-wider border border-teal-500/20">
-            Acompanhamento em Tempo Real
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-          {agentsData
-            .filter(a => a.role === 'Agente' && (a.totalPatients > 0 || a.totalHouseholds > 0 || a.totalVisits > 0))
-            .map((agent) => {
-              const isSelected = selectedAgentFilter === agent.id;
-              return (
-                <div 
-                  key={agent.id}
-                  className={`p-4 rounded-2xl border transition-all relative flex flex-col justify-between space-y-3 bg-bg-primary/40 hover:bg-bg-primary/80 ${
-                    isSelected ? 'ring-2 ring-teal-500 border-teal-500/40 bg-teal-500/5' : 'border-border/60'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div 
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-white font-extrabold text-[13px] shadow-inner shrink-0"
-                        style={{ backgroundColor: agent.color || '#64748b' }}
-                      >
-                        {(agent.name || 'Agente').charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <h4 className="text-xs font-extrabold text-text-primary uppercase tracking-tight truncate" title={agent.name || 'Agente'}>
-                          {agent.name}
-                        </h4>
-                        <span className="inline-flex items-center gap-1 text-[9px] font-bold text-text-muted mt-0.5 uppercase">
-                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: agent.color || '#64748b' }} />
-                          Micro {agent.microarea || 'S/N'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => setSelectedAgentFilter(isSelected ? null : agent.id)}
-                      className={`px-2 py-1 rounded-lg border text-[9px] font-black uppercase tracking-wider transition-all hover:scale-102 flex items-center gap-1 shrink-0 ${
-                        isSelected 
-                          ? 'bg-teal-600 border-teal-600 text-white shadow-sm'
-                          : 'bg-bg-secondary text-text-secondary border-border hover:border-teal-500/40'
-                      }`}
-                    >
-                      <Filter className="w-2.5 h-2.5" />
-                      {isSelected ? 'Filtrado' : 'Logs'}
-                    </button>
-                  </div>
-
-                  {/* Quick counts */}
-                  <div className="grid grid-cols-2 gap-2 bg-bg-primary/65 dark:bg-slate-900/40 p-2.5 rounded-xl border border-border/40">
-                    <div className="text-center">
-                      <p className="text-[9px] text-text-muted font-black uppercase tracking-tight">Domicílios</p>
-                      <p className="text-sm font-black text-text-primary mt-0.5">{agent.totalHouseholds}</p>
-                    </div>
-                    <div className="text-center border-l border-border/40">
-                      <p className="text-[9px] text-text-muted font-black uppercase tracking-tight">Pacientes</p>
-                      <p className="text-sm font-black text-text-primary mt-0.5">{agent.totalPatients}</p>
-                    </div>
-                  </div>
-
-                  {/* Visitas & Última ação status */}
-                  <div className="flex items-center justify-between text-[10px] font-extrabold text-text-muted pt-1.5 border-t border-border/20">
-                    <span>Visitas: <strong className="text-teal-600 dark:text-teal-400 font-extrabold">{agent.totalVisits}</strong></span>
-                    {agent.lastActive ? (
-                      <span className="flex items-center gap-1 text-[9px] text-text-muted uppercase">
-                        <Clock className="w-2.5 h-2.5 text-teal-600" />
-                        {formatDate(agent.lastActive.toISOString()).split(' às ')[0]}
-                      </span>
-                    ) : (
-                      <span className="text-[9px] text-text-muted/40 italic uppercase">Inativo</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-        </div>
-      </div>
+      <AgentMonitoring
+        agentsData={agentsData}
+        selectedAgentFilter={selectedAgentFilter}
+        setSelectedAgentFilter={setSelectedAgentFilter}
+      />
 
       {/* Seção de Abas de Indicadores e Cobertura */}
-      <div className="bg-bg-secondary rounded-[32px] p-6 border border-border shadow-sm space-y-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400">
-              <Activity className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-base font-black text-text-primary uppercase tracking-tight">Indicadores de Saúde Ativos</h3>
-              <p className="text-xs text-text-muted font-medium">Selecione um indicador para visualizar a quantidade de cidadãos assistidos por área/microárea</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Indicator Selection Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
-          {indicatorsConfig.map(indicator => {
-            const IconComponent = indicator.icon;
-            const isSelected = selectedIndicator === indicator.id;
-            const totalCount = patients.filter(indicator.filterFn).length;
-            
-            return (
-              <button
-                key={indicator.id}
-                onClick={() => {
-                  setSelectedIndicator(indicator.id);
-                  setIndicatorSearch('');
-                }}
-                className={`p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between h-32 active:scale-98 cursor-pointer ${
-                  isSelected
-                    ? indicator.activeBgClass + ' shadow-md scale-102 font-black ring-1 ring-teal-500/40'
-                    : 'bg-bg-primary hover:bg-bg-primary/80 text-text-secondary border-border/80'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div className={`p-2 rounded-xl ${isSelected ? 'bg-white/20 text-white' : indicator.bgClass.split(' ')[0] + ' ' + indicator.bgClass.split(' ')[1]}`}>
-                    <IconComponent className="w-4 h-4" />
-                  </div>
-                  <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded-md ${
-                    isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-text-muted'
-                  }`}>
-                    Ativos
-                  </span>
-                </div>
-                
-                <div className="mt-2 space-y-1">
-                  <span className={`text-2xl font-black block leading-none ${isSelected ? 'text-white' : 'text-text-primary'}`}>
-                    {totalCount}
-                  </span>
-                  <span className={`text-[10.5px] font-extrabold uppercase tracking-tight block truncate ${isSelected ? 'text-white/90' : 'text-text-muted'}`}>
-                    {indicator.label}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Selected Indicator Breakdown Panel */}
-        <div className="grid grid-cols-12 gap-6 pt-6 border-t border-border/60">
-          
-          {/* Microarea distribution (por área) */}
-          <div className="col-span-12 lg:col-span-5 space-y-3">
-            <div>
-              <h4 className="text-xs font-black text-text-primary uppercase tracking-wider flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-teal-600" />
-                Casos por Microárea (Área)
-              </h4>
-              <p className="text-[10px] text-text-muted font-medium">Distribuição geográfica do indicador selecionado</p>
-            </div>
-
-            <div className="bg-bg-primary/40 border border-border/55 rounded-2xl p-4 divide-y divide-border/30 max-h-[300px] overflow-y-auto custom-scrollbar">
-              {microareaStats.map(stat => (
-                <div key={stat.key} className="py-2.5 flex items-center justify-between text-xs font-semibold">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full border border-white/20 shrink-0"
-                      style={{ backgroundColor: stat.agentColor }}
-                    />
-                    <div>
-                      <p className="font-extrabold text-text-primary uppercase tracking-tight">
-                        Microárea {stat.microarea}
-                      </p>
-                      <p className="text-[9px] text-text-muted font-semibold">
-                        ACS: {stat.agentName}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-text-secondary pr-1">
-                      {patients.filter(indicatorsConfig.find(ind => ind.id === selectedIndicator)?.filterFn || (() => false)).length > 0
-                        ? `${Math.round((stat.count / patients.filter(indicatorsConfig.find(ind => ind.id === selectedIndicator)?.filterFn || (() => false)).length) * 100)}%`
-                        : '0%'
-                      }
-                    </span>
-                    <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-text-primary border border-border/60 rounded-xl font-black">
-                      {stat.count}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {microareaStats.length === 0 && (
-                <p className="text-center py-6 text-xs font-medium text-text-muted italic">Nenhuma microárea com casos ativos.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Patient Details list details with direct search */}
-          <div className="col-span-12 lg:col-span-7 space-y-3">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <div>
-                <h4 className="text-xs font-black text-text-primary uppercase tracking-wider flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-indigo-600" />
-                  Relação de Cidadãos ({filteredIndicatorPatients.length})
-                </h4>
-                <p className="text-[10px] text-text-muted font-medium">Identificação dos casos ativos neste indicador</p>
-              </div>
-
-              {/* Search bar specifically for tracking patients within this indicator */}
-              <div className="relative w-full sm:w-60">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
-                <input
-                  type="text"
-                  placeholder="Pesquisar nesta listagem..."
-                  value={indicatorSearch}
-                  onChange={(e) => setIndicatorSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 bg-bg-primary border border-border rounded-xl text-[11px] font-semibold focus:outline-none focus:border-teal-500 transition-colors"
-                />
-              </div>
-            </div>
-
-            <div className="border border-border/60 rounded-2xl overflow-hidden bg-bg-primary/20 max-h-[300px] overflow-y-auto custom-scrollbar">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-bg-primary/60 border-b border-border/40 text-[9px] font-bold text-text-muted uppercase tracking-wider">
-                    <th className="py-2.5 px-3">Nome do Cidadão</th>
-                    <th className="py-2.5 px-3">CNS</th>
-                    <th className="py-2.5 px-3 text-center">Idade</th>
-                    <th className="py-2.5 px-3">Microárea</th>
-                    <th className="py-2.5 px-3 text-right">Ação</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/20 font-medium text-text-secondary">
-                  {filteredIndicatorPatients.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-10 text-center text-text-muted italic">
-                        Nenhum cidadão correspondente aos termos de pesquisa.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredIndicatorPatients.map(p => {
-                      const age = p.birth_date ? calculateAge(p.birth_date) : '--';
-                      return (
-                        <tr key={p.id} className="hover:bg-bg-primary/40 transition-colors">
-                          <td className="py-3 px-3 uppercase tracking-tight font-extrabold text-xs text-text-primary">
-                            {p.name}
-                          </td>
-                          <td className="py-3 px-3 font-mono text-[10px]">
-                            {p.cns || 'NÃO INFORMADO'}
-                          </td>
-                          <td className="py-3 px-3 text-center font-bold">
-                            {age}
-                          </td>
-                          <td className="py-3 px-3">
-                            <span className="inline-flex items-center gap-1.5 font-bold uppercase text-[10px]">
-                              <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
-                              M-{p.microarea || 'S/A'}
-                            </span>
-                          </td>
-                          <td className="py-3 px-3 text-right">
-                            <button
-                              onClick={() => navigate(`/pacientes?search=${encodeURIComponent(p.name)}`)}
-                              className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-border/80 rounded-lg text-[9px] font-black uppercase tracking-wider transition-colors hover:text-teal-600 hover:border-teal-500/20 shadow-sm"
-                            >
-                              Ver Detalhes
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
+      <HealthIndicators
+        patients={patients}
+        selectedIndicator={selectedIndicator}
+        setSelectedIndicator={setSelectedIndicator}
+        indicatorSearch={indicatorSearch}
+        setIndicatorSearch={setIndicatorSearch}
+        indicatorsConfig={indicatorsConfig}
+        microareaStats={microareaStats}
+        filteredIndicatorPatients={filteredIndicatorPatients}
+        onNavigatePatient={(name) => navigate(`/pacientes?search=${encodeURIComponent(name)}`)}
+      />
 
       {/* Main Grid: Agents List & Coverage Chart */}
       <div className="grid grid-cols-12 gap-8">

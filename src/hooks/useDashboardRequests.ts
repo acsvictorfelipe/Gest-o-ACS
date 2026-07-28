@@ -2,6 +2,7 @@ import * as React from 'react';
 import { supabase } from '../lib/supabase';
 import { visitRequestService } from '../lib/visitRequests';
 import { generateUUID } from '../lib/utils';
+import { healPatientVisitDate } from '../lib/dateUtils';
 
 export function useDashboardRequests(
   user: any,
@@ -72,9 +73,10 @@ export function useDashboardRequests(
           });
 
           const nowISO = new Date().toISOString();
-          await supabase.from('patients')
-            .update({ last_visit_at: nowISO })
-            .eq('id', req.patient_id);
+          const healResult = await healPatientVisitDate(supabase, req.patient_id, nowISO);
+          if (!healResult.success) {
+            console.error('Failed to sync patient last_visit_at:', healResult.error);
+          }
         }
         // Silently refresh to ensure absolute sync with server values
         setRequestsRefreshTrigger(prev => prev + 1);

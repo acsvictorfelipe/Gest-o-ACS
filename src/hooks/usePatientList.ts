@@ -9,6 +9,7 @@ import { safeStorage } from '../lib/safeStorage';
 import { isSameDay } from 'date-fns';
 import { getAgeInMonths, VACCINE_SCHEDULE, getPatientLastVisitAt } from '../lib/dateUtils';
 import { AppUser, Patient, Household } from '../types';
+import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 
 export interface DailyAgendaItem {
   id: string;
@@ -32,7 +33,7 @@ export function usePatientList(user: AppUser | null | undefined) {
     queryKey: ['patientList', user?.id, user?.role, user?.color, user?.microarea],
     queryFn: async () => {
       if (!user) return { patients: [], householdsMap: {} };
-      if (!user.microarea && user.role !== 'Administrador' && user.role !== 'Gestor') {
+      if (!user.microarea && !isAdminRole(user.role) && !isGestorRole(user.role)) {
         return { patients: [], householdsMap: {} };
       }
 
@@ -57,9 +58,9 @@ export function usePatientList(user: AppUser | null | undefined) {
       // HEALING LOGIC: SINCERELY UPDATE LATENCY AND RECENT VISITS
       try {
         let visitsDataQuery = supabase.from('visits').select('patient_id, date, type');
-        if (user.role === 'Gestor') {
+        if (isGestorRole(user.role)) {
           visitsDataQuery = visitsDataQuery.eq('area_color', user.color);
-        } else if (user.role !== 'Administrador') {
+        } else if (!isAdminRole(user.role)) {
           visitsDataQuery = visitsDataQuery.eq('agent_id', user.id);
         }
         
@@ -98,17 +99,7 @@ export function usePatientList(user: AppUser | null | undefined) {
           }
 
           if (trueAcsVisitDateStr && trueAcsVisitDateStr !== (p.last_visit_at ? p.last_visit_at.split('T')[0] : null)) {
-            (async () => {
-              try {
-                const { error } = await supabase.from('patients')
-                  .update({ last_visit_at: trueAcsVisitDateStr })
-                  .eq('id', p.id);
-                if (error) console.error(`Error syncing last_visit_at for patient ${p.id}:`, error);
-              } catch (err) {
-                console.warn(`Silent error catching on background patients sync for patient ${p.id}:`, err);
-              }
-            })();
-
+            // In-memory calculation for accurate rendering without firing side-effect writes during reads
             return {
               ...p,
               last_visit_at: trueAcsVisitDateStr
@@ -452,6 +443,29 @@ export function usePatientList(user: AppUser | null | undefined) {
     window.open(`https://wa.me/${finalNumber}`, '_blank');
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  // Reset page when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeFilter, selectedStreet]);
+
+  const totalCount = filteredPatients.length;
+  const totalPages = Math.ceil(totalCount / pageSize) || 1;
+
+  // Ensure page is adjusted if items were deleted and page is now out of bounds
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedPatients = filteredPatients.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
   return {
     patients,
     loading,
@@ -471,11 +485,19 @@ export function usePatientList(user: AppUser | null | undefined) {
     isPatientSemDomicilio,
     availableStreets,
     sortPatientsByAddressNumber,
-    filteredPatients,
+    filteredPatients: paginatedPatients,
+    unpaginatedFilteredPatients: filteredPatients,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalCount,
+    totalPages,
     clearFilter,
     handleDelete,
     copyToClipboard,
     handleWhatsApp,
     getPrescriptionStatus
   };
+
 }

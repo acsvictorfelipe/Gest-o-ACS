@@ -28,10 +28,12 @@ import {
   WifiOff
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 import { getAgeInMonths, getPatientLastVisitAt } from '../lib/dateUtils';
 import { syncService } from '../lib/syncService';
 import { motion, AnimatePresence } from 'motion/react';
 import { AppUser } from '../types';
+import { InstallPWA } from './InstallPWA';
 
 export function Layout({ 
   user, 
@@ -82,9 +84,9 @@ export function Layout({
       if (!user) return;
       try {
         let alertQuery = supabase.from('patients').select('*');
-        if (user.role === 'Gestor') {
+        if (isGestorRole(user.role)) {
           alertQuery = alertQuery.eq('area_color', user.color);
-        } else if (user.role !== 'Administrador') {
+        } else if (!isAdminRole(user.role)) {
           alertQuery = alertQuery.eq('agent_id', user.id);
         }
         const { data, error } = await alertQuery;
@@ -415,7 +417,8 @@ export function Layout({
         </header>
 
         {/* Page Container */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-8 pb-[100px] lg:pb-8">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-6 lg:p-8 pb-[88px] sm:pb-[100px] lg:pb-8 space-y-4">
+          <InstallPWA />
           <div className="w-full">
             <Outlet />
           </div>

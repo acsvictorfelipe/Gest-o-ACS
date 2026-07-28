@@ -151,6 +151,24 @@ export function HouseholdList({ user }: { user: any }) {
     return matchesSearch && !isPlaceholder && matchesStreet && isInConfig;
   });
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, selectedStreet]);
+
+  const totalCount = filteredHouseholds.length;
+  const totalPages = Math.ceil(totalCount / pageSize) || 1;
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  const paginatedHouseholds = filteredHouseholds.slice((page - 1) * pageSize, page * pageSize);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -239,7 +257,7 @@ export function HouseholdList({ user }: { user: any }) {
                 </div>
 
                 <div className="divide-y divide-border dark:divide-slate-800">
-                  {filteredHouseholds.map((h) => {
+                  {paginatedHouseholds.map((h) => {
                     const patientCount = h.patients?.length || 0;
                     return (
                       <div 
@@ -334,6 +352,48 @@ export function HouseholdList({ user }: { user: any }) {
                     );
                   })}
                 </div>
+
+                {/* Pagination Controls */}
+                {totalCount > 0 && (
+                  <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900/60 border-t border-border dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-text-muted">
+                    <div className="flex items-center gap-2">
+                      <span>Exibindo página <strong>{page}</strong> de <strong>{totalPages}</strong> ({totalCount} domicílios)</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1">
+                        <span>Por página:</span>
+                        <select
+                          value={pageSize}
+                          onChange={(e) => {
+                            setPageSize(Number(e.target.value));
+                            setPage(1);
+                          }}
+                          className="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-semibold text-slate-700 dark:text-slate-200 focus:outline-none"
+                        >
+                          <option value={15}>15</option>
+                          <option value={25}>25</option>
+                          <option value={50}>50</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setPage(p => Math.max(1, p - 1))}
+                          disabled={page === 1}
+                          className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
+                        >
+                          Anterior
+                        </button>
+                        <button
+                          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                          disabled={page >= totalPages}
+                          className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
+                        >
+                          Próxima
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="py-16 text-center bg-bg-primary/50 dark:bg-slate-800/20 rounded-xl border border-dashed border-border dark:border-slate-800">

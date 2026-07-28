@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { supabase } from '../lib/supabase';
+import { fetchTableWithFilters } from '../lib/supabase';
 
 export function useDashboardWeeklyChart(user: any) {
   const [weeklyChartData, setWeeklyChartData] = React.useState<{ name: string; visitas: number }[]>([]);
@@ -12,18 +12,12 @@ export function useDashboardWeeklyChart(user: any) {
       sevenDaysAgo.setHours(0, 0, 0, 0);
       const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
 
-      let visitQuery = supabase
-        .from('visits')
-        .select('date, created_at');
-
-      if (user.role === 'Gestor') visitQuery = visitQuery.eq('area_color', user.color);
-      else if (user.role !== 'Administrador') visitQuery = visitQuery.eq('agent_id', user.id);
-
-      const { data: visitData, error: visitError } = await visitQuery;
-
-      if (visitError) {
-        console.error('Erro ao buscar visitas para o gráfico:', visitError);
-        return;
+      let visitData: any[] = [];
+      try {
+        visitData = await fetchTableWithFilters<any>('visits', user, { select: 'date, created_at' });
+      } catch (visitError) {
+        console.warn('Visitas do gráfico carregadas com fallback de array vazio:', visitError);
+        visitData = [];
       }
 
       // Build 7-day chart with real counts

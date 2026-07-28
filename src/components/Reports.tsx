@@ -13,11 +13,10 @@ import {
   Bed,
   Activity
 } from 'lucide-react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { UI_CONFIG } from '../constants';
 
 import { calculateAge, getAgeInMonths, VACCINE_SCHEDULE, formatDate } from '../lib/dateUtils';
+import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 
 export function Reports({ user }: { user: any }) {
   const [patients, setPatients] = useState<any[]>([]);
@@ -37,7 +36,7 @@ export function Reports({ user }: { user: any }) {
         setLoading(false);
         return;
       }
-      if (!user.microarea && user.role !== 'Administrador') return;
+      if (!user.microarea && !isAdminRole(user.role) && !isGestorRole(user.role)) return;
       setLoading(true);
       try {
         // Fetch Patients using central helper
@@ -311,8 +310,11 @@ export function Reports({ user }: { user: any }) {
     return { consultas, tomadas, pendentes };
   };
 
-  const generatePDF = () => {
-    const doc = new jsPDF();
+  const generatePDF = async () => {
+    const { default: jsPDFModule } = await import('jspdf');
+    const { default: autoTableModule } = await import('jspdf-autotable');
+    const doc = new jsPDFModule();
+    const autoTable = autoTableModule;
     
     if (categoryFilter === 'Produção Mensal') {
       const monthNames = [

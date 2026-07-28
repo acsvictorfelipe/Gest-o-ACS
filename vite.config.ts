@@ -22,7 +22,7 @@ export default defineConfig(({mode}) => {
         output: {
           manualChunks: {
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-utils': ['papaparse', 'jspdf', 'jspdf-autotable'],
+            'vendor-pdf': ['jspdf', 'jspdf-autotable'],
             'vendor-ui': ['lucide-react', 'motion'],
           },
         },

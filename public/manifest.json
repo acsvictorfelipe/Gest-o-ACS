@@ -1,20 +1,16 @@
 {
-  "name": "Gestão ACS",
+  "name": "Gestão ACS - Agentes Comunitários de Saúde",
   "short_name": "Gestão ACS",
-  "description": "Sistema de Gestão para Agentes Comunitários de Saúde (ACS)",
+  "description": "Sistema de Gestão e Acompanhamento de Saúde da Família para Agentes Comunitários de Saúde (ACS)",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#14B8A6",
   "theme_color": "#14B8A6",
-  "orientation": "any",
-  "categories": ["medical", "productivity"],
+  "orientation": "portrait-primary",
+  "categories": ["medical", "productivity", "health"],
   "icons": [
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
@@ -22,14 +18,20 @@
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
+      "src": "/icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     }
