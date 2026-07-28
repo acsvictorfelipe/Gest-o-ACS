@@ -236,7 +236,10 @@ class SyncService {
   }
 
   isOnline(): boolean {
-    return typeof navigator !== 'undefined' ? navigator.onLine : true;
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+      return navigator.onLine;
+    }
+    return false;
   }
 
   getLastSyncedAt(): Date | null {
