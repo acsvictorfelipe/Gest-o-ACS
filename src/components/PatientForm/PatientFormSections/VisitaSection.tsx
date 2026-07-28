@@ -58,39 +58,39 @@ export function VisitaSection({ formData, setFormData, isReadOnly }: VisitaSecti
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Data da Visita</label>
+              <label className="text-[11px] font-bold uppercase text-slate-900 dark:text-slate-100 tracking-wider">Data da Visita</label>
               <input
                 type="date"
                 disabled={isReadOnly}
                 value={formData.visitDate}
                 onChange={e => setFormData((prev: any) => ({ ...prev, visitDate: e.target.value }))}
-                className="w-full bg-white dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-primary/20 text-slate-800 dark:text-white mt-1"
+                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 mt-1"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Tipo de Visita</label>
+              <label className="text-[11px] font-bold uppercase text-slate-900 dark:text-slate-100 tracking-wider">Tipo de Visita</label>
               <select
                 disabled={isReadOnly}
                 value={formData.visitType}
                 onChange={e => setFormData((prev: any) => ({ ...prev, visitType: e.target.value }))}
-                className="w-full bg-white dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-primary/20 text-slate-800 dark:text-white mt-1"
+                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 mt-1"
               >
-                <option value="Rotina">Rotina</option>
-                <option value="Acompanhamento">Acompanhamento</option>
-                <option value="Urgência">Urgência</option>
-                <option value="Pós-Parto">Pós-Parto</option>
-                <option value="Recém-Nascido">Recém-Nascido</option>
-                <option value="Ausente">Ausente (Cidadão Ausente)</option>
+                <option value="Rotina" className="font-bold text-slate-900 dark:text-slate-100">Rotina</option>
+                <option value="Acompanhamento" className="font-bold text-slate-900 dark:text-slate-100">Acompanhamento</option>
+                <option value="Urgência" className="font-bold text-slate-900 dark:text-slate-100">Urgência</option>
+                <option value="Pós-Parto" className="font-bold text-slate-900 dark:text-slate-100">Pós-Parto</option>
+                <option value="Recém-Nascido" className="font-bold text-slate-900 dark:text-slate-100">Recém-Nascido</option>
+                <option value="Ausente" className="font-bold text-slate-900 dark:text-slate-100">Ausente (Cidadão Ausente)</option>
               </select>
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Anotações da Visita / Conduta Clínica</label>
+            <label className="text-[11px] font-bold uppercase text-slate-900 dark:text-slate-100 tracking-wider">Anotações da Visita / Conduta Clínica</label>
             <textarea 
               value={formData.visitSummary || ''}
               onChange={e => setFormData((prev: any) => ({ ...prev, visitSummary: e.target.value }))}
-              className="w-full bg-white dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg p-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 min-h-[100px] shadow-inner mt-1" 
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 min-h-[100px] shadow-inner mt-1 placeholder:font-normal placeholder:text-slate-500" 
               placeholder="Descreva brevemente o estado de saúde do cidadão, queixas, vacinas aplicadas ou orientações fornecidas."
             />
           </div>

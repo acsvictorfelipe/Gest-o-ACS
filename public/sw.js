@@ -1,10 +1,12 @@
-const CACHE_NAME = 'gestao-acs-v4';
+const CACHE_NAME = 'gestao-acs-v5';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
   '/icon-512.png',
-  '/icon-192.png'
+  '/icon-192.png',
+  '/maskable-icon-512.png',
+  '/apple-touch-icon.png'
 ];
 
 // List of URL patterns that MUST NEVER be cached in CacheStorage for security and freshness

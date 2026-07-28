@@ -56,7 +56,7 @@ export function EnderecoSection({ formData, setFormData, isReadOnly, streets = [
         </div>
         <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-4">
           <div className="md:col-span-8 relative" ref={dropdownRef}>
-            <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Logradouro / Rua</label>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Logradouro / Rua</label>
             <div className="relative mt-1.5">
               <input 
                 type="text" 
@@ -67,11 +67,11 @@ export function EnderecoSection({ formData, setFormData, isReadOnly, streets = [
                   setFormData((prev: any) => ({ ...prev, address: e.target.value }));
                   setShowStreets(true);
                 }}
-                className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
+                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg py-2 px-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
                 placeholder="Ex: Rua das Flores"
               />
               {showStreets && filteredStreets.length > 0 && !isReadOnly && (
-                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-border dark:border-slate-700 rounded-xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-200">
                   {filteredStreets.map((street, index) => (
                     <button
                       key={index}
@@ -80,7 +80,7 @@ export function EnderecoSection({ formData, setFormData, isReadOnly, streets = [
                         setFormData((prev: any) => ({ ...prev, address: street }));
                         setShowStreets(false);
                       }}
-                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-primary/10 hover:text-primary transition-colors border-b border-border/50 last:border-0 font-medium dark:text-white"
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-primary/10 hover:text-primary transition-colors border-b border-border/50 last:border-0 font-bold text-slate-900 dark:text-slate-100"
                     >
                       {street}
                     </button>
@@ -90,34 +90,34 @@ export function EnderecoSection({ formData, setFormData, isReadOnly, streets = [
             </div>
           </div>
           <div className="md:col-span-2 space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Número</label>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Número</label>
             <input 
               type="text" 
               disabled={isReadOnly}
               value={formData.number || ''}
               onChange={e => setFormData((prev: any) => ({ ...prev, number: e.target.value }))}
-              className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50 mt-1.5" 
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg py-2 px-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 disabled:opacity-50 mt-1.5" 
             />
           </div>
           <div className="md:col-span-2 space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Compl.</label>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Compl.</label>
             <input 
               type="text" 
               disabled={isReadOnly}
               value={formData.complement || ''}
               onChange={e => setFormData((prev: any) => ({ ...prev, complement: e.target.value }))}
-              className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50 mt-1.5" 
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg py-2 px-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 disabled:opacity-50 mt-1.5" 
             />
           </div>
           
           <div className="md:col-span-4 space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Contato / WhatsApp</label>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Contato / WhatsApp</label>
               {formData.contact && (
                 <button 
                   type="button"
                   onClick={() => handleWhatsApp(formData.contact)}
-                  className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors uppercase tracking-wider"
+                  className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors uppercase tracking-wider"
                 >
                   <MessageCircle className="w-3 h-3" />
                   Abrir
@@ -130,21 +130,21 @@ export function EnderecoSection({ formData, setFormData, isReadOnly, streets = [
                 disabled={isReadOnly}
                 value={formData.contact || ''}
                 onChange={e => setFormData((prev: any) => ({ ...prev, contact: e.target.value }))}
-                className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 pl-9 pr-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
+                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg py-2 pl-9 pr-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
                 placeholder="(00) 00000-0000"
               />
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted opacity-50" />
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 font-bold" />
             </div>
           </div>
 
           <div className="md:col-span-4 space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Telefone Recado / WhatsApp</label>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Telefone Recado / WhatsApp</label>
               {formData.contact2 && (
                 <button 
                   type="button"
                   onClick={() => handleWhatsApp(formData.contact2)}
-                  className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors uppercase tracking-wider"
+                  className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors uppercase tracking-wider"
                 >
                   <MessageCircle className="w-3 h-3" />
                   Abrir
@@ -157,21 +157,21 @@ export function EnderecoSection({ formData, setFormData, isReadOnly, streets = [
                 disabled={isReadOnly}
                 value={formData.contact2 || ''}
                 onChange={e => setFormData((prev: any) => ({ ...prev, contact2: e.target.value }))}
-                className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 pl-9 pr-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
+                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg py-2 pl-9 pr-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
                 placeholder="(00) 00000-0000"
               />
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted opacity-50" />
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 font-bold" />
             </div>
           </div>
 
           <div className="md:col-span-4 space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Nome para Recado</label>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Nome para Recado</label>
             <input 
               type="text" 
               disabled={isReadOnly}
               value={formData.messageContact || ''}
               onChange={e => setFormData((prev: any) => ({ ...prev, messageContact: e.target.value }))}
-              className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50 mt-1.5" 
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg py-2 px-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 disabled:opacity-50 mt-1.5" 
               placeholder="Ex: Esposo, Mãe..."
             />
           </div>

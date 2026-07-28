@@ -30,7 +30,7 @@ export function CategoriesSection({ formData, setFormData, isReadOnly }: Categor
     <section className="bg-bg-primary dark:bg-slate-800/50 rounded-xl p-3.5 sm:p-6 border border-border dark:border-slate-800 space-y-4">
       <div className="flex items-center gap-2 text-primary">
         <CheckCircle2 className="w-4 h-4" />
-        <h3 className="text-xs font-semibold uppercase tracking-widest">Acompanhamentos Específicos</h3>
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Acompanhamentos Específicos</h3>
       </div>
       <div className="flex flex-wrap gap-2">
         {categoriesList.map((cat) => {
@@ -43,12 +43,12 @@ export function CategoriesSection({ formData, setFormData, isReadOnly }: Categor
               onClick={() => toggleCategory(cat.id)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
                 isSelected 
-                  ? `${cat.color} bg-bg-secondary dark:bg-slate-900 shadow-sm font-semibold border-current scale-[1.02]` 
-                  : 'border-border dark:border-slate-700 bg-bg-secondary dark:bg-slate-800 text-text-muted hover:border-slate-300'
+                  ? `${cat.color} bg-white dark:bg-slate-900 shadow-sm font-bold border-current scale-[1.02]` 
+                  : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:border-slate-400 font-bold'
               } ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <cat.icon className="w-4 h-4" />
-              <span className="text-[11px] font-semibold uppercase tracking-tight">{cat.label || cat.id}</span>
+              <span className="text-xs font-bold uppercase tracking-tight">{cat.label || cat.id}</span>
             </button>
           );
         })}

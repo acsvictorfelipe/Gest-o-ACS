@@ -769,7 +769,6 @@ export function PatientForm({ user }: { user: any }) {
                 <>
                   {/* Household Info Card */}
                   <div className="bg-gradient-to-br from-primary to-primary-dark dark:from-teal-800 dark:to-teal-950 rounded-2xl p-6 text-white shadow-md relative overflow-hidden">
-                    <div className="absolute right-0 top-0 h-full w-1/3 bg-white/10 skew-x-12 translate-x-12"></div>
                     <div className="relative z-10">
                       <span className="text-[9px] font-bold uppercase tracking-widest opacity-75 block mb-1">Responsável Familiar</span>
                       <h4 className="text-xl font-bold font-headline mb-4">{householdData.responsible_name}</h4>

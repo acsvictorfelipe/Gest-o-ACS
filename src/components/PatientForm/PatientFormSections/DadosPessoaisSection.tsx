@@ -20,39 +20,39 @@ export function DadosPessoaisSection({ formData, setFormData, isReadOnly }: Dado
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-4">
           <div className="md:col-span-4 space-y-1.5">
-            <label className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">SUS / CNS</label>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">SUS / CNS</label>
             <input 
               type="text" 
               disabled={isReadOnly}
               value={formData.cns || ''}
               onChange={e => setFormData({ ...formData, cns: e.target.value.replace(/\s+/g, '') })}
-              className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg py-2 px-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
             />
           </div>
           <div className="md:col-span-2 space-y-1.5">
-            <label className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Responsável?</label>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Responsável?</label>
             <select 
               disabled={isReadOnly}
               value={formData.isFamilyResponsible ? 'Sim' : 'Não'}
               onChange={e => setFormData({ ...formData, isFamilyResponsible: e.target.value === 'Sim' })}
-              className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg py-2 px-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
             >
-              <option>Não</option>
-              <option>Sim</option>
+              <option className="text-slate-900 dark:text-slate-100 font-bold">Não</option>
+              <option className="text-slate-900 dark:text-slate-100 font-bold">Sim</option>
             </select>
           </div>
           <div className="md:col-span-6 space-y-1.5">
-            <label className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Nome Completo</label>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Nome Completo</label>
             <input 
               type="text" 
               disabled={isReadOnly}
               value={formData.name || ''}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg py-2 px-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
             />
           </div>
           <div className="md:col-span-4 space-y-1.5">
-            <label className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
               {formData.isFamilyResponsible ? 'Seu CNS (Responsável)' : 'CNS do Responsável'}
             </label>
             <input 
@@ -60,42 +60,42 @@ export function DadosPessoaisSection({ formData, setFormData, isReadOnly }: Dado
               value={(formData.isFamilyResponsible ? formData.cns : formData.responsibleCns) || ''}
               onChange={e => setFormData({ ...formData, responsibleCns: e.target.value.replace(/\s+/g, '') })}
               disabled={formData.isFamilyResponsible || isReadOnly}
-              className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 appearance-none disabled:opacity-50" 
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg py-2 px-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 appearance-none disabled:opacity-50" 
               placeholder="000 0000 0000 0000" 
             />
           </div>
           <div className="md:col-span-2 space-y-1.5">
-            <label className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Gênero</label>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Gênero</label>
             <select 
               required
               disabled={isReadOnly}
               value={formData.gender || ''}
               onChange={e => setFormData({ ...formData, gender: e.target.value })}
-              className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg py-2 px-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
             >
-              <option value="" disabled>Selecione</option>
-              <option>Feminino</option>
-              <option>Masculino</option>
-              <option>Outro</option>
+              <option value="" disabled className="text-slate-900 dark:text-slate-100 font-bold">Selecione</option>
+              <option className="text-slate-900 dark:text-slate-100 font-bold">Feminino</option>
+              <option className="text-slate-900 dark:text-slate-100 font-bold">Masculino</option>
+              <option className="text-slate-900 dark:text-slate-100 font-bold">Outro</option>
             </select>
           </div>
           <div className="md:col-span-3 space-y-1.5">
-            <label className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Nascimento</label>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Nascimento</label>
             <input 
               type="date" 
               disabled={isReadOnly}
               value={formData.birthDate || ''}
               onChange={e => setFormData({ ...formData, birthDate: e.target.value })}
-              className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg py-2 px-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 disabled:opacity-50" 
             />
           </div>
           <div className="md:col-span-3 space-y-1.5">
-            <label className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Idade</label>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Idade</label>
             <input 
               disabled
               type="text" 
               value={calculateAge(formData.birthDate) || ''}
-              className="w-full bg-bg-primary dark:bg-slate-800/50 border border-border dark:border-slate-800 rounded-lg py-2 px-3 text-sm text-text-secondary font-medium" 
+              className="w-full bg-slate-100 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg py-2 px-3 text-sm text-slate-900 dark:text-slate-100 font-bold" 
             />
           </div>
         </div>

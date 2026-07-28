@@ -176,19 +176,18 @@ export function HouseholdView({ user }: { user: any }) {
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header Card */}
       <section className="bg-primary rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl">
-        <div className="absolute right-0 top-0 h-full w-1/3 bg-bg-secondary/10 skew-x-12 translate-x-12"></div>
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70 mb-2 block">Responsável Familiar</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-90 mb-2 block">Responsável Familiar</span>
             <h2 className="text-3xl font-extrabold font-headline mb-3">{household.responsible_name}</h2>
             <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2 bg-bg-secondary/10 px-4 py-1.5 rounded-full text-sm backdrop-blur-md">
-                <IdCard className="w-4 h-4 opacity-70" />
-                <span className="font-medium">SUS: {household.responsible_cns}</span>
+              <div className="flex items-center gap-2 bg-black/15 px-4 py-1.5 rounded-full text-sm font-bold">
+                <IdCard className="w-4 h-4 opacity-90" />
+                <span>SUS: {household.responsible_cns}</span>
               </div>
-              <div className="flex items-center gap-2 bg-bg-secondary/10 px-4 py-1.5 rounded-full text-sm backdrop-blur-md">
-                <MapPin className="w-4 h-4 opacity-70" />
-                <span className="font-medium">{household.address}, {household.number}</span>
+              <div className="flex items-center gap-2 bg-black/15 px-4 py-1.5 rounded-full text-sm font-bold">
+                <MapPin className="w-4 h-4 opacity-90" />
+                <span>{household.address}, {household.number}</span>
               </div>
             </div>
           </div>
