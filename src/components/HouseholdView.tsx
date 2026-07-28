@@ -175,7 +175,7 @@ export function HouseholdView({ user }: { user: any }) {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header Card */}
-      <section className="bg-primary rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl">
+      <section className="bg-teal-600 dark:bg-teal-800 rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl">
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-90 mb-2 block">Responsável Familiar</span>

@@ -768,19 +768,19 @@ export function PatientForm({ user }: { user: any }) {
               ) : householdData ? (
                 <>
                   {/* Household Info Card */}
-                  <div className="bg-gradient-to-br from-primary to-primary-dark dark:from-teal-800 dark:to-teal-950 rounded-2xl p-6 text-white shadow-md relative overflow-hidden">
-                    <div className="relative z-10">
-                      <span className="text-[9px] font-bold uppercase tracking-widest opacity-75 block mb-1">Responsável Familiar</span>
-                      <h4 className="text-xl font-bold font-headline mb-4">{householdData.responsible_name}</h4>
+                  <div className="bg-teal-600 dark:bg-teal-800 rounded-2xl p-6 text-white shadow-md">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-teal-100 block mb-1">Responsável Familiar</span>
+                      <h4 className="text-xl font-extrabold font-headline mb-4">{householdData.responsible_name}</h4>
                       
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-xs bg-white/15 px-3 py-1.5 rounded-lg w-fit">
-                          <span className="font-semibold opacity-85">SUS:</span>
-                          <span>{householdData.responsible_cns}</span>
+                        <div className="flex items-center gap-2 text-xs bg-black/20 px-3 py-1.5 rounded-lg w-fit font-bold">
+                          <span className="text-teal-100">SUS:</span>
+                          <span className="text-white">{householdData.responsible_cns}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs bg-white/15 px-3 py-1.5 rounded-lg">
-                          <span className="font-semibold opacity-85">Endereço:</span>
-                          <span>{householdData.address}, {householdData.number} {householdData.complement ? ` - ${householdData.complement}` : ''}</span>
+                        <div className="flex items-center gap-2 text-xs bg-black/20 px-3 py-1.5 rounded-lg font-bold">
+                          <span className="text-teal-100">Endereço:</span>
+                          <span className="text-white">{householdData.address}, {householdData.number} {householdData.complement ? ` - ${householdData.complement}` : ''}</span>
                         </div>
                       </div>
                     </div>
