@@ -141,7 +141,7 @@ class SyncService {
             attempts: 0
           };
           this.saveQueue(queue);
-          if (navigator.onLine) await this.sync();
+          if (this.isOnline()) await this.sync();
           return;
         }
 
@@ -155,7 +155,7 @@ class SyncService {
             lastError: undefined
           };
           this.saveQueue(queue);
-          if (navigator.onLine) await this.sync();
+          if (this.isOnline()) await this.sync();
           return;
         }
       }
@@ -173,13 +173,13 @@ class SyncService {
     queue.push(newItem);
     this.saveQueue(queue);
     
-    if (navigator.onLine) {
+    if (this.isOnline()) {
       await this.sync();
     }
   }
 
   async sync() {
-    if (!navigator.onLine || this.syncing) return;
+    if (!this.isOnline() || this.syncing) return;
     
     const queue = this.getQueue();
     if (queue.length === 0) return;
