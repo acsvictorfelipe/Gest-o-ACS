@@ -7,7 +7,8 @@ export const safeStorage = {
   getItem(key: string): string | null {
     try {
       if (isBrowser) {
-        return window.localStorage.getItem(key);
+        const val = window.localStorage.getItem(key);
+        if (val !== null) return val;
       }
     } catch (e) {
       console.warn(`safeStorage: Failed to read key "${key}" from localStorage. Using in-memory fallback.`, e);

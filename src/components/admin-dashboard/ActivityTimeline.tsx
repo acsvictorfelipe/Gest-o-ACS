@@ -148,7 +148,9 @@ export function ActivityTimeline({
                       </span>
                     </div>
                     <span className="text-[9px] text-text-muted font-bold whitespace-nowrap">
-                      {log.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      {log.timestamp && !isNaN(log.timestamp.getTime()) 
+                        ? log.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                        : '--:--'}
                     </span>
                   </div>
 
@@ -163,7 +165,9 @@ export function ActivityTimeline({
                   </p>
 
                   <div className="text-[9px] font-bold text-text-muted pt-0.5">
-                    {log.timestamp.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
+                    {log.timestamp && !isNaN(log.timestamp.getTime())
+                      ? log.timestamp.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
+                      : 'Data recente'}
                   </div>
                 </div>
               </div>

@@ -241,9 +241,9 @@ export function AdminDashboard({ user }: { user: AppUser | null }) {
       
       // Get last active date
       const dates = [
-        ...agentVisits.map(v => new Date(v.created_at || v.date || '').getTime()),
-        ...agentPatients.map(p => new Date(p.created_at || '').getTime()),
-        ...agentHouseholds.map(h => new Date(h.created_at || '').getTime())
+        ...agentVisits.map(v => new Date(v.created_at || v.date || '').getTime()).filter(t => !isNaN(t) && t > 0),
+        ...agentPatients.map(p => new Date(p.created_at || '').getTime()).filter(t => !isNaN(t) && t > 0),
+        ...agentHouseholds.map(h => new Date(h.created_at || '').getTime()).filter(t => !isNaN(t) && t > 0)
       ];
       const lastActiveTime = dates.length > 0 ? Math.max(...dates) : null;
 

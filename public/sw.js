@@ -80,8 +80,22 @@ self.addEventListener('fetch', (event) => {
           }
           // Navigation fallback to index.html for SPA routes
           if (event.request.mode === 'navigate') {
-            return caches.match('/');
+            return caches.match('/').then((appShell) => {
+              if (appShell) return appShell;
+              return caches.match('/index.html').then((indexShell) => {
+                return indexShell || new Response('Offline - recarregue a página quando houver conexão.', {
+                  status: 503,
+                  statusText: 'Service Unavailable',
+                  headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+                });
+              });
+            });
           }
+          return new Response('Recurso não disponível offline.', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+          });
         });
       })
   );

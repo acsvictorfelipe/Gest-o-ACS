@@ -2,20 +2,39 @@ import { createClient } from '@supabase/supabase-js';
 import { isAdminRole, isGestorRole } from './roleUtils';
 import { safeStorage } from './safeStorage';
 
-const getSupabaseConfig = () => {
+export const getSupabaseConfig = () => {
   const isBrowser = typeof window !== 'undefined';
   const config = isBrowser && (window as any).__SUPABASE_CONFIG__ ? (window as any).__SUPABASE_CONFIG__ : {};
   
+  let storedUrl = '';
+  let storedAnonKey = '';
+  if (isBrowser) {
+    try {
+      storedUrl = localStorage.getItem('CUSTOM_SUPABASE_URL') || '';
+      storedAnonKey = localStorage.getItem('CUSTOM_SUPABASE_ANON_KEY') || '';
+    } catch (e) {
+      console.warn('Could not read custom Supabase config from localStorage:', e);
+    }
+  }
+
   return {
-    url: config.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL || '',
-    anonKey: config.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+    url: storedUrl || config.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL || '',
+    anonKey: storedAnonKey || config.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || ''
   };
+};
+
+export const saveCustomSupabaseConfig = (url: string, anonKey: string) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('CUSTOM_SUPABASE_URL', url.trim());
+    localStorage.setItem('CUSTOM_SUPABASE_ANON_KEY', anonKey.trim());
+    window.location.reload();
+  }
 };
 
 const { url: supabaseUrl, anonKey: supabaseAnonKey } = getSupabaseConfig();
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase URL or Anon Key is missing. Please configure them in your AI Studio Environment Variables (Secrets).');
+if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder.supabase.co')) {
+  console.warn('Supabase URL or Anon Key is missing or using placeholder.');
 }
 
 export const supabase = createClient(

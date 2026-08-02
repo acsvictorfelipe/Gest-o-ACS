@@ -39,6 +39,24 @@ if ('serviceWorker' in navigator) {
 }
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: any; resetErrorBoundary: () => void }) {
+  const clearCacheAndReload = () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(regs => {
+          regs.forEach(r => r.unregister());
+        });
+      }
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          names.forEach(name => caches.delete(name));
+        });
+      }
+    } catch (e) {
+      console.warn('Error clearing caches:', e);
+    }
+    window.location.reload();
+  };
+
   const downloadBackupData = () => {
     try {
       const backup: Record<string, string> = {};
@@ -90,6 +108,13 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: any; resetErrorBo
             Tentar Novamente / Recarregar
           </button>
           
+          <button
+            onClick={clearCacheAndReload}
+            className="w-full py-2.5 px-4 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 rounded-xl font-medium transition duration-150 ease-in-out cursor-pointer text-xs"
+          >
+            Limpar Cache do Navegador e Recarregar
+          </button>
+
           <button
             onClick={downloadBackupData}
             className="w-full py-3 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium transition duration-150 ease-in-out cursor-pointer flex items-center justify-center gap-2"

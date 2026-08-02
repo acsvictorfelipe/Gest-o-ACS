@@ -204,7 +204,14 @@ export const validateCNS = (cns: string): boolean => {
 
 export function getPatientLastVisitAt(p: any): string | null {
   if (!p) return null;
-  let latestDate: Date | null = p.last_visit_at ? new Date(p.last_visit_at) : null;
+  let latestDate: Date | null = null;
+
+  if (p.last_visit_at) {
+    const initialD = new Date(p.last_visit_at);
+    if (!isNaN(initialD.getTime())) {
+      latestDate = initialD;
+    }
+  }
 
   const checkDate = (dStr: any) => {
     if (!dStr) return;
