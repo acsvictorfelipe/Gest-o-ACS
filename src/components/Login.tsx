@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Mail, Lock, LogIn, UserCircle, Loader2, Eye, EyeOff } from 'lucide-react';
-import { InstallPWA } from './InstallPWA';
 
 export function Login() {
   const [loading, setLoading] = useState(false);
@@ -52,11 +51,6 @@ export function Login() {
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#3B82F6]/5 blur-[120px] rounded-full"></div>
 
       <div className="relative z-10 w-full max-w-sm px-6 my-auto py-8">
-        {/* PWA Install Banner if applicable */}
-        <div className="mb-4">
-          <InstallPWA />
-        </div>
-
         <div className="bg-bg-secondary rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-border overflow-hidden">
           <div className="p-10">
             <div className="text-center mb-10">
