@@ -11,7 +11,18 @@ export function InstallPWA() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
+  const [inIframe, setInIframe] = useState(false);
+
   useEffect(() => {
+    // Check if app is running in an iframe
+    try {
+      if (window.self !== window.top) {
+        setInIframe(true);
+      }
+    } catch (e) {
+      setInIframe(true);
+    }
+
     // Check if app is already running in standalone mode (installed PWA)
     const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
       (window.navigator as any).standalone === true ||
@@ -49,17 +60,26 @@ export function InstallPWA() {
     };
   }, []);
 
+  const openInNewTab = () => {
+    window.open(window.location.href, '_blank', 'noopener,noreferrer');
+  };
+
   const handleInstallClick = async () => {
     if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setIsInstalled(true);
+      try {
+        await deferredPrompt.prompt();
+        const choiceResult = await deferredPrompt.userChoice;
+        if (choiceResult.outcome === 'accepted') {
+          setIsInstalled(true);
+        }
+        setDeferredPrompt(null);
+      } catch (err) {
+        console.warn('Erro ao chamar instalador PWA:', err);
+        setShowAndroidModal(true);
       }
-      setDeferredPrompt(null);
     } else if (isIOS) {
       setShowIosModal(true);
-    } else if (isAndroid || !deferredPrompt) {
+    } else {
       setShowAndroidModal(true);
     }
   };
@@ -120,25 +140,40 @@ export function InstallPWA() {
                 <Smartphone className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Instalar no Android (Gaveta de Apps)</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Siga estes passos no seu navegador Chrome:</p>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Instalar na Gaveta de Apps do Android</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Instalação nativa WebAPK no Google Chrome</p>
               </div>
             </div>
+
+            {inIframe && (
+              <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 p-3 rounded-xl text-xs text-amber-800 dark:text-amber-200 space-y-2">
+                <p className="font-semibold">⚠️ Pré-visualização Detectada</p>
+                <p className="text-[11px] leading-relaxed">
+                  Para o Android instalar como <strong>aplicativo completo na gaveta de apps</strong> (WebAPK), o site deve ser aberto diretamente no Chrome, fora do editor.
+                </p>
+                <button
+                  onClick={openInNewTab}
+                  className="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <Share className="w-3.5 h-3.5" /> Abrir em Nova Aba do Chrome
+                </button>
+              </div>
+            )}
 
             <ol className="space-y-3 text-xs text-slate-700 dark:text-slate-300">
               <li className="flex items-start gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                 <span className="w-5 h-5 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">1</span>
-                <span>Toque no menu de <strong>três pontos</strong> <MoreVertical className="w-4 h-4 inline text-teal-600 mx-0.5" /> no canto superior direito do Chrome.</span>
+                <span>Abra este link no <strong>Google Chrome</strong> no seu celular Android.</span>
               </li>
 
               <li className="flex items-start gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                 <span className="w-5 h-5 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">2</span>
-                <span>Selecione a opção <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à Tela Inicial"</strong>.</span>
+                <span>Toque no menu de <strong>três pontos</strong> <MoreVertical className="w-4 h-4 inline text-teal-600 mx-0.5" /> no canto superior do Chrome.</span>
               </li>
 
               <li className="flex items-start gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                 <span className="w-5 h-5 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">3</span>
-                <span>Confirme em <strong>Instalar</strong>. O ícone do <strong>Gestão ACS</strong> aparecerá na sua gaveta de apps do celular!</span>
+                <span>Selecione <strong>"Instalar aplicativo"</strong> (não "Adicionar à tela de início"). Confirmando, o Android compilará o app diretamente para sua <strong>gaveta de apps</strong>!</span>
               </li>
             </ol>
 
