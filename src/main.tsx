@@ -25,6 +25,33 @@ if (sentryDsn) {
   console.log('Sentry DSN não configurado. Fallback de console ativo.');
 }
 
+// Handle Vite dynamic import chunk loading errors (e.g. after a new build deployment on Vercel)
+window.addEventListener('vite:preloadError', () => {
+  console.warn('Vite preload error detected (chunk updated/missing). Reloading window...');
+  const reloaded = sessionStorage.getItem('vite_preload_error_reloaded');
+  if (!reloaded) {
+    sessionStorage.setItem('vite_preload_error_reloaded', 'true');
+    window.location.reload();
+  }
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event?.reason?.message || event?.reason || '';
+  if (
+    typeof reason === 'string' &&
+    (reason.includes('Failed to fetch dynamically imported module') ||
+     reason.includes('Importing a module script failed') ||
+     reason.includes('dynamically imported module'))
+  ) {
+    console.warn('Dynamic import module error caught globally. Forcing reload...');
+    const reloaded = sessionStorage.getItem('chunk_import_reloaded');
+    if (!reloaded) {
+      sessionStorage.setItem('chunk_import_reloaded', 'true');
+      window.location.reload();
+    }
+  }
+});
+
 // Register service worker for installable Android webapp (PWA)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

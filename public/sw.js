@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gestao-acs-v5';
+const CACHE_NAME = 'gestao-acs-v6';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -65,6 +65,15 @@ self.addEventListener('fetch', (event) => {
       .then((response) => {
         // Cache valid static responses (JS, CSS, images, shell)
         if (response && response.status === 200 && response.type === 'basic') {
+          const contentType = response.headers.get('content-type') || '';
+          // If a JS/CSS chunk request returns an HTML 404 fallback page, do NOT cache it and fail fast
+          if (url.includes('/assets/') && contentType.includes('text/html')) {
+            return new Response('Chunk no longer exists on server due to a new deployment.', {
+              status: 404,
+              statusText: 'Not Found',
+              headers: { 'Content-Type': 'text/plain' }
+            });
+          }
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);

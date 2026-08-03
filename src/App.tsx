@@ -12,17 +12,52 @@ import { safeStorage } from './lib/safeStorage';
 import { AppUser } from './types';
 import { User } from '@supabase/supabase-js';
 
-const Login = lazy(() => import('./components/Login').then(module => ({ default: module.Login })));
-const Dashboard = lazy(() => import('./components/Dashboard').then(module => ({ default: module.Dashboard })));
-const PatientForm = lazy(() => import('./components/PatientForm').then(module => ({ default: module.PatientForm })));
-const HouseholdView = lazy(() => import('./components/HouseholdView').then(module => ({ default: module.HouseholdView })));
-const PatientList = lazy(() => import('./components/PatientList').then(module => ({ default: module.PatientList })));
-const HouseholdList = lazy(() => import('./components/HouseholdList').then(module => ({ default: module.HouseholdList })));
-const Settings = lazy(() => import('./components/Settings').then(module => ({ default: module.Settings })));
-const Reports = lazy(() => import('./components/Reports').then(module => ({ default: module.Reports })));
-const UserManagement = lazy(() => import('./components/UserManagement').then(module => ({ default: module.UserManagement })));
-const VisitHistory = lazy(() => import('./components/VisitHistory').then(module => ({ default: module.VisitHistory })));
-const ExportTool = lazy(() => import('./components/ExportTool').then(module => ({ default: module.ExportTool })));
+function lazyWithRetry(componentImport: () => Promise<any>) {
+  return lazy(async () => {
+    const pageHasAlreadyBeenReloaded = JSON.parse(
+      sessionStorage.getItem('page_reloaded_for_chunk_error') || 'false'
+    );
+
+    try {
+      const module = await componentImport();
+      sessionStorage.removeItem('page_reloaded_for_chunk_error');
+      return module;
+    } catch (error: any) {
+      console.warn('Error loading dynamic module chunk:', error);
+      if (!pageHasAlreadyBeenReloaded) {
+        sessionStorage.setItem('page_reloaded_for_chunk_error', 'true');
+        if ('serviceWorker' in navigator) {
+          try {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            for (const r of regs) await r.unregister();
+          } catch (e) {}
+        }
+        if ('caches' in window) {
+          try {
+            const keys = await caches.keys();
+            for (const k of keys) await caches.delete(k);
+          } catch (e) {}
+        }
+        window.location.reload();
+        return new Promise(() => {});
+      }
+      sessionStorage.removeItem('page_reloaded_for_chunk_error');
+      throw error;
+    }
+  });
+}
+
+const Login = lazyWithRetry(() => import('./components/Login').then(module => ({ default: module.Login })));
+const Dashboard = lazyWithRetry(() => import('./components/Dashboard').then(module => ({ default: module.Dashboard })));
+const PatientForm = lazyWithRetry(() => import('./components/PatientForm').then(module => ({ default: module.PatientForm })));
+const HouseholdView = lazyWithRetry(() => import('./components/HouseholdView').then(module => ({ default: module.HouseholdView })));
+const PatientList = lazyWithRetry(() => import('./components/PatientList').then(module => ({ default: module.PatientList })));
+const HouseholdList = lazyWithRetry(() => import('./components/HouseholdList').then(module => ({ default: module.HouseholdList })));
+const Settings = lazyWithRetry(() => import('./components/Settings').then(module => ({ default: module.Settings })));
+const Reports = lazyWithRetry(() => import('./components/Reports').then(module => ({ default: module.Reports })));
+const UserManagement = lazyWithRetry(() => import('./components/UserManagement').then(module => ({ default: module.UserManagement })));
+const VisitHistory = lazyWithRetry(() => import('./components/VisitHistory').then(module => ({ default: module.VisitHistory })));
+const ExportTool = lazyWithRetry(() => import('./components/ExportTool').then(module => ({ default: module.ExportTool })));
 
 
 export default function App() {
