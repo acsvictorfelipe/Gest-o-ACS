@@ -1,19 +1,15 @@
 {
-  "name": "Gestão ACS - Agentes Comunitários de Saúde",
-  "short_name": "Gestão ACS",
-  "description": "Sistema de Gestão e Acompanhamento de Saúde da Família para Agentes Comunitários de Saúde (ACS)",
-  "id": "/",
+  "name": "Gestão ACS",
+  "short_name": "ACS",
+  "description": "Aplicativo de gestão para Agentes Comunitários de Saúde",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
-  "background_color": "#14B8A6",
-  "theme_color": "#14B8A6",
   "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#14B8A6",
   "lang": "pt-BR",
-  "dir": "ltr",
-  "prefer_related_applications": false,
-  "categories": ["medical", "productivity", "health"],
+  "categories": ["health", "medical", "productivity"],
   "icons": [
     {
       "src": "/icon-192.png",
@@ -28,32 +24,10 @@
       "purpose": "any"
     },
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
       "src": "/maskable-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Nova Visita",
-      "short_name": "Visita",
-      "description": "Registrar nova visita domiciliar",
-      "url": "/",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Pacientes",
-      "short_name": "Pacientes",
-      "description": "Lista de pacientes cadastrados",
-      "url": "/",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

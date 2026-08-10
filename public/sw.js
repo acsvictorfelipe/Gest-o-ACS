@@ -1,4 +1,5 @@
-const CACHE_NAME = 'gestao-acs-v6';
+const CACHE_NAME = 'gestao-acs-v7';
+const FONTS_CACHE_NAME = 'gestao-acs-fonts-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -36,7 +37,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
+          if (cache !== CACHE_NAME && cache !== FONTS_CACHE_NAME) {
             console.log('[Service Worker] Clearing old cache version:', cache);
             return caches.delete(cache);
           }
@@ -48,12 +49,30 @@ self.addEventListener('activate', (event) => {
 
 // Fetch Event (Network-First falling back to cache for static assets)
 self.addEventListener('fetch', (event) => {
+  const url = event.request.url;
+
+  // Cache-First para fontes do Google Fonts (googleapis e gstatic)
+  if (url.includes('fonts.googleapis.com') || url.includes('fonts.gstatic.com')) {
+    event.respondWith(
+      caches.open(FONTS_CACHE_NAME).then((cache) => {
+        return cache.match(event.request).then((cached) => {
+          if (cached) return cached;
+          return fetch(event.request).then((response) => {
+            if (response && response.status === 200) {
+              cache.put(event.request, response.clone());
+            }
+            return response;
+          }).catch(() => cached || new Response('', { status: 503 }));
+        });
+      })
+    );
+    return;
+  }
+
   // Only handle local GET requests
   if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
     return;
   }
-
-  const url = event.request.url;
 
   // Bypass service worker completely for API, database, or authentication routes
   if (NEVER_CACHE_PATTERNS.some(pattern => url.includes(pattern))) {

@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Smartphone, Share, PlusSquare, X, Check, MoreVertical } from 'lucide-react';
+import { Download, Smartphone, Share, PlusSquare, X, Check, MoreVertical, Monitor } from 'lucide-react';
+
+const DISMISSED_KEY = 'pwa_install_dismissed';
 
 export function InstallPWA() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
+  const [isWindows, setIsWindows] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showIosModal, setShowIosModal] = useState(false);
   const [showAndroidModal, setShowAndroidModal] = useState(false);
+  const [showWindowsModal, setShowWindowsModal] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem(DISMISSED_KEY) === 'true'; } catch { return false; }
+  });
 
   const [inIframe, setInIframe] = useState(false);
 
@@ -36,9 +42,11 @@ export function InstallPWA() {
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
     const isAndroidDevice = /android/.test(userAgent);
+    const isWindowsDevice = /win/.test(userAgent) && !isAndroidDevice;
 
     setIsIOS(isIosDevice);
     setIsAndroid(isAndroidDevice);
+    setIsWindows(isWindowsDevice);
 
     // Listen for beforeinstallprompt event (Chrome, Edge, Android)
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -64,6 +72,11 @@ export function InstallPWA() {
     window.open(window.location.href, '_blank', 'noopener,noreferrer');
   };
 
+  const handleDismiss = () => {
+    setDismissed(true);
+    try { localStorage.setItem(DISMISSED_KEY, 'true'); } catch {}
+  };
+
   const handleInstallClick = async () => {
     if (deferredPrompt) {
       try {
@@ -75,20 +88,24 @@ export function InstallPWA() {
         setDeferredPrompt(null);
       } catch (err) {
         console.warn('Erro ao chamar instalador PWA:', err);
-        setShowAndroidModal(true);
+        if (isAndroid) setShowAndroidModal(true);
+        else if (isWindows) setShowWindowsModal(true);
       }
     } else if (isIOS) {
       setShowIosModal(true);
-    } else {
+    } else if (isAndroid) {
       setShowAndroidModal(true);
+    } else {
+      // Desktop (Windows, Linux, macOS)
+      setShowWindowsModal(true);
     }
   };
 
   // If already running in standalone app or installed, hide
   if (isStandalone || isInstalled) return null;
 
-  // Show banner if deferredPrompt is present OR on Android/iOS/mobile or if not dismissed
-  const shouldShowBanner = !dismissed && (deferredPrompt || isAndroid || isIOS || true);
+  // Mostrar banner apenas quando há prompt disponível OU no mobile (iOS/Android) — nunca forçar em desktop sem prompt
+  const shouldShowBanner = !dismissed && (deferredPrompt || isAndroid || isIOS || isWindows);
 
   return (
     <>
@@ -114,7 +131,7 @@ export function InstallPWA() {
               Instalar
             </button>
             <button
-              onClick={() => setDismissed(true)}
+              onClick={handleDismiss}
               className="text-teal-200 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
               title="Fechar"
             >
@@ -227,6 +244,54 @@ export function InstallPWA() {
 
             <button
               onClick={() => setShowIosModal(false)}
+              className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+            >
+              <Check className="w-4 h-4" /> Entendi
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Modal Guide for Windows / Desktop */}
+      {showWindowsModal && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 relative space-y-4">
+            <button
+              onClick={() => setShowWindowsModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+                <Monitor className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Instalar no Windows</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Funciona no Chrome e no Edge</p>
+              </div>
+            </div>
+
+            <ol className="space-y-3 text-xs text-slate-700 dark:text-slate-300">
+              <li className="flex items-start gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                <span className="w-5 h-5 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">1</span>
+                <span>Abra este link no <strong>Google Chrome</strong> ou <strong>Microsoft Edge</strong>.</span>
+              </li>
+              <li className="flex items-start gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                <span className="w-5 h-5 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">2</span>
+                <span>
+                  No <strong>Chrome</strong>: clique no ícone <strong>⊕</strong> na barra de endereço → <strong>"Instalar"</strong>.<br/>
+                  No <strong>Edge</strong>: clique nos <strong>3 pontos</strong> → <strong>Apps</strong> → <strong>"Instalar este site como app"</strong>.
+                </span>
+              </li>
+              <li className="flex items-start gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                <span className="w-5 h-5 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">3</span>
+                <span>O app aparecerá no <strong>Menu Iniciar</strong> e na <strong>barra de tarefas</strong> do Windows.</span>
+              </li>
+            </ol>
+
+            <button
+              onClick={() => setShowWindowsModal(false)}
               className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
             >
               <Check className="w-4 h-4" /> Entendi

@@ -1,5 +1,5 @@
 @import "tailwindcss"; /* Sync: 2024-04-28-1037 */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Fontes carregadas via <link> no index.html com preconnect para melhor performance */
 
 /* Configuração de Dark Mode para Tailwind v4 (Suporte a Classe) */
 @custom-variant dark (&:where(.dark, .dark *));
