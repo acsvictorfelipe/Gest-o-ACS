@@ -458,18 +458,18 @@ export function PatientList({ user }: { user: AppUser | null }) {
                         </td>
                         <td className="px-8 py-5 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <button 
-                              onClick={(e) => handleToggleAgenda(p, e)}
-                              className={`p-2 rounded-lg transition-all ${
-                                dailyAgenda.some(item => item.id === p.id)
-                                  ? 'text-teal-600 bg-teal-50 dark:bg-teal-950/30'
-                                  : 'text-text-muted hover:text-teal-600 bg-slate-50 hover:bg-teal-50 dark:bg-slate-800/40 dark:hover:bg-slate-800'
-                              }`}
-                              title={dailyAgenda.some(item => item.id === p.id) ? "Remover do Roteiro do Dia" : "Adicionar ao Roteiro do Dia"}
-                            >
-                              <CheckSquare className="w-4.5 h-4.5" />
-                            </button>
-
+                            {p.household_id && (
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/domicilio/${p.household_id}`);
+                                }}
+                                className="p-2 rounded-xl text-slate-400 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-all border border-transparent hover:border-teal-200 dark:hover:border-teal-900/40"
+                                title="Ver Domicílio na Tela"
+                              >
+                                <Home className="w-4 h-4" />
+                              </button>
+                            )}
                             <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 group-hover:text-teal-600 transition-colors">
                               <ChevronRight className="w-5 h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
                             </div>
@@ -579,20 +579,20 @@ export function PatientList({ user }: { user: AppUser | null }) {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button 
-                        onClick={(e) => handleToggleAgenda(p, e)}
-                        className={`p-2 rounded-lg transition-all ${
-                          dailyAgenda.some(item => item.id === p.id)
-                            ? 'text-teal-600 bg-teal-50 dark:bg-teal-950/30'
-                            : 'text-text-muted hover:text-teal-600 bg-slate-50 dark:bg-slate-800/40 hover:bg-teal-50'
-                        }`}
-                        title={dailyAgenda.some(item => item.id === p.id) ? "Remover do Roteiro do Dia" : "Adicionar ao Roteiro do Dia"}
-                      >
-                        <CheckSquare className="w-4 h-4" />
-                      </button>
-
-                      <ChevronRight className="w-4 h-4 text-slate-300" />
-                    </div>
+                        {p.household_id && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/domicilio/${p.household_id}`);
+                            }}
+                            className="p-2 rounded-xl text-slate-400 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-all border border-transparent hover:border-teal-200 dark:hover:border-teal-900/40"
+                            title="Ver Domicílio na Tela"
+                          >
+                            <Home className="w-4 h-4" />
+                          </button>
+                        )}
+                        <ChevronRight className="w-4 h-4 text-slate-300" />
+                      </div>
                   </div>
 
                   <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">

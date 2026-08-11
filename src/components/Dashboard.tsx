@@ -96,7 +96,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
     return [...allPatients]
       .filter(p => p.created_at)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 4);
+      .slice(0, 5);
   }, [allPatients]);
 
   const chartData = weeklyChartData;
@@ -285,129 +285,13 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         ))}
       </div>
 
-      {/* 3. Row 1: Planejamento e Acompanhamento (Calendário, Roteiro, Prioritários) */}
+      {/* 3. Planejamento, Acompanhamento e Últimos Cadastros (3 Colunas Lado a Lado) */}
       <div className="grid grid-cols-12 gap-6 items-stretch">
-        {/* Calendário de Pendências */}
+        {/* Calendário de Visitas Realizadas */}
         <div className="col-span-12 lg:col-span-4">
           <div className="bg-bg-secondary rounded-[32px] p-3 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
             <div className="flex-1 overflow-auto">
               <PendingCalendar patients={allPatients} />
-            </div>
-          </div>
-        </div>
-
-        {/* Roteiro de Hoje (Checklist) */}
-        <div className="col-span-12 lg:col-span-4">
-          <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
-            <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800 shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400">
-                  <CheckSquare className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Roteiro de Hoje</h3>
-                  <p className="text-[10px] text-text-secondary font-medium">Lista de visitas do dia</p>
-                </div>
-              </div>
-              <span className="text-[10px] font-bold bg-teal-50 text-teal-600 dark:bg-teal-950/30 dark:text-teal-400 px-2.5 py-0.5 rounded-full border border-teal-100 dark:border-teal-900/30 shrink-0">
-                {dailyAgenda.filter(i => i.done).length}/{dailyAgenda.length}
-              </span>
-            </div>
-
-            {/* Progress bar */}
-            {dailyAgenda.length > 0 && (
-              <div className="mb-3 shrink-0 bg-bg-primary/50 dark:bg-slate-800/10 p-2 rounded-xl border border-border/60">
-                <div className="flex justify-between items-center text-[10px] font-bold text-text-secondary mb-1">
-                  <span className="uppercase tracking-wider">Progresso das Visitas</span>
-                  <span className="text-teal-600 dark:text-teal-400">{Math.round((dailyAgenda.filter(i => i.done).length / dailyAgenda.length) * 100)}%</span>
-                </div>
-                <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-teal-500 rounded-full transition-all duration-500" 
-                    style={{ width: `${Math.round((dailyAgenda.filter(i => i.done).length / dailyAgenda.length) * 100)}%` }} 
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-              {dailyAgenda.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                  <div className="w-12 h-12 rounded-full bg-teal-50 dark:bg-teal-950/20 flex items-center justify-center text-teal-600 dark:text-teal-400 mb-3 shrink-0">
-                    <MapPin className="w-6 h-6 animate-pulse" />
-                  </div>
-                  <p className="text-[12px] font-black text-text-primary uppercase tracking-tight">Roteiro de Campo Vazio</p>
-                  <p className="text-[10px] text-text-muted mt-1 max-w-[200px] leading-relaxed">
-                    Adicione visitas ao seu roteiro através da lista de cidadãos para começar o dia!
-                  </p>
-                  <button 
-                    onClick={() => navigate('/pacientes')} 
-                    className="mt-4 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-[11px] font-bold shadow-md shadow-teal-600/10 active:scale-98 transition-all shrink-0"
-                  >
-                    Buscar Cidadãos
-                  </button>
-                </div>
-              ) : (
-                dailyAgenda.map((item) => {
-                  const patient = allPatients.find(p => p.id === item.id);
-                  const primaryCategory = patient?.categories?.[0] || 'Outros';
-                  const address = patient?.address;
-                  
-                  const categoryKey = primaryCategory.toLowerCase().includes('criança') ? 'criancas' :
-                                     primaryCategory.toLowerCase().includes('gestante') ? 'gestantes' :
-                                     primaryCategory.toLowerCase().includes('idoso') ? 'idosos' :
-                                     primaryCategory.toLowerCase().includes('hipertenso') ? 'hipertensos' :
-                                     primaryCategory.toLowerCase().includes('diabético') || primaryCategory.toLowerCase().includes('diabetico') ? 'diabeticos' :
-                                     'outros';
-                  const categoryConfig = (UI_CONFIG.categorias as any)[categoryKey] || UI_CONFIG.categorias.outros;
-
-                  return (
-                    <motion.div 
-                      layout
-                      key={item.id}
-                      className="flex flex-col gap-1 p-2.5 bg-bg-primary/40 dark:bg-slate-800/10 hover:bg-bg-primary dark:hover:bg-slate-800/30 rounded-2xl border border-border/60 transition-all group"
-                    >
-                      <div className="flex items-center justify-between min-w-0">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <button
-                            onClick={() => handleToggleAgenda(item.id)}
-                            className={`w-4 h-4 rounded-lg flex items-center justify-center border transition-all shrink-0 ${
-                              item.done 
-                                ? 'bg-teal-500 border-teal-500 text-white' 
-                                : 'border-slate-300 dark:border-slate-700 hover:border-teal-500'
-                            }`}
-                          >
-                            {item.done && <Check className="w-3 h-3 stroke-[3]" />}
-                          </button>
-                          <span className={`text-[12px] font-black truncate uppercase tracking-tight ${
-                            item.done 
-                              ? 'line-through text-text-muted dark:text-text-secondary/40 font-bold' 
-                              : 'text-text-primary'
-                          }`}>
-                            {item.name}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveFromAgenda(item.id)}
-                          className="p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-500 text-text-muted transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 shrink-0"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                      <div className="flex items-center justify-between pl-6.5">
-                        <span className="text-[8px] font-extrabold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0" style={{ backgroundColor: categoryConfig.primary, color: '#fff' }}>
-                          {primaryCategory}
-                        </span>
-                        {address && (
-                          <span className="text-[9px] font-bold text-text-muted truncate max-w-[150px] uppercase text-right ml-2">
-                            {address}
-                          </span>
-                        )}
-                      </div>
-                    </motion.div>
-                  );
-                })
-              )}
             </div>
           </div>
         </div>
@@ -557,59 +441,6 @@ export function Dashboard({ user }: { user: AppUser | null }) {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* 4. Row 2: Histórico e Análises (Últimos Visitados, Gráfico de Linha, Rosca Demográfica) */}
-      <div className="grid grid-cols-12 gap-6 items-stretch">
-        {/* Últimos Pacientes Visitados */}
-        <div className="col-span-12 lg:col-span-4">
-          <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
-            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100 dark:border-slate-800 shrink-0">
-              <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
-                <Users className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Últimos Visitados</h3>
-                <p className="text-[10px] text-text-secondary font-medium">Histórico recente de campo</p>
-              </div>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-              {recentPatients.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                  <p className="text-xs text-text-muted">Nenhum paciente visitado recentemente.</p>
-                </div>
-              ) : (
-                recentPatients.slice(0, 4).map((p, i) => {
-                  const realVisitAt = getPatientLastVisitAt(p);
-                  const isAtrazo = !(realVisitAt && new Date(realVisitAt) > thirtyDaysAgo);
-                  return (
-                    <div 
-                      key={i} 
-                      className="flex items-center justify-between p-2.5 rounded-2xl bg-bg-primary/40 dark:bg-slate-800/10 hover:bg-bg-primary dark:hover:bg-slate-800/30 border border-border/60 transition-colors cursor-pointer group" 
-                      onClick={() => navigate(`/domicilio/${p.household_id || ''}`)}
-                    >
-                      <div className="min-w-0">
-                        <p className="text-[12px] font-black text-text-primary truncate uppercase leading-none tracking-tight">{p.name}</p>
-                        <p className="text-[9px] text-text-muted mt-1 font-bold truncate">
-                          CNS {p.cns || 'S/ CNS'} {p.birth_date && ` • ${calculateAge(p.birth_date)} anos`}
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
-                        <span className="text-[9px] font-bold text-text-secondary">{realVisitAt ? formatDate(realVisitAt) : '--'}</span>
-                        <span className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide border ${!isAtrazo ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30' : 'bg-orange-50 text-orange-600 border-orange-100 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30'}`}>
-                          {!isAtrazo ? 'Em dia' : 'Atraso'}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-            
-
-          </div>
-        </div>
 
         {/* Últimos Cadastros */}
         <div className="col-span-12 lg:col-span-4">
@@ -651,76 +482,6 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                 ))
               )}
             </div>
-          </div>
-        </div>
-
-        {/* Distribuição por Categoria (Donut) */}
-        <div className="col-span-12 lg:col-span-4">
-          <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
-            <div className="shrink-0 mb-3 pb-1">
-              <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Cidadãos por Categoria</h3>
-              <p className="text-[10px] text-text-secondary font-medium">Perfil clínico da microárea</p>
-            </div>
-            {distribuicaoData.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <p className="text-xs text-text-muted">Sem dados cadastrados.</p>
-              </div>
-            ) : (
-              <div className="flex-1 flex flex-row items-center justify-between gap-3 min-h-0">
-                <div className="relative w-[130px] h-[130px] shrink-0 flex items-center justify-center">
-                  <PieChart width={130} height={130}>
-                    <Pie
-                      data={distribuicaoData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={40}
-                      outerRadius={56}
-                      paddingAngle={2.5}
-                      dataKey="value"
-                    >
-                      {distribuicaoData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'rgba(255, 255, 255, 0.96)', 
-                        border: '1px solid #e2e8f0', 
-                        borderRadius: '14px',
-                        fontSize: '11px',
-                        fontWeight: 'bold'
-                      }}
-                    />
-                  </PieChart>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-                    <span className="text-[18px] font-black text-text-primary leading-none">{stats.totalPatients}</span>
-                    <span className="text-[8px] text-text-muted font-black uppercase tracking-wider mt-0.5">Total</span>
-                  </div>
-                </div>
-                <div className="flex-1 grid grid-cols-2 gap-x-2.5 gap-y-1.5 max-h-[230px] overflow-y-auto pr-1 custom-scrollbar">
-                  {distribuicaoData.map((d, index) => {
-                    const pct = stats.totalPatients > 0 ? ((d.value / stats.totalPatients) * 100).toFixed(0) : '0';
-                    return (
-                      <div key={index} className="flex flex-col gap-0.5 p-1.5 rounded-xl hover:bg-bg-primary/50 dark:hover:bg-slate-800/10 transition-colors min-w-0">
-                        <div className="flex items-center justify-between text-[9px] font-bold">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                            <span className="text-text-secondary truncate uppercase leading-none">{d.name}</span>
-                          </div>
-                          <span className="text-text-primary font-black shrink-0 ml-1">{d.value}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <div className="flex-1 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: d.color }} />
-                          </div>
-                          <span className="text-[8px] text-text-muted font-extrabold leading-none shrink-0">{pct}%</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

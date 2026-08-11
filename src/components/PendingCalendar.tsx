@@ -13,6 +13,72 @@ interface PendingCalendarProps {
   patients: any[];
 }
 
+function getPatientAllVisitDates(p: any): Date[] {
+  if (!p) return [];
+  const dates: Date[] = [];
+
+  const addValidDate = (dStr: any) => {
+    if (!dStr) return;
+    const d = new Date(dStr);
+    if (!isNaN(d.getTime())) {
+      dates.push(d);
+    }
+  };
+
+  if (p.last_visit_at) {
+    addValidDate(p.last_visit_at);
+  }
+
+  const clinical = p.clinical_data || {};
+
+  if (Array.isArray(clinical.visitasGerais)) {
+    clinical.visitasGerais.forEach((v: any) => {
+      if (typeof v === 'string') addValidDate(v);
+      else if (v && typeof v === 'object') addValidDate(v.date);
+    });
+  }
+
+  if (clinical.crianca) {
+    if (Array.isArray(clinical.crianca.visitasAcs)) {
+      clinical.crianca.visitasAcs.forEach((d: any) => addValidDate(d));
+    }
+    addValidDate(clinical.crianca.visita30dias);
+    addValidDate(clinical.crianca.visita6meses);
+  }
+
+  if (clinical.gestante) {
+    if (Array.isArray(clinical.gestante.visitasAcs)) {
+      clinical.gestante.visitasAcs.forEach((d: any) => addValidDate(d));
+    }
+    addValidDate(clinical.gestante.puerperioVisita);
+  }
+
+  const categoriesWithDiabetesAndHypertension = ['gestante', 'acamadodomiciliado', 'adulto', 'idoso', 'chronic'];
+  categoriesWithDiabetesAndHypertension.forEach(cat => {
+    const section = clinical[cat];
+    if (section) {
+      if (Array.isArray(section.visitasAcsDiabetes)) {
+        section.visitasAcsDiabetes.forEach((d: any) => addValidDate(d));
+      }
+      if (section.diabetesData) {
+        addValidDate(section.diabetesData.visitaAcs1);
+        addValidDate(section.diabetesData.visitaAcs2);
+      }
+      if (section.hipertensaoData) {
+        addValidDate(section.hipertensaoData.visitaAcs1);
+        addValidDate(section.hipertensaoData.visitaAcs2);
+      }
+    }
+  });
+
+  if (clinical.idoso) {
+    addValidDate(clinical.idoso.visitaAcs1);
+    addValidDate(clinical.idoso.visitaAcs2);
+  }
+
+  return dates;
+}
+
 export const PendingCalendar: React.FC<PendingCalendarProps> = ({ patients }) => {
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = React.useState(new Date());
@@ -20,26 +86,20 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ patients }) =>
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [modalPatients, setModalPatients] = React.useState<any[]>([]);
   
-  const getPendingForDate = (date: Date) => {
+  const getVisitedForDate = (date: Date) => {
     return patients.filter(p => {
-      const realLastVisitStr = getPatientLastVisitAt(p);
-      const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
-      if (!lastVisit) return false;
-      
-      const dueDate = new Date(lastVisit);
-      dueDate.setDate(dueDate.getDate() + 30);
-      
-      return isSameDay(date, dueDate);
+      const visitDates = getPatientAllVisitDates(p);
+      return visitDates.some(vDate => isSameDay(date, vDate));
     });
   };
 
   const getTilesContent = ({ date, view }: { date: Date; view: string }) => {
     if (view !== 'month') return null;
 
-    const pendingOnDay = getPendingForDate(date);
-    if (pendingOnDay.length === 0) return null;
+    const visitedOnDay = getVisitedForDate(date);
+    if (visitedOnDay.length === 0) return null;
 
-    const categories: string[] = Array.from(new Set<string>(pendingOnDay.flatMap(p => (p.categories || []) as string[])));
+    const categories: string[] = Array.from(new Set<string>(visitedOnDay.flatMap(p => (p.categories || []) as string[])));
     
     const dots = [
       { key: 'Criança', color: CATEGORY_PALETTE.crianca.primary },
@@ -76,9 +136,9 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ patients }) =>
   };
 
   const handleDateClick = (date: Date) => {
-    const pending = getPendingForDate(date);
-    if (pending.length > 0) {
-      setModalPatients(pending);
+    const visited = getVisitedForDate(date);
+    if (visited.length > 0) {
+      setModalPatients(visited);
       setSelectedDate(date);
       setIsModalOpen(true);
     } else {
@@ -195,7 +255,7 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ patients }) =>
           <div className="w-7 h-7 rounded-lg bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0">
             <CalendarIcon className="w-4 h-4" />
           </div>
-          <h3 className="text-xs font-black text-text-primary uppercase tracking-tight truncate">Pendências</h3>
+          <h3 className="text-xs font-black text-text-primary uppercase tracking-tight truncate">Visitas Realizadas</h3>
         </div>
         
         <div className="flex items-center gap-1 bg-bg-primary/50 dark:bg-slate-800/20 rounded-xl p-0.5 border border-border/60 shrink-0">
@@ -275,47 +335,28 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ patients }) =>
                 {modalPatients.map((p, idx) => (
                   <div 
                     key={idx}
-                    className="p-3 rounded-xl border border-border bg-bg-secondary transition-all"
+                    className="p-3 rounded-xl border border-border bg-bg-secondary transition-all flex flex-col gap-0.5"
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <button
-                        onClick={() => {
-                          navigate(`/editar-paciente/${p.id}`);
-                          setIsModalOpen(false);
-                        }}
-                        className="text-[13px] font-black text-teal-600 dark:text-teal-450 hover:text-teal-700 dark:hover:text-teal-300 hover:underline transition-colors text-left truncate max-w-[190px]"
-                        title="Acessar perfil do paciente"
-                      >
-                        {p.name}
-                      </button>
-                      <div className="flex gap-1">
-                        {p.categories?.slice(0, 1).map((cat: string) => {
-                          const categoryKey = cat.toLowerCase().includes('criança') ? 'criancas' :
-                                             cat.toLowerCase().includes('gestante') ? 'gestantes' :
-                                             cat.toLowerCase().includes('idoso') ? 'idosos' :
-                                             cat.toLowerCase().includes('hipertenso') ? 'hipertensos' :
-                                             cat.toLowerCase().includes('diabético') || cat.toLowerCase().includes('diabetico') ? 'diabeticos' :
-                                             'outros';
-                          const config = (UI_CONFIG.categorias as any)[categoryKey] || UI_CONFIG.categorias.outros;
-                          return (
-                            <span key={cat} className="text-[8px] font-black px-1.5 py-0.5 rounded uppercase" style={{ backgroundColor: config.primary, color: '#fff' }}>
-                              {cat}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-text-muted">
-                      <MapPin className="w-3 h-3" />
-                      <span className="text-[10px] font-bold">{p.address || 'Endereço não informado'}</span>
-                    </div>
+                    <button
+                      onClick={() => {
+                        navigate(`/editar-paciente/${p.id}`);
+                        setIsModalOpen(false);
+                      }}
+                      className="text-[13px] font-black text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 hover:underline transition-colors text-left truncate uppercase"
+                      title="Acessar perfil do paciente"
+                    >
+                      {p.name}
+                    </button>
+                    <p className="text-[11px] font-bold text-text-secondary">
+                      SUS: {p.cns || 'Não informado'}
+                    </p>
                   </div>
                 ))}
               </div>
 
               <div className="p-3 bg-bg-primary border-t border-border text-center">
                  <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
-                   {modalPatients.length} visitas previstas
+                   {modalPatients.length} {modalPatients.length === 1 ? 'visita realizada' : 'visitas realizadas'}
                  </p>
               </div>
             </motion.div>
