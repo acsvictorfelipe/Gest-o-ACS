@@ -1,12 +1,11 @@
 {
-  "id": "gestao-acs-pwa",
+  "id": "/",
   "name": "Gestão ACS - Prontuário Digital",
   "short_name": "Gestão ACS",
-  "description": "Aplicativo oficial de acompanhamento clínico e gestão para Agentes Comunitários de Saúde",
+  "description": "Aplicativo de gestão para Agentes Comunitários de Saúde",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait-primary",
   "background_color": "#14B8A6",
   "theme_color": "#14B8A6",
@@ -38,22 +37,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Novo Cadastro",
-      "short_name": "Novo",
-      "description": "Cadastrar novo cidadão",
-      "url": "/novo-cadastro",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Lista de Pacientes",
-      "short_name": "Pacientes",
-      "description": "Ver todos os pacientes da microárea",
-      "url": "/pacientes",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

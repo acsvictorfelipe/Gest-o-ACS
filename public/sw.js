@@ -24,9 +24,13 @@ const NEVER_CACHE_PATTERNS = [
 // Install Event
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
+    caches.open(CACHE_NAME).then(async (cache) => {
       console.log('[Service Worker] Pre-caching offline static shell');
-      return cache.addAll(ASSETS_TO_CACHE);
+      await Promise.allSettled(
+        ASSETS_TO_CACHE.map((url) =>
+          cache.add(url).catch((err) => console.warn('[Service Worker] Aviso ao salvar no cache:', url, err))
+        )
+      );
     }).then(() => self.skipWaiting())
   );
 });
