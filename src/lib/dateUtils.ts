@@ -278,8 +278,54 @@ export function getPatientLastVisitAt(p: any): string | null {
   return latestDate ? latestDate.toISOString() : null;
 }
 
-export function isVisitLate(lastVisitAt: string | null | undefined): boolean {
+export function getPatientVisitInterval(p: any): number {
+  if (!p) return 30; // Padrão: 30 dias
+
+  const categories = p.categories || [];
+  const clinical = p.clinical_data || {};
+
+  const isGestante = categories.includes('Gestante');
+  const isAcamado = categories.includes('AcamadoDomiciliado') || categories.includes('Acamado / Domiciliado');
+  const isSaudeMental = categories.includes('SaudeMental') || categories.includes('Saúde Mental');
+
+  const isDiabetico = clinical.chronic?.diabetes === 'Sim' || 
+                      clinical.gestante?.diabetes === 'Sim' || 
+                      clinical.acamadodomiciliado?.diabetes === 'Sim' || 
+                      clinical.adulto?.diabetes === 'Sim' || 
+                      clinical.idoso?.diabetes === 'Sim';
+
+  const isHipertenso = clinical.chronic?.hipertensao === 'Sim' || 
+                       clinical.gestante?.hipertensao === 'Sim' || 
+                       clinical.gestante?.pressaoAlta === 'Sim' || 
+                       clinical.acamadodomiciliado?.hipertensao === 'Sim' || 
+                       clinical.acamadodomiciliado?.pressaoAlta === 'Sim' || 
+                       clinical.adulto?.hipertensao === 'Sim' || 
+                       clinical.adulto?.pressaoAlta === 'Sim' || 
+                       clinical.idoso?.hipertensao === 'Sim' || 
+                       clinical.idoso?.pressaoAlta === 'Sim';
+
+  // Verifica idade de crianças menores de 2 anos (24 meses)
+  const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 999;
+  const isChildUnder2 = categories.includes('Criança') && ageInMonths <= 24;
+
+  // Grupos Prioritários / Alto Risco -> visita a cada 30 dias (mensal)
+  if (isGestante || isAcamado || isSaudeMental || isDiabetico || isHipertenso || isChildUnder2) {
+    return 30;
+  }
+
+  // Idosos sem outras comorbidades/flags prioritárias -> visita a cada 60 dias (bimestral)
+  if (categories.includes('Idoso') || categories.includes('Idosos')) {
+    return 60;
+  }
+
+  // Cidadãos saudáveis e população geral (adultos saudáveis, crianças maiores de 2 anos, etc.) -> visita a cada 90 dias (trimestral)
+  return 90;
+}
+
+export function isVisitLate(lastVisitAt: string | null | undefined, patient?: any): boolean {
   if (!lastVisitAt) return true;
+  
+  const allowedInterval = getPatientVisitInterval(patient);
   
   try {
     const cleanDateStr = lastVisitAt.includes('T') ? lastVisitAt.split('T')[0] : lastVisitAt;
@@ -290,7 +336,7 @@ export function isVisitLate(lastVisitAt: string | null | undefined): boolean {
     const month = parseInt(parts[1]) - 1;
     const day = parseInt(parts[2]);
     
-    // Create date at noon to be timezone independent
+    // Cria data ao meio-dia para independência de fuso horário
     const lastVisitDate = new Date(year, month, day, 12, 0, 0);
     const today = new Date();
     const todayNoon = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 0, 0);
@@ -298,12 +344,13 @@ export function isVisitLate(lastVisitAt: string | null | undefined): boolean {
     const diffTime = todayNoon.getTime() - lastVisitDate.getTime();
     const diffDays = diffTime / (1000 * 60 * 60 * 24);
     
-    return diffDays > 30;
+    return diffDays > allowedInterval;
   } catch (e) {
     console.warn('Error parsing last visit date in isVisitLate:', e);
     return true;
   }
 }
+
 
 /**
  * Explicit, observable, and testable operation to heal/sync a patient's last_visit_at

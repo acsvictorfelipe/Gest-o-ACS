@@ -12,10 +12,9 @@ import {
   ShieldAlert,
   Users
 } from 'lucide-react';
-import { getAgeInMonths, VACCINE_SCHEDULE, getAgeNumber, getPatientLastVisitAt } from '../lib/dateUtils';
+import { getAgeInMonths, VACCINE_SCHEDULE, getAgeNumber, getPatientLastVisitAt, isVisitLate } from '../lib/dateUtils';
 import { generateUUID } from '../lib/utils';
 import { UI_CONFIG } from '../constants';
-import { useDashboardAgenda } from './useDashboardAgenda';
 import { useDashboardWeeklyChart } from './useDashboardWeeklyChart';
 import { useDashboardRequests } from './useDashboardRequests';
 import { isAdminRole, isGestorRole } from '../lib/roleUtils';
@@ -59,17 +58,19 @@ export function useDashboard(user: any) {
       const newHCount = newHRes.count || 0;
 
       let patientsData: any[] = await fetchTableWithFilters<any>('patients', user);
+      let allVisitsData: any[] | null = null;
 
       // HEALING LOGIC: SINCERELY UPDATE LATENCY AND RECENT VISITS
       try {
-        let visitsDataQuery = supabase.from('visits').select('patient_id, date, type');
+        let visitsDataQuery = supabase.from('visits').select('id, patient_id, date, type, summary');
         if (isGestorRole(user.role)) {
           visitsDataQuery = visitsDataQuery.eq('area_color', user.color);
         } else if (!isAdminRole(user.role)) {
           visitsDataQuery = visitsDataQuery.eq('agent_id', user.id);
         }
         
-        const { data: allVisitsData } = await visitsDataQuery;
+        const { data } = await visitsDataQuery;
+        allVisitsData = data;
         
         const visitsMap: Record<string, string> = {};
         if (allVisitsData) {
@@ -116,7 +117,7 @@ export function useDashboard(user: any) {
         console.error("Error healing patient visit dates:", syncErr);
       }
 
-      return { allPatients: patientsData, hCount, newHCount };
+      return { allPatients: patientsData, hCount, newHCount, visits: allVisitsData || [] };
     },
     enabled: !!user && (!!user.microarea || isAdminRole(user.role) || isGestorRole(user.role)),
   });
@@ -136,14 +137,12 @@ export function useDashboard(user: any) {
     queryClient.invalidateQueries({ queryKey: ['patientList'] });
   };
 
-  // Delegation hooks
-  const { dailyAgenda, handleAddToAgenda, handleRemoveFromAgenda, handleToggleAgenda } = 
-    useDashboardAgenda(user, allPatients, setAllPatients);
+  const visits = queryData?.visits || [];
 
   const { weeklyChartData, fetchWeeklyChart } = useDashboardWeeklyChart(user);
 
   const { visitRequests, handleUpdateVisitRequestStatus } = 
-    useDashboardRequests(user, setAllPatients, handleAddToAgenda);
+    useDashboardRequests(user, setAllPatients);
 
   const { stats, recentPatients } = React.useMemo(() => {
     const defaultStats = {
@@ -193,8 +192,7 @@ export function useDashboard(user: any) {
       const categories = p.categories || [];
 
       const realLastVisitStr = getPatientLastVisitAt(p);
-      const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
-      if (!lastVisit || lastVisit < thirtyDaysAgo) {
+      if (isVisitLate(realLastVisitStr, p)) {
         newStats.pendingVisits++;
       }
 
@@ -221,7 +219,7 @@ export function useDashboard(user: any) {
       if (p.birth_date && ageInMonths <= 6 && categories.includes('Criança')) {
         // If visita6meses was recorded in clinical form, don't count as alert
         if (!clinical.crianca?.visita6meses) {
-          const isAtrazo = !lastVisit || lastVisit < thirtyDaysAgo;
+          const isAtrazo = isVisitLate(realLastVisitStr, p);
           if (isAtrazo) {
             newStats.childVisitAlerts++;
           }
@@ -433,10 +431,7 @@ export function useDashboard(user: any) {
     recentPatients,
     weeklyChartData,
     loading,
-    dailyAgenda,
-    handleAddToAgenda,
-    handleRemoveFromAgenda,
-    handleToggleAgenda,
+    visits,
     statCards,
     distribuicaoData,
     getCategoryStyle,

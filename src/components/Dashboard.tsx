@@ -59,9 +59,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
     statCards,
     distribuicaoData,
     getAvatarStyle,
-    dailyAgenda,
-    handleRemoveFromAgenda,
-    handleToggleAgenda,
+    visits,
     visitRequests,
     handleUpdateVisitRequestStatus
   } = useDashboard(user);
@@ -144,10 +142,9 @@ export function Dashboard({ user }: { user: AppUser | null }) {
       )}
 
       {/* Coordinated Visit Requests Alerts for Agents */}
-      {visitRequests && visitRequests.filter(r => r.status === 'pending' || r.status === 'accepted').length > 0 && (
+      {visitRequests && visitRequests.filter(r => r.status === 'pending').length > 0 && (
         <div className="space-y-3">
-          {visitRequests.filter(r => r.status === 'pending' || r.status === 'accepted').map((req, i) => {
-            const isPending = req.status === 'pending';
+          {visitRequests.filter(r => r.status === 'pending').map((req, i) => {
             const priorityColors = {
               low: 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20',
               medium: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20',
@@ -208,40 +205,24 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                 </div>
 
                 <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 w-full sm:w-auto md:w-56 items-stretch md:items-end pt-2 md:pt-0">
-                  {isPending ? (
-                    <>
-                      <button
-                        onClick={() => handleUpdateVisitRequestStatus(req.id, 'accepted')}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-[11px] font-black shadow-md shadow-teal-600/10 active:scale-98 transition-all"
-                      >
-                        ✓ Aceitar & Incluir no Roteiro
-                      </button>
-                      <button
-                        onClick={() => {
-                          const note = prompt('Motivo da recusa/dispensa (opcional):');
-                          handleUpdateVisitRequestStatus(req.id, 'dismissed', note || '');
-                        }}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-transparent hover:bg-slate-500/10 text-text-secondary hover:text-text-primary rounded-xl text-[11px] font-black border border-border/80 transition-all"
-                      >
-                        Dispensar Alerta
-                      </button>
-                    </>
-                  ) : (
-                    <div className="space-y-2 w-full flex flex-col">
-                      <div className="bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 text-[10px] font-black uppercase tracking-wider text-center py-1.5 rounded-xl">
-                        ✓ Roteiro de Hoje Ativo
-                      </div>
-                      <button
-                        onClick={() => {
-                          const note = prompt('Relatório final / observações para o Gestor (opcional):');
-                          handleUpdateVisitRequestStatus(req.id, 'done', note || '');
-                        }}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-black shadow-md shadow-emerald-500/10 active:scale-98 transition-all"
-                      >
-                        ✓ Marcar Visita Concluída
-                      </button>
-                    </div>
-                  )}
+                  <button
+                    onClick={() => {
+                      const note = prompt('Relatório final / observações para o Gestor (opcional):');
+                      handleUpdateVisitRequestStatus(req.id, 'done', note || '');
+                    }}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-black shadow-md shadow-emerald-500/10 active:scale-98 transition-all"
+                  >
+                    ✓ Marcar Visita Concluída
+                  </button>
+                  <button
+                    onClick={() => {
+                      const note = prompt('Motivo da recusa/dispensa (opcional):');
+                      handleUpdateVisitRequestStatus(req.id, 'dismissed', note || '');
+                    }}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-transparent hover:bg-slate-500/10 text-text-secondary hover:text-text-primary rounded-xl text-[11px] font-black border border-border/80 transition-all"
+                  >
+                    Dispensar Alerta
+                  </button>
                 </div>
               </motion.div>
             );
@@ -252,176 +233,60 @@ export function Dashboard({ user }: { user: AppUser | null }) {
 
 
       {/* 2. Stat Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {statCards.map((stat, i) => (
           <motion.div
             key={stat.id}
-            initial={{ opacity: 0, y: 15 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
+            transition={{ delay: i * 0.06, type: 'spring', stiffness: 200, damping: 20 }}
             onClick={() => navigate(stat.id === 'domicilios' ? '/domicilios' : `/pacientes?filter=${stat.filter}`)}
-            className="bg-bg-secondary rounded-[24px] py-6 px-4 border border-border shadow-sm cursor-pointer group relative overflow-hidden flex flex-col transition-all hover:shadow-xl hover:-translate-y-1 h-full"
+            className="bg-bg-secondary rounded-[20px] p-4 border border-border shadow-sm cursor-pointer group relative overflow-hidden flex flex-col transition-all duration-300 hover:shadow-lg hover:-translate-y-1.5 hover:border-transparent h-full"
+            style={{ '--hover-shadow': `0 12px 32px ${stat.config.primary}22` } as any}
           >
-            <div className="absolute top-0 left-0 w-[5px] h-full" style={{ backgroundColor: stat.config.primary }} />
+            {/* Accent bar top */}
+            <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-[20px] opacity-80" style={{ background: `linear-gradient(90deg, ${stat.config.primary}, ${stat.config.primary}66)` }} />
+            {/* Subtle bg glow */}
+            <div className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full blur-2xl opacity-20 transition-opacity group-hover:opacity-40" style={{ backgroundColor: stat.config.primary }} />
 
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-lg transition-transform group-hover:scale-105" style={{ backgroundColor: stat.config.primary, color: '#fff' }}>
-                <stat.icon className="w-6 h-6" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider truncate leading-tight">{stat.label}</p>
-                <h4 className="text-[24px] font-black text-text-primary leading-none mt-1">{stat.value}</h4>
-              </div>
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-md mb-3 transition-transform group-hover:scale-110" style={{ background: `linear-gradient(135deg, ${stat.config.primary}dd, ${stat.config.primary})`, color: '#fff' }}>
+              <stat.icon className="w-5 h-5" />
             </div>
 
-            <div className="mt-auto space-y-1">
-              <p className="text-[11px] text-text-secondary font-medium opacity-60 truncate">{stat.sublabel}</p>
-              <div className={`flex items-center gap-1 text-[11px] font-bold ${stat.trend.direction === 'up' ? 'text-emerald-600' : 'text-red-500'}`}>
-                {stat.trend.direction === 'up' ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                {stat.trend.value}
+            <h4 className="text-[26px] font-black text-text-primary leading-none tabular-nums">{stat.value}</h4>
+            <p className="text-[10px] text-text-muted font-bold uppercase tracking-wide mt-1 truncate leading-tight">{stat.label}</p>
+
+            <div className="mt-3 pt-2.5 border-t border-border/60 flex items-center gap-1">
+              <div className={`flex items-center gap-1 text-[10px] font-black ${stat.trend.direction === 'up' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                {stat.trend.direction === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                <span>{stat.trend.value}</span>
               </div>
             </div>
           </motion.div>
         ))}
       </div>
 
-      {/* 3. Row 1: Planejamento e Acompanhamento (Calendário, Roteiro, Prioritários) */}
+      {/* 3. Row 1: Planejamento e Acompanhamento (Calendário, Prioritários) */}
       <div className="grid grid-cols-12 gap-6 items-stretch">
-        {/* Calendário de Pendências */}
-        <div className="col-span-12 lg:col-span-4">
+        {/* Calendário de Visitas Realizadas */}
+        <div className="col-span-12 lg:col-span-8">
           <div className="bg-bg-secondary rounded-[32px] p-3 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
             <div className="flex-1 overflow-auto">
-              <PendingCalendar patients={allPatients} />
-            </div>
-          </div>
-        </div>
-
-        {/* Roteiro de Hoje (Checklist) */}
-        <div className="col-span-12 lg:col-span-4">
-          <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
-            <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800 shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400">
-                  <CheckSquare className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Roteiro de Hoje</h3>
-                  <p className="text-[10px] text-text-secondary font-medium">Lista de visitas do dia</p>
-                </div>
-              </div>
-              <span className="text-[10px] font-bold bg-teal-50 text-teal-600 dark:bg-teal-950/30 dark:text-teal-400 px-2.5 py-0.5 rounded-full border border-teal-100 dark:border-teal-900/30 shrink-0">
-                {dailyAgenda.filter(i => i.done).length}/{dailyAgenda.length}
-              </span>
-            </div>
-
-            {/* Progress bar */}
-            {dailyAgenda.length > 0 && (
-              <div className="mb-3 shrink-0 bg-bg-primary/50 dark:bg-slate-800/10 p-2 rounded-xl border border-border/60">
-                <div className="flex justify-between items-center text-[10px] font-bold text-text-secondary mb-1">
-                  <span className="uppercase tracking-wider">Progresso das Visitas</span>
-                  <span className="text-teal-600 dark:text-teal-400">{Math.round((dailyAgenda.filter(i => i.done).length / dailyAgenda.length) * 100)}%</span>
-                </div>
-                <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-teal-500 rounded-full transition-all duration-500" 
-                    style={{ width: `${Math.round((dailyAgenda.filter(i => i.done).length / dailyAgenda.length) * 100)}%` }} 
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-              {dailyAgenda.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                  <div className="w-12 h-12 rounded-full bg-teal-50 dark:bg-teal-950/20 flex items-center justify-center text-teal-600 dark:text-teal-400 mb-3 shrink-0">
-                    <MapPin className="w-6 h-6 animate-pulse" />
-                  </div>
-                  <p className="text-[12px] font-black text-text-primary uppercase tracking-tight">Roteiro de Campo Vazio</p>
-                  <p className="text-[10px] text-text-muted mt-1 max-w-[200px] leading-relaxed">
-                    Adicione visitas ao seu roteiro através da lista de cidadãos para começar o dia!
-                  </p>
-                  <button 
-                    onClick={() => navigate('/pacientes')} 
-                    className="mt-4 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-[11px] font-bold shadow-md shadow-teal-600/10 active:scale-98 transition-all shrink-0"
-                  >
-                    Buscar Cidadãos
-                  </button>
-                </div>
-              ) : (
-                dailyAgenda.map((item) => {
-                  const patient = allPatients.find(p => p.id === item.id);
-                  const primaryCategory = patient?.categories?.[0] || 'Outros';
-                  const address = patient?.address;
-                  
-                  const categoryKey = primaryCategory.toLowerCase().includes('criança') ? 'criancas' :
-                                     primaryCategory.toLowerCase().includes('gestante') ? 'gestantes' :
-                                     primaryCategory.toLowerCase().includes('idoso') ? 'idosos' :
-                                     primaryCategory.toLowerCase().includes('hipertenso') ? 'hipertensos' :
-                                     primaryCategory.toLowerCase().includes('diabético') || primaryCategory.toLowerCase().includes('diabetico') ? 'diabeticos' :
-                                     'outros';
-                  const categoryConfig = (UI_CONFIG.categorias as any)[categoryKey] || UI_CONFIG.categorias.outros;
-
-                  return (
-                    <motion.div 
-                      layout
-                      key={item.id}
-                      className="flex flex-col gap-1 p-2.5 bg-bg-primary/40 dark:bg-slate-800/10 hover:bg-bg-primary dark:hover:bg-slate-800/30 rounded-2xl border border-border/60 transition-all group"
-                    >
-                      <div className="flex items-center justify-between min-w-0">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <button
-                            onClick={() => handleToggleAgenda(item.id)}
-                            className={`w-4 h-4 rounded-lg flex items-center justify-center border transition-all shrink-0 ${
-                              item.done 
-                                ? 'bg-teal-500 border-teal-500 text-white' 
-                                : 'border-slate-300 dark:border-slate-700 hover:border-teal-500'
-                            }`}
-                          >
-                            {item.done && <Check className="w-3 h-3 stroke-[3]" />}
-                          </button>
-                          <span className={`text-[12px] font-black truncate uppercase tracking-tight ${
-                            item.done 
-                              ? 'line-through text-text-muted dark:text-text-secondary/40 font-bold' 
-                              : 'text-text-primary'
-                          }`}>
-                            {item.name}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveFromAgenda(item.id)}
-                          className="p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-500 text-text-muted transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 shrink-0"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                      <div className="flex items-center justify-between pl-6.5">
-                        <span className="text-[8px] font-extrabold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0" style={{ backgroundColor: categoryConfig.primary, color: '#fff' }}>
-                          {primaryCategory}
-                        </span>
-                        {address && (
-                          <span className="text-[9px] font-bold text-text-muted truncate max-w-[150px] uppercase text-right ml-2">
-                            {address}
-                          </span>
-                        )}
-                      </div>
-                    </motion.div>
-                  );
-                })
-              )}
+              <PendingCalendar visits={visits} patients={allPatients} />
             </div>
           </div>
         </div>
 
         {/* Acompanhamento Prioritário */}
         <div className="col-span-12 lg:col-span-4">
-          <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
-            <div className="flex items-center gap-2.5 mb-3 pb-2 border-b border-slate-100 dark:border-slate-800 shrink-0">
-              <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-600 dark:text-red-400">
-                <ShieldAlert className="w-4 h-4" />
+          <div className="bg-bg-secondary rounded-[28px] p-5 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
+            <div className="flex items-center gap-3 mb-4 shrink-0">
+              <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white shadow-md shadow-red-500/25">
+                <ShieldAlert className="w-4.5 h-4.5" />
               </div>
               <div>
-                <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Acompanhamento Prioritário</h3>
-                <p className="text-[10px] text-text-secondary font-medium">Alertas de saúde ativos</p>
+                <h3 className="text-sm font-black text-text-primary tracking-tight">Acompanhamento Prioritário</h3>
+                <p className="text-[10px] text-text-muted font-semibold">Alertas de saúde ativos</p>
               </div>
             </div>
             <div className="space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
@@ -559,69 +424,24 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </div>
       </div>
 
-      {/* 4. Row 2: Histórico e Análises (Últimos Visitados, Gráfico de Linha, Rosca Demográfica) */}
+      {/* 4. Row 2: Histórico e Análises (Últimos Cadastros, Rosca Demográfica) */}
       <div className="grid grid-cols-12 gap-6 items-stretch">
-        {/* Últimos Pacientes Visitados */}
-        <div className="col-span-12 lg:col-span-4">
-          <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
-            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100 dark:border-slate-800 shrink-0">
-              <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
-                <Users className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Últimos Visitados</h3>
-                <p className="text-[10px] text-text-secondary font-medium">Histórico recente de campo</p>
-              </div>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-              {recentPatients.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                  <p className="text-xs text-text-muted">Nenhum paciente visitado recentemente.</p>
-                </div>
-              ) : (
-                recentPatients.slice(0, 4).map((p, i) => {
-                  const realVisitAt = getPatientLastVisitAt(p);
-                  const isAtrazo = !(realVisitAt && new Date(realVisitAt) > thirtyDaysAgo);
-                  return (
-                    <div 
-                      key={i} 
-                      className="flex items-center justify-between p-2.5 rounded-2xl bg-bg-primary/40 dark:bg-slate-800/10 hover:bg-bg-primary dark:hover:bg-slate-800/30 border border-border/60 transition-colors cursor-pointer group" 
-                      onClick={() => navigate(`/domicilio/${p.household_id || ''}`)}
-                    >
-                      <div className="min-w-0">
-                        <p className="text-[12px] font-black text-text-primary truncate uppercase leading-none tracking-tight">{p.name}</p>
-                        <p className="text-[9px] text-text-muted mt-1 font-bold truncate">
-                          CNS {p.cns || 'S/ CNS'} {p.birth_date && ` • ${calculateAge(p.birth_date)} anos`}
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
-                        <span className="text-[9px] font-bold text-text-secondary">{realVisitAt ? formatDate(realVisitAt) : '--'}</span>
-                        <span className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide border ${!isAtrazo ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30' : 'bg-orange-50 text-orange-600 border-orange-100 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30'}`}>
-                          {!isAtrazo ? 'Em dia' : 'Atraso'}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-            
-
-          </div>
-        </div>
-
         {/* Últimos Cadastros */}
-        <div className="col-span-12 lg:col-span-4">
-          <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
-            <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800 shrink-0">
-              <div>
-                <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Últimos Cadastros</h3>
-                <p className="text-[10px] text-text-secondary font-medium">Cidadãos adicionados recentemente</p>
+        <div className="col-span-12 lg:col-span-6">
+          <div className="bg-bg-secondary rounded-[28px] p-5 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
+            <div className="flex items-center justify-between mb-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/25">
+                  <Users className="w-4.5 h-4.5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-text-primary tracking-tight">Últimos Cadastros</h3>
+                  <p className="text-[10px] text-text-muted font-semibold">Cidadãos adicionados recentemente</p>
+                </div>
               </div>
               <div className="text-right">
-                <p className="text-[16px] font-black text-emerald-600 dark:text-emerald-400 leading-none">+{stats.newCidadaos}</p>
-                <p className="text-[8px] text-text-muted font-black uppercase tracking-wider mt-0.5">Este Mês</p>
+                <p className="text-[20px] font-black text-emerald-600 dark:text-emerald-400 leading-none">+{stats.newCidadaos}</p>
+                <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Este Mês</p>
               </div>
             </div>
             
@@ -632,22 +452,28 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                 </div>
               ) : (
                 lastRegisteredPatients.map((p, i) => (
-                  <div 
-                    key={i} 
-                    className="flex items-center justify-between p-2.5 rounded-2xl bg-bg-primary/40 dark:bg-slate-800/10 hover:bg-bg-primary dark:hover:bg-slate-800/30 border border-border/60 transition-colors cursor-pointer group" 
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="flex items-center gap-3 p-3 rounded-2xl bg-bg-primary/50 dark:bg-slate-800/20 hover:bg-bg-primary dark:hover:bg-slate-800/40 border border-border/50 transition-all duration-200 cursor-pointer group"
                     onClick={() => navigate(`/domicilio/${p.household_id || ''}`)}
                   >
-                    <div className="min-w-0">
-                      <p className="text-[12px] font-black text-text-primary truncate uppercase leading-none tracking-tight">{p.name}</p>
-                      <p className="text-[9px] text-text-muted mt-1 font-bold truncate">
-                        CNS {p.cns || 'S/ CNS'} {p.birth_date && ` • ${calculateAge(p.birth_date)} anos`}
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-xs shrink-0 shadow-sm bg-gradient-to-br from-teal-400 to-emerald-600">
+                      {p.name?.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-bold text-text-primary truncate leading-tight">{p.name}</p>
+                      <p className="text-[9px] text-text-muted mt-0.5 font-semibold truncate">
+                        {p.birth_date ? calculateAge(p.birth_date) : 'Idade não informada'}
                       </p>
                     </div>
-                    <div className="flex flex-col items-end shrink-0 ml-2">
-                      <span className="text-[9px] font-bold text-text-secondary">{p.created_at ? formatDate(p.created_at) : '--'}</span>
-                      <span className="text-[8px] text-teal-600 dark:text-teal-400 font-extrabold uppercase mt-0.5 tracking-wide">Novo</span>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className="text-[9px] font-semibold text-text-muted">{p.created_at ? formatDate(p.created_at) : '--'}</span>
+                      <span className="px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wide bg-teal-100 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400">✦ Novo</span>
                     </div>
-                  </div>
+                  </motion.div>
                 ))
               )}
             </div>
@@ -655,11 +481,16 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </div>
 
         {/* Distribuição por Categoria (Donut) */}
-        <div className="col-span-12 lg:col-span-4">
-          <div className="bg-bg-secondary rounded-[32px] p-4 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
-            <div className="shrink-0 mb-3 pb-1">
-              <h3 className="text-sm font-black text-text-primary uppercase tracking-tight">Cidadãos por Categoria</h3>
-              <p className="text-[10px] text-text-secondary font-medium">Perfil clínico da microárea</p>
+        <div className="col-span-12 lg:col-span-6">
+          <div className="bg-bg-secondary rounded-[28px] p-5 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
+            <div className="flex items-center gap-3 mb-4 shrink-0">
+              <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white shadow-md shadow-violet-500/25">
+                <Activity className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-text-primary tracking-tight">Cidadãos por Categoria</h3>
+                <p className="text-[10px] text-text-muted font-semibold">Perfil clínico da microárea</p>
+              </div>
             </div>
             {distribuicaoData.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center">

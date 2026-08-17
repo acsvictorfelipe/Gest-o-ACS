@@ -6,8 +6,7 @@ import { healPatientVisitDate } from '../lib/dateUtils';
 
 export function useDashboardRequests(
   user: any,
-  setAllPatients: React.Dispatch<React.SetStateAction<any[]>>,
-  handleAddToAgenda: (patientId: string) => void
+  setAllPatients: React.Dispatch<React.SetStateAction<any[]>>
 ) {
   const [visitRequests, setVisitRequests] = React.useState<any[]>([]);
   const [requestsRefreshTrigger, setRequestsRefreshTrigger] = React.useState(0);
@@ -37,11 +36,6 @@ export function useDashboardRequests(
 
     // 1. Optimistically update the visit requests list
     setVisitRequests(prev => prev.map(r => r.id === requestId ? { ...r, status } : r));
-
-    // 2. Optimistically add to agenda immediately if accepted
-    if (status === 'accepted' && req.patient_id) {
-      handleAddToAgenda(req.patient_id);
-    }
 
     // 3. Optimistically update last_visit_at in state if done
     let originalPatients: any[] | null = null;

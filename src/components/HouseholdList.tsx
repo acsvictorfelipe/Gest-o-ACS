@@ -14,7 +14,8 @@ import {
   Loader2,
   Trash2,
   AlertTriangle,
-  UserPlus
+  UserPlus,
+  Hash
 } from 'lucide-react';
 
 export function HouseholdList({ user }: { user: any }) {
@@ -23,6 +24,7 @@ export function HouseholdList({ user }: { user: any }) {
   const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [numberSearch, setNumberSearch] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [selectedStreet, setSelectedStreet] = useState<string | null>(null);
@@ -133,9 +135,13 @@ export function HouseholdList({ user }: { user: any }) {
   }, [households, user?.streets]);
 
   const filteredHouseholds = households.filter(h => {
-    const matchesSearch = h.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = !searchTerm ||
+      h.responsible_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       h.responsible_cns?.includes(searchTerm) ||
       h.address?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesNumber = !numberSearch.trim() ||
+      String(h.number || '').toLowerCase().includes(numberSearch.trim().toLowerCase());
     
     const isPlaceholder = h.responsible_name === 'Responsável Importado' || h.responsible_name === 'Responsável não cadastrado';
     
@@ -148,7 +154,7 @@ export function HouseholdList({ user }: { user: any }) {
     
     const matchesStreet = !selectedStreet || hStreet === selectedStreet.trim().toUpperCase();
     
-    return matchesSearch && !isPlaceholder && matchesStreet && isInConfig;
+    return matchesSearch && matchesNumber && !isPlaceholder && matchesStreet && isInConfig;
   });
 
   const [page, setPage] = useState(1);
@@ -156,7 +162,7 @@ export function HouseholdList({ user }: { user: any }) {
 
   useEffect(() => {
     setPage(1);
-  }, [searchTerm, selectedStreet]);
+  }, [searchTerm, numberSearch, selectedStreet]);
 
   const totalCount = filteredHouseholds.length;
   const totalPages = Math.ceil(totalCount / pageSize) || 1;
@@ -187,16 +193,29 @@ export function HouseholdList({ user }: { user: any }) {
         )}
       </div>
 
-      {/* Search Bar */}
-      <div className="relative group max-w-2xl">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" />
-        <input 
-          type="text" 
-          placeholder="Pesquisar por endereço ou responsável..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-lg py-2.5 pl-11 pr-6 shadow-sm focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium text-text-primary dark:text-white"
-        />
+      {/* Search Bar & Number Filter */}
+      <div className="flex flex-col sm:flex-row items-center gap-3 max-w-3xl">
+        <div className="relative group flex-1 w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" />
+          <input 
+            type="text" 
+            placeholder="Pesquisar por endereço ou responsável..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-lg py-2.5 pl-11 pr-6 shadow-sm focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium text-text-primary dark:text-white"
+          />
+        </div>
+
+        <div className="relative group w-full sm:w-48 shrink-0">
+          <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" />
+          <input 
+            type="text" 
+            placeholder="Nº da residência..."
+            value={numberSearch}
+            onChange={(e) => setNumberSearch(e.target.value)}
+            className="w-full bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-lg py-2.5 pl-11 pr-4 shadow-sm focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium text-text-primary dark:text-white"
+          />
+        </div>
       </div>
 
       {loading ? (

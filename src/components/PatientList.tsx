@@ -61,8 +61,6 @@ export function PatientList({ user }: { user: AppUser | null }) {
     householdsMap,
     selectedStreet,
     setSelectedStreet,
-    dailyAgenda,
-    handleToggleAgenda,
     getPatientAddress,
     isPatientSemDomicilio,
     availableStreets,
@@ -268,7 +266,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
                     .sort(sortPatientsByAddressNumber)
                     .map((p) => {
                       const realVisitAt = getPatientLastVisitAt(p);
-                      const isAtraso = isVisitLate(realVisitAt);
+                      const isAtraso = isVisitLate(realVisitAt, p);
                       return (
                         <tr 
                           key={p.id} 
@@ -458,18 +456,6 @@ export function PatientList({ user }: { user: AppUser | null }) {
                         </td>
                         <td className="px-8 py-5 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <button 
-                              onClick={(e) => handleToggleAgenda(p, e)}
-                              className={`p-2 rounded-lg transition-all ${
-                                dailyAgenda.some(item => item.id === p.id)
-                                  ? 'text-teal-600 bg-teal-50 dark:bg-teal-950/30'
-                                  : 'text-text-muted hover:text-teal-600 bg-slate-50 hover:bg-teal-50 dark:bg-slate-800/40 dark:hover:bg-slate-800'
-                              }`}
-                              title={dailyAgenda.some(item => item.id === p.id) ? "Remover do Roteiro do Dia" : "Adicionar ao Roteiro do Dia"}
-                            >
-                              <CheckSquare className="w-4.5 h-4.5" />
-                            </button>
-
                             <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 group-hover:text-teal-600 transition-colors">
                               <ChevronRight className="w-5 h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
                             </div>
@@ -523,7 +509,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
                           )}
                           {(() => {
                             const realVisitAtMobile = getPatientLastVisitAt(p);
-                            const isAtrasoMobile = isVisitLate(realVisitAtMobile);
+                            const isAtrasoMobile = isVisitLate(realVisitAtMobile, p);
                             return isAtrasoMobile ? (
                               <span 
                                 className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-50 dark:bg-red-950/20 text-red-500 border border-red-100 dark:border-red-900/30 text-[9px] font-extrabold shadow-sm shrink-0" 
@@ -575,24 +561,10 @@ export function PatientList({ user }: { user: AppUser | null }) {
                                 <span className="text-[11px] font-bold uppercase">WhatsApp</span>
                               </button>
                             )}
-                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button 
-                        onClick={(e) => handleToggleAgenda(p, e)}
-                        className={`p-2 rounded-lg transition-all ${
-                          dailyAgenda.some(item => item.id === p.id)
-                            ? 'text-teal-600 bg-teal-50 dark:bg-teal-950/30'
-                            : 'text-text-muted hover:text-teal-600 bg-slate-50 dark:bg-slate-800/40 hover:bg-teal-50'
-                        }`}
-                        title={dailyAgenda.some(item => item.id === p.id) ? "Remover do Roteiro do Dia" : "Adicionar ao Roteiro do Dia"}
-                      >
-                        <CheckSquare className="w-4 h-4" />
-                      </button>
-
-                      <ChevronRight className="w-4 h-4 text-slate-300" />
                     </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300" />
                   </div>
 
                   <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, Download, UserPlus, X, AlertCircle } from 'lucide-react';
+import { Home, Download, UserPlus, X, AlertCircle, Sparkles, Plus, Baby, Activity, CheckCircle2 } from 'lucide-react';
 import { formatDate } from '../../lib/dateUtils';
 
 interface PatientFormHeaderProps {
@@ -15,6 +15,7 @@ interface PatientFormHeaderProps {
   confirm: any;
   hasExpiredPrescription: boolean;
   errors: any;
+  onQuickVisit?: (category: 'geral' | 'gestante' | 'cronicos') => void;
 }
 
 export function PatientFormHeader({
@@ -28,7 +29,8 @@ export function PatientFormHeader({
   generatePatientPDF,
   confirm,
   hasExpiredPrescription,
-  errors
+  errors,
+  onQuickVisit
 }: PatientFormHeaderProps) {
   const navigate = useNavigate();
 
@@ -205,6 +207,61 @@ export function PatientFormHeader({
           </button>
         </div>
       </div>
+
+      {/* Barra de Ações Rápidas de Registro de Visitas por Categoria */}
+      {!isReadOnly && id && (
+        <div className="flex flex-wrap items-center gap-3 bg-teal-50/80 dark:bg-teal-950/30 border border-teal-200/80 dark:border-teal-900/50 p-4 rounded-xl shadow-sm">
+          <div className="flex items-center gap-2 mr-1">
+            <Sparkles className="w-4 h-4 text-teal-600 dark:text-teal-400 animate-pulse" />
+            <span className="text-xs font-bold uppercase tracking-wider text-teal-900 dark:text-teal-200">
+              Registrar Visita Hoje:
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onQuickVisit?.('geral')}
+            className="flex items-center gap-1.5 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold uppercase transition-all shadow-sm active:scale-95"
+            title="Registrar Visita ACS Padrão realizada hoje"
+          >
+            <Plus className="w-4 h-4" />
+            + Visita ACS (Geral)
+          </button>
+
+          {Array.isArray(formData.categories) && formData.categories.includes('Gestante') && (
+            <button
+              type="button"
+              onClick={() => onQuickVisit?.('gestante')}
+              className="flex items-center gap-1.5 px-3 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold uppercase transition-all shadow-sm active:scale-95"
+              title="Registrar Visita de Acompanhamento da Gestante"
+            >
+              <Baby className="w-4 h-4" />
+              + Visita Gestante (Pré-Natal)
+            </button>
+          )}
+
+          {(formData.clinicalData?.chronic?.hipertensao === 'Sim' ||
+            formData.clinicalData?.chronic?.diabetes === 'Sim' ||
+            (Array.isArray(formData.categories) && formData.categories.some((c: string) => ['Hipertenso', 'Diabético'].includes(c)))) && (
+            <button
+              type="button"
+              onClick={() => onQuickVisit?.('cronicos')}
+              className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase transition-all shadow-sm active:scale-95"
+              title="Registrar Visita e atualizar 1ª/2ª visita em Hipertensão/Diabetes"
+            >
+              <Activity className="w-4 h-4" />
+              + Visita ACS (Comorbidades)
+            </button>
+          )}
+
+          {formData.visitDate === new Date().toISOString().split('T')[0] && (
+            <span className="ml-auto text-[11px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 px-3 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4" />
+              Visita Preenchida! Salve o formulário
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

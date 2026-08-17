@@ -93,15 +93,65 @@ export function Layout({
         if (data) {
           const thirtyDaysAgo = new Date();
           thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+          const isDateRecent = (dateStr: any): boolean => {
+            if (!dateStr) return false;
+            try {
+              // Handle both ISO strings and plain date strings (YYYY-MM-DD)
+              const clean = typeof dateStr === 'string' && dateStr.includes('T')
+                ? dateStr.split('T')[0]
+                : String(dateStr);
+              const parts = clean.split('-');
+              if (parts.length !== 3) return false;
+              const d = new Date(
+                parseInt(parts[0]),
+                parseInt(parts[1]) - 1,
+                parseInt(parts[2]),
+                12, 0, 0
+              );
+              return !isNaN(d.getTime()) && d >= thirtyDaysAgo;
+            } catch {
+              return false;
+            }
+          };
+
           const pending = data.filter(p => {
+            // Only alert for babies under 6 months
             if (!p.categories?.includes('Criança') || !p.birth_date) return false;
             const age = getAgeInMonths(p.birth_date);
             if (age > 6) return false;
-            // If the 6-month visit was already recorded in the clinical form, do not alert
-            if (p.clinical_data?.crianca?.visita6meses) return false;
-            const realLastVisitStr = getPatientLastVisitAt(p);
-            const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
-            return !lastVisit || lastVisit < thirtyDaysAgo;
+
+            const crianca = p.clinical_data?.crianca || {};
+
+            // 1. If visita6meses is set AND it's recent → not pending
+            if (crianca.visita6meses && isDateRecent(crianca.visita6meses)) return false;
+
+            // 2. If visita30dias is set AND it's recent → not pending
+            if (crianca.visita30dias && isDateRecent(crianca.visita30dias)) return false;
+
+            // 3. Check any ACS visit in the last 30 days
+            if (Array.isArray(crianca.visitasAcs) && crianca.visitasAcs.some(isDateRecent)) return false;
+
+            // 4. Check any puericultura consultation (consultas) in the last 30 days
+            if (Array.isArray(crianca.consultas) && crianca.consultas.some(isDateRecent)) return false;
+
+            // 5. Check last_visit_at on the patient record (set when VisitaSection is saved)
+            if (p.last_visit_at && isDateRecent(p.last_visit_at)) return false;
+
+            // 6. Check general ACS visits (visitasGerais)
+            const visitasGerais = p.clinical_data?.visitasGerais || [];
+            if (Array.isArray(visitasGerais)) {
+              const hasRecentGeneral = visitasGerais.some((v: any) => {
+                if (typeof v === 'string') return isDateRecent(v);
+                if (v && typeof v === 'object') return isDateRecent(v.date);
+                return false;
+              });
+              if (hasRecentGeneral) return false;
+            }
+
+            // All checks failed — patient is genuinely pending
+            return true;
           });
           setCriticalAlerts(pending);
         }

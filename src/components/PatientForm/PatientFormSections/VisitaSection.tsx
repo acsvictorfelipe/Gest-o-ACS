@@ -27,19 +27,6 @@ export function VisitaSection({ formData, setFormData, isReadOnly }: VisitaSecti
 
   return (
     <div className="space-y-4">
-      {!isReadOnly && !formData.visitDate && (
-        <div className="flex justify-end">
-          <button 
-            type="button"
-            onClick={handleStartTodayVisit}
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold uppercase transition-all tracking-tight shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            + Registrar Visita ACS Realizada Hoje
-          </button>
-        </div>
-      )}
-
       {formData.visitDate && (
         <div className="p-3.5 sm:p-5 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/20 space-y-4 animate-in fade-in duration-300" id="secao-visita">
           <div className="flex items-center justify-between">

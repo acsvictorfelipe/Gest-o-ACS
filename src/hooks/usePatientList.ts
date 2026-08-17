@@ -7,7 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useToast } from '../components/Toast';
 import { safeStorage } from '../lib/safeStorage';
 import { isSameDay } from 'date-fns';
-import { getAgeInMonths, VACCINE_SCHEDULE, getPatientLastVisitAt } from '../lib/dateUtils';
+import { getAgeInMonths, VACCINE_SCHEDULE, getPatientLastVisitAt, isVisitLate, getPatientVisitInterval } from '../lib/dateUtils';
 import { AppUser, Patient, Household } from '../types';
 import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 
@@ -27,7 +27,6 @@ export function usePatientList(user: AppUser | null | undefined) {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [selectedStreet, setSelectedStreet] = useState('');
-  const [dailyAgenda, setDailyAgenda] = useState<DailyAgendaItem[]>([]);
 
   const { data: queryData, isLoading: loading } = useQuery({
     queryKey: ['patientList', user?.id, user?.role, user?.color, user?.microarea],
@@ -119,32 +118,7 @@ export function usePatientList(user: AppUser | null | undefined) {
   const patients = queryData?.patients || [];
   const householdsMap = queryData?.householdsMap || {};
 
-  useEffect(() => {
-    const saved = safeStorage.getItem('gestao_acs_daily_agenda');
-    if (saved) {
-      try {
-        const decrypted = encryptionService.decrypt(saved);
-        setDailyAgenda(JSON.parse(decrypted || saved));
-      } catch {
-        setDailyAgenda([]);
-      }
-    }
-  }, []);
 
-  const handleToggleAgenda = (patient: any, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const isSaved = dailyAgenda.some(item => item.id === patient.id);
-    let newAgenda;
-    if (isSaved) {
-      newAgenda = dailyAgenda.filter(item => item.id !== patient.id);
-    } else {
-      newAgenda = [...dailyAgenda, { id: patient.id, name: patient.name, done: false }];
-    }
-    setDailyAgenda(newAgenda);
-    const serialized = JSON.stringify(newAgenda);
-    const encrypted = encryptionService.encrypt(serialized);
-    safeStorage.setItem('gestao_acs_daily_agenda', encrypted);
-  };
 
   useEffect(() => {
     const filter = searchParams.get('filter');
@@ -260,16 +234,14 @@ export function usePatientList(user: AppUser | null | undefined) {
       const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
       if (!lastVisit) return false;
       const dueDate = new Date(lastVisit);
-      dueDate.setDate(dueDate.getDate() + 30);
+      const interval = getPatientVisitInterval(p);
+      dueDate.setDate(dueDate.getDate() + interval);
       return matchesSearch && isSameDay(targetDate, dueDate);
     }
 
     if (activeFilter === 'visitas_atrasadas') {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const realLastVisitStr = getPatientLastVisitAt(p);
-      const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
-      return matchesSearch && (!lastVisit || lastVisit < thirtyDaysAgo);
+      return matchesSearch && isVisitLate(realLastVisitStr, p);
     }
 
     if (activeFilter === 'pending_6m') {
@@ -278,11 +250,8 @@ export function usePatientList(user: AppUser | null | undefined) {
       const ageInMonths = getAgeInMonths(p.birth_date);
       if (ageInMonths > 6) return false;
       if (p.clinical_data?.crianca?.visita6meses) return false;
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const realLastVisitStr = getPatientLastVisitAt(p);
-      const lastVisit = realLastVisitStr ? new Date(realLastVisitStr) : null;
-      return matchesSearch && (!lastVisit || lastVisit < thirtyDaysAgo);
+      return matchesSearch && isVisitLate(realLastVisitStr, p);
     }
 
     if (activeFilter === 'vacinas_atrasadas') {
@@ -479,10 +448,8 @@ export function usePatientList(user: AppUser | null | undefined) {
     householdsMap,
     selectedStreet,
     setSelectedStreet,
-    dailyAgenda,
-    handleToggleAgenda,
-    getPatientAddress,
     isPatientSemDomicilio,
+    getPatientAddress,
     availableStreets,
     sortPatientsByAddressNumber,
     filteredPatients: paginatedPatients,

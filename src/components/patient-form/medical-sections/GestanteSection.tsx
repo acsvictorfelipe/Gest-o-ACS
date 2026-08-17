@@ -139,13 +139,6 @@ export function GestanteSection({
 
           <div className="flex items-center justify-between mt-2">
             <label className="block text-[10px] font-semibold uppercase text-text-muted">Visitas ACS na Gestação</label>
-            <button 
-              type="button"
-              onClick={() => addDateToList('gestante', 'visitasAcs')}
-              className="text-primary hover:text-primary/80 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {data.visitasAcs?.map((date: string, index: number) => (

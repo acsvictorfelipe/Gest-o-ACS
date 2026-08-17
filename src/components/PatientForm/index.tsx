@@ -633,6 +633,83 @@ export function PatientForm({ user }: { user: any }) {
     });
   };
 
+  const handleQuickVisit = (type: 'geral' | 'gestante' | 'cronicos') => {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    setFormData((prev: any) => {
+      const nextClinical = { ...(prev.clinicalData || {}) };
+      let summaryText = 'Visita de Rotina do ACS realizada hoje.';
+
+      // 1. Caso Gestante: adicione na lista de visitasAcs da gestante
+      if (type === 'gestante' || (type === 'geral' && prev.categories?.includes('Gestante'))) {
+        summaryText = 'Visita de Acompanhamento de Gestante (Pré-Natal)';
+        const gestanteObj = { ...(nextClinical.gestante || {}) };
+        const currentVisitas = Array.isArray(gestanteObj.visitasAcs) ? [...gestanteObj.visitasAcs] : [];
+        if (!currentVisitas.includes(todayStr)) {
+          currentVisitas.push(todayStr);
+        }
+        gestanteObj.visitasAcs = currentVisitas;
+        nextClinical.gestante = gestanteObj;
+      }
+
+      // 2. Caso Comorbidades (Hipertensão / Diabetes)
+      const hasDiabetes = prev.categories?.includes('Diabético') || nextClinical.chronic?.diabetes === 'Sim';
+      const hasHipertensao = prev.categories?.includes('Hipertenso') || nextClinical.chronic?.hipertensao === 'Sim';
+
+      if (type === 'cronicos' || (type === 'geral' && (hasDiabetes || hasHipertensao))) {
+        if (summaryText === 'Visita de Rotina do ACS realizada hoje.') {
+          summaryText = 'Visita de Acompanhamento de Condição Crônica';
+        }
+        const chronicObj = { ...(nextClinical.chronic || {}) };
+
+        if (hasDiabetes) {
+          const diabetesData = { ...(chronicObj.diabetesData || {}) };
+          if (!diabetesData.visitaAcs1) {
+            diabetesData.visitaAcs1 = todayStr;
+            const d180 = new Date(todayStr + 'T12:00:00');
+            d180.setDate(d180.getDate() + 180);
+            diabetesData.visitaAcs2 = d180.toISOString().split('T')[0];
+          } else {
+            diabetesData.visitaAcs2 = todayStr;
+          }
+          chronicObj.diabetesData = diabetesData;
+        }
+
+        if (hasHipertensao) {
+          const hipertensaoData = { ...(chronicObj.hipertensaoData || {}) };
+          if (!hipertensaoData.visitaAcs1) {
+            hipertensaoData.visitaAcs1 = todayStr;
+            const d180 = new Date(todayStr + 'T12:00:00');
+            d180.setDate(d180.getDate() + 180);
+            hipertensaoData.visitaAcs2 = d180.toISOString().split('T')[0];
+          } else {
+            hipertensaoData.visitaAcs2 = todayStr;
+          }
+          chronicObj.hipertensaoData = hipertensaoData;
+        }
+
+        nextClinical.chronic = chronicObj;
+      }
+
+      return {
+        ...prev,
+        visitDate: todayStr,
+        visitType: type === 'gestante' ? 'Acompanhamento' : type === 'cronicos' ? 'Acompanhamento' : 'Rotina',
+        visitSummary: prev.visitSummary || summaryText,
+        clinicalData: nextClinical
+      };
+    });
+
+    setIsDirty(true);
+    success(
+      type === 'gestante'
+        ? 'Visita de Gestante adicionada! A data de hoje foi somada nas visitas de pré-natal. Clique em "Salvar" para confirmar.'
+        : type === 'cronicos'
+        ? 'Visita de Comorbidades registrada! As datas em Hipertensão/Diabetes foram atualizadas. Clique em "Salvar" para confirmar.'
+        : 'Visita ACS registrada com a data de hoje! Clique em "Salvar" para confirmar.'
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
@@ -656,6 +733,7 @@ export function PatientForm({ user }: { user: any }) {
         confirm={confirm}
         hasExpiredPrescription={hasExpiredPrescription()}
         errors={methods.formState.errors}
+        onQuickVisit={handleQuickVisit}
       />
 
       <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-6">

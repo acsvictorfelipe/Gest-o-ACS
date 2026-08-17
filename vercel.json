@@ -1,10 +1,4 @@
 {
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ],
   "headers": [
     {
       "source": "/sw.js",
@@ -16,6 +10,10 @@
         {
           "key": "Service-Worker-Allowed",
           "value": "/"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/javascript; charset=utf-8"
         }
       ]
     },
@@ -31,6 +29,25 @@
           "value": "application/manifest+json; charset=utf-8"
         }
       ]
+    },
+    {
+      "source": "/(.*\\.png)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, immutable"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/((?!sw\\.js|manifest\\.json|icon|apple-touch|favicon|assets|api).*)",
+      "destination": "/index.html"
     }
   ]
 }
