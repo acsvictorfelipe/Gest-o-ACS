@@ -5,21 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
     <title>Gestão ACS</title>
 
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.json" />
+    <!-- PWA Manifest (ambos os formatos para máxima compatibilidade) -->
+    <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
 
     <!-- Tema e cores -->
     <meta name="theme-color" content="#14B8A6" />
-    <meta name="background-color" content="#ffffff" />
+    <meta name="background-color" content="#14B8A6" />
 
     <!-- Android PWA -->
     <meta name="mobile-web-app-capable" content="yes" />
 
     <!-- iOS / Apple -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Gestão ACS" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
     <!-- Windows / Edge PWA -->
     <meta name="application-name" content="Gestão ACS" />
@@ -27,9 +27,9 @@
     <meta name="msapplication-TileImage" content="/icon-192.png" />
     <meta name="msapplication-starturl" content="/" />
 
-    <!-- Ícone padrão -->
-    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <!-- Ícones -->
     <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="shortcut icon" href="/icon-192.png" />
 
     <!-- Google Fonts (preconnect para performance) -->
