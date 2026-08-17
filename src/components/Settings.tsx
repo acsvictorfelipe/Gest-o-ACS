@@ -14,10 +14,22 @@ import {
   Plus,
   Trash2,
   Pencil,
-  X
+  X,
+  Moon,
+  Sun
 } from 'lucide-react';
 
-export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate?: () => void }) {
+export function Settings({ 
+  user, 
+  onProfileUpdate,
+  theme,
+  toggleTheme
+}: { 
+  user: any, 
+  onProfileUpdate?: () => void,
+  theme?: 'light' | 'dark',
+  toggleTheme?: () => void
+}) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   
@@ -203,6 +215,41 @@ export function Settings({ user, onProfileUpdate }: { user: any, onProfileUpdate
                   ))}
                 </div>
               </div>
+            )}
+          </div>
+        </section>
+
+        {/* Aparência do Sistema */}
+        <section className="bg-bg-secondary dark:bg-slate-900 rounded-xl border border-border dark:border-slate-800 p-6 shadow-sm space-y-4">
+          <div className="flex items-center gap-2 text-text-primary dark:text-white">
+            <Palette className="w-4 h-4 text-teal-500" />
+            <h3 className="text-sm font-semibold uppercase tracking-tight">Aparência do Sistema</h3>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-bg-primary dark:bg-slate-800 rounded-xl border border-border/50">
+            <div>
+              <p className="text-sm font-bold text-text-primary dark:text-white">Modo de Exibição</p>
+              <p className="text-xs text-text-muted font-medium mt-0.5">
+                Alterne entre o tema Claro e o tema Escuro para melhor conforto visual.
+              </p>
+            </div>
+            {toggleTheme && (
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 font-extrabold text-xs transition-all border border-teal-500/20 cursor-pointer active:scale-95"
+              >
+                {theme === 'dark' ? (
+                  <>
+                    <Sun className="w-4 h-4 text-amber-400" />
+                    Modo Claro
+                  </>
+                ) : (
+                  <>
+                    <Moon className="w-4 h-4 text-indigo-500" />
+                    Modo Escuro
+                  </>
+                )}
+              </button>
             )}
           </div>
         </section>

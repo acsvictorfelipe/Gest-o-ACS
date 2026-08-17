@@ -321,133 +321,69 @@ export function Layout({
 
       {/* Main Content */}
       <main className="flex-1 lg:ml-[240px] flex flex-col h-full overflow-hidden">
-        {/* Topbar */}
-        <header className="h-[80px] bg-bg-secondary/80 backdrop-blur-md border-b border-border flex items-center justify-between px-8 sticky top-0 z-30">
-          <div className="flex items-center gap-6">
-            <button 
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden p-2 text-text-secondary rounded-xl hover:bg-bg-primary transition-colors"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-            <div className="hidden sm:flex items-center gap-2">
-              <span className="text-sm font-extrabold text-text-primary uppercase tracking-tight">Gestão ACS</span>
-              <span className="text-[10px] font-black bg-teal-500/15 text-teal-700 dark:text-teal-300 px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-teal-500/20">
-                Acompanhamento Clínico
-              </span>
-            </div>
-          </div>
+        {/* Topbar (Mobile Only) */}
+        <header className="lg:hidden h-[56px] bg-bg-secondary/80 backdrop-blur-md border-b border-border flex items-center justify-between px-4 sticky top-0 z-30">
+          <button 
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 text-text-secondary rounded-xl hover:bg-bg-primary transition-colors cursor-pointer"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
 
-          <div className="flex items-center gap-4">
-            {/* Connection / Sync Pill (hidden when online & synced) */}
-            {(!isOnline || isSyncing || syncQueueLength > 0) && (
-              <div className={`flex items-center gap-1.5 md:gap-2 px-2.5 py-1.5 md:px-3.5 md:py-2 rounded-2xl text-[10px] md:text-[11px] font-extrabold uppercase tracking-wider transition-all duration-300 border shadow-sm ${
-                !isOnline 
-                  ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/30 text-amber-600 dark:text-amber-400' 
-                  : isSyncing 
-                    ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/30 text-blue-600 dark:text-blue-400 animate-pulse' 
-                    : 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900/30 text-orange-600 dark:text-orange-400'
-              }`}>
-                {!isOnline ? (
-                  <>
-                    <WifiOff className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-500 shrink-0" />
-                    <span className="hidden sm:inline">Modo Offline</span>
-                  </>
-                ) : isSyncing ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-500 animate-spin shrink-0" />
-                    <span className="hidden sm:inline">Sincronizando</span>
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-500 animate-bounce shrink-0" />
-                    <span className="hidden sm:inline">Fila: {syncQueueLength}</span>
-                  </>
-                )}
+          <div className="flex items-center gap-2 relative">
+            <button 
+              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+              className="p-2 text-text-muted hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-xl transition-all relative cursor-pointer"
+            >
+              <Bell className="w-5.5 h-5.5" />
+              {criticalAlerts.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-red-500 border-2 border-bg-secondary rounded-full flex items-center justify-center">
+                  <span className="text-[8px] font-bold text-white">{criticalAlerts.length}</span>
+                </span>
+              )}
+            </button>
+
+            {isNotificationsOpen && (
+              <div className="absolute top-[120%] right-0 mt-2 w-80 bg-bg-secondary border border-border rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
+                <div className="p-4 border-b border-border bg-bg-primary flex items-center justify-between">
+                  <h3 className="font-semibold text-text-primary text-sm">Notificações</h3>
+                  {criticalAlerts.length > 0 && (
+                    <span className="bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">
+                      {criticalAlerts.length} Pendentes
+                    </span>
+                  )}
+                </div>
+                <div className="max-h-96 overflow-y-auto custom-scrollbar">
+                  {criticalAlerts.length > 0 ? (
+                    criticalAlerts.map(alert => (
+                      <div 
+                        key={alert.id} 
+                        className="p-4 border-b border-border hover:bg-bg-primary transition-colors cursor-pointer group"
+                        onClick={() => { setIsNotificationsOpen(false); navigate(`/editar-paciente/${alert.id}`); }}
+                      >
+                        <p className="text-sm font-semibold text-text-primary group-hover:text-primary transition-colors">{alert.name}</p>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded font-semibold uppercase">
+                            Bebê (Até 6m)
+                          </span>
+                          <span className="text-[10px] text-text-muted font-semibold uppercase">
+                            Pendente
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center">
+                      <div className="w-12 h-12 bg-bg-primary rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Bell className="w-5 h-5 text-text-muted opacity-50" />
+                      </div>
+                      <p className="text-text-secondary text-sm font-medium">Tudo certo por aqui!</p>
+                      <p className="text-text-muted text-xs mt-1">Nenhuma notificação no momento.</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
-
-            <button 
-              onClick={toggleTheme}
-              className="p-2.5 text-text-secondary hover:text-text-primary hover:bg-bg-primary rounded-xl transition-all border border-border shadow-sm"
-              title={theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}
-            >
-              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-            </button>
-
-            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-bg-primary border border-border rounded-2xl text-[13px] font-semibold text-text-secondary">
-              <CalendarDays className="w-4 h-4 text-teal-600" />
-              {new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
-            </div>
-
-            <div className="flex items-center gap-2 pl-4 border-l border-border relative">
-              <button 
-                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className="p-2.5 text-text-muted hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-xl transition-all relative"
-              >
-                <Bell className="w-5.5 h-5.5" />
-                {criticalAlerts.length > 0 && (
-                  <span className="absolute top-2 right-2 w-3.5 h-3.5 bg-red-500 border-2 border-bg-secondary rounded-full flex items-center justify-center">
-                    <span className="text-[8px] font-bold text-white">{criticalAlerts.length}</span>
-                  </span>
-                )}
-              </button>
-
-              {isNotificationsOpen && (
-                <div className="absolute top-[120%] right-0 mt-2 w-80 bg-bg-secondary border border-border rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
-                  <div className="p-4 border-b border-border bg-bg-primary flex items-center justify-between">
-                    <h3 className="font-semibold text-text-primary text-sm">Notificações</h3>
-                    {criticalAlerts.length > 0 && (
-                      <span className="bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">
-                        {criticalAlerts.length} Pendentes
-                      </span>
-                    )}
-                  </div>
-                  <div className="max-h-96 overflow-y-auto custom-scrollbar">
-                    {criticalAlerts.length > 0 ? (
-                      criticalAlerts.map(alert => (
-                        <div 
-                          key={alert.id} 
-                          className="p-4 border-b border-border hover:bg-bg-primary transition-colors cursor-pointer group"
-                          onClick={() => { setIsNotificationsOpen(false); navigate(`/editar-paciente/${alert.id}`); }}
-                        >
-                          <p className="text-sm font-semibold text-text-primary group-hover:text-primary transition-colors">{alert.name}</p>
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded font-semibold uppercase">
-                              Bebê (Até 6m)
-                            </span>
-                            <span className="text-[10px] text-text-muted font-semibold uppercase">
-                              Pendente
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="p-8 text-center">
-                        <div className="w-12 h-12 bg-bg-primary rounded-full flex items-center justify-center mx-auto mb-3">
-                          <Bell className="w-5 h-5 text-text-muted opacity-50" />
-                        </div>
-                        <p className="text-text-secondary text-sm font-medium">Tudo certo por aqui!</p>
-                        <p className="text-text-muted text-xs mt-1">Nenhuma notificação no momento.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <button 
-                onClick={() => syncService.sync()}
-                className={`p-2.5 rounded-xl transition-all relative ${syncQueueLength > 0 ? 'text-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'text-text-muted hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20'}`}
-                title={syncQueueLength > 0 ? `${syncQueueLength} itens pendentes para sincronização` : 'Sincronizado'}
-              >
-                <RefreshCw className={`w-5.5 h-5.5 ${syncQueueLength > 0 ? 'animate-spin-slow' : ''}`} />
-                {syncQueueLength > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 border-2 border-bg-secondary rounded-full flex items-center justify-center">
-                    <span className="text-[9px] font-bold text-white">{syncQueueLength}</span>
-                  </span>
-                )}
-              </button>
-            </div>
           </div>
         </header>
 

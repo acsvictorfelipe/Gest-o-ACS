@@ -124,7 +124,7 @@ export function Login() {
 
             <div className="mt-8 pt-6 border-t border-border flex flex-col items-center gap-3">
               <p className="text-[10px] text-text-muted font-semibold uppercase tracking-widest">
-                © 2024 Gestão ACS • PRONTUÁRIO DIGITAL
+                Gestão ACS • PRONTUÁRIO DIGITAL
               </p>
             </div>
           </div>
