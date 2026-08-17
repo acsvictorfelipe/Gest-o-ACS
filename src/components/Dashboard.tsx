@@ -87,7 +87,11 @@ export function Dashboard({ user }: { user: AppUser | null }) {
   }, []);
 
   const lastRegisteredPatients = React.useMemo(() => {
-    return [...allPatients]
+    const uniqueMap = new Map<string, any>();
+    allPatients.forEach(p => {
+      if (p.id) uniqueMap.set(p.id, p);
+    });
+    return Array.from(uniqueMap.values())
       .filter(p => p.created_at)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 5);

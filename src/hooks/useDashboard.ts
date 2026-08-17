@@ -58,6 +58,16 @@ export function useDashboard(user: any) {
       const newHCount = newHRes.count || 0;
 
       let patientsData: any[] = await fetchTableWithFilters<any>('patients', user);
+
+      // Deduplicate patientsData by ID
+      if (patientsData && patientsData.length > 0) {
+        const uniquePatientsMap = new Map<string, any>();
+        patientsData.forEach(p => {
+          if (p.id) uniquePatientsMap.set(p.id, p);
+        });
+        patientsData = Array.from(uniquePatientsMap.values());
+      }
+
       let allVisitsData: any[] | null = null;
 
       // HEALING LOGIC: SINCERELY UPDATE LATENCY AND RECENT VISITS
@@ -70,7 +80,16 @@ export function useDashboard(user: any) {
         }
         
         const { data } = await visitsDataQuery;
-        allVisitsData = data;
+        if (data) {
+          const uniqueVisitsMap = new Map<string, any>();
+          data.forEach((v: any) => {
+            if (v.id) uniqueVisitsMap.set(v.id, v);
+            else uniqueVisitsMap.set(`${v.patient_id}_${v.date}`, v);
+          });
+          allVisitsData = Array.from(uniqueVisitsMap.values());
+        } else {
+          allVisitsData = [];
+        }
         
         const visitsMap: Record<string, string> = {};
         if (allVisitsData) {
@@ -105,7 +124,6 @@ export function useDashboard(user: any) {
           }
 
           if (trueAcsVisitDateStr && trueAcsVisitDateStr !== (p.last_visit_at ? p.last_visit_at.split('T')[0] : null)) {
-            // In-memory calculation for accurate rendering without firing side-effect writes during reads
             return {
               ...p,
               last_visit_at: trueAcsVisitDateStr
@@ -394,7 +412,7 @@ export function useDashboard(user: any) {
     { name: 'Adultos', value: stats.adultos, color: UI_CONFIG.categorias.adultos.primary },
     { name: 'Saúde Mental', value: stats.saudeMental, color: UI_CONFIG.categorias.saudeMental.primary },
     { name: 'Acamados', value: stats.acamados, color: UI_CONFIG.categorias.acamados.primary },
-    { name: 'Outros', value: stats.totalPatients - (stats.criancasTotal + stats.gestantes + stats.idosos + stats.hipertensos + stats.diabeticos + stats.adultos + stats.saudeMental + stats.acamados), color: UI_CONFIG.categorias.outros.primary },
+    { name: 'Outros', value: Math.max(0, stats.totalPatients - (stats.criancasTotal + stats.gestantes + stats.idosos + stats.hipertensos + stats.diabeticos + stats.adultos + stats.saudeMental + stats.acamados)), color: UI_CONFIG.categorias.outros.primary },
   ].filter(d => d.value > 0);
 
   const getCategoryStyle = (category: string) => {
