@@ -31,11 +31,28 @@
       ]
     },
     {
+      "source": "/manifest.webmanifest",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json; charset=utf-8"
+        }
+      ]
+    },
+    {
       "source": "/(.*\\.png)",
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=86400, immutable"
+          "value": "public, max-age=604800, must-revalidate"
+        },
+        {
+          "key": "Content-Type",
+          "value": "image/png"
         }
       ]
     }
@@ -46,7 +63,7 @@
       "destination": "/api/$1"
     },
     {
-      "source": "/((?!sw\\.js|manifest\\.json|icon|apple-touch|favicon|assets|api).*)",
+      "source": "/((?!sw\\.js|manifest\\.json|manifest\\.webmanifest|icon|apple-touch|favicon|assets|api).*)",
       "destination": "/index.html"
     }
   ]
