@@ -94,7 +94,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
     return [...allPatients]
       .filter(p => p.created_at)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 4);
+      .slice(0, 5);
   }, [allPatients]);
 
   const chartData = weeklyChartData;
@@ -234,24 +234,26 @@ export function Dashboard({ user }: { user: AppUser | null }) {
 
       {/* 2. Stat Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-        {statCards.map((stat, i) => (
-          <motion.div
-            key={stat.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.06, type: 'spring', stiffness: 200, damping: 20 }}
-            onClick={() => navigate(stat.id === 'domicilios' ? '/domicilios' : `/pacientes?filter=${stat.filter}`)}
-            className="bg-bg-secondary rounded-[20px] p-4 border border-border shadow-sm cursor-pointer group relative overflow-hidden flex flex-col transition-all duration-300 hover:shadow-lg hover:-translate-y-1.5 hover:border-transparent h-full"
-            style={{ '--hover-shadow': `0 12px 32px ${stat.config.primary}22` } as any}
-          >
-            {/* Accent bar top */}
-            <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-[20px] opacity-80" style={{ background: `linear-gradient(90deg, ${stat.config.primary}, ${stat.config.primary}66)` }} />
-            {/* Subtle bg glow */}
-            <div className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full blur-2xl opacity-20 transition-opacity group-hover:opacity-40" style={{ backgroundColor: stat.config.primary }} />
+        {statCards.map((stat, i) => {
+          const Icon = stat.icon;
+          return (
+            <motion.div
+              key={stat.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.06, type: 'spring', stiffness: 200, damping: 20 }}
+              onClick={() => navigate(stat.id === 'domicilios' ? '/domicilios' : `/pacientes?filter=${stat.filter}`)}
+              className="bg-bg-secondary rounded-[20px] p-4 border border-border shadow-sm cursor-pointer group relative overflow-hidden flex flex-col transition-all duration-300 hover:shadow-lg hover:-translate-y-1.5 hover:border-transparent h-full"
+              style={{ '--hover-shadow': `0 12px 32px ${stat.config.primary}22` } as any}
+            >
+              {/* Accent bar top */}
+              <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-[20px] opacity-80" style={{ background: `linear-gradient(90deg, ${stat.config.primary}, ${stat.config.primary}66)` }} />
+              {/* Subtle bg glow */}
+              <div className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full blur-2xl opacity-20 transition-opacity group-hover:opacity-40" style={{ backgroundColor: stat.config.primary }} />
 
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-md mb-3 transition-transform group-hover:scale-110" style={{ background: `linear-gradient(135deg, ${stat.config.primary}dd, ${stat.config.primary})`, color: '#fff' }}>
-              <stat.icon className="w-5 h-5" />
-            </div>
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-md mb-3 transition-transform group-hover:scale-110" style={{ background: `linear-gradient(135deg, ${stat.config.primary}dd, ${stat.config.primary})`, color: '#fff' }}>
+                <Icon className="w-5 h-5" />
+              </div>
 
             <h4 className="text-[26px] font-black text-text-primary leading-none tabular-nums">{stat.value}</h4>
             <p className="text-[10px] text-text-muted font-bold uppercase tracking-wide mt-1 truncate leading-tight">{stat.label}</p>
@@ -263,7 +265,8 @@ export function Dashboard({ user }: { user: AppUser | null }) {
               </div>
             </div>
           </motion.div>
-        ))}
+          );
+        })}
       </div>
 
       {/* 3. Row 1: Planejamento e Acompanhamento (Calendário, Prioritários) */}
@@ -479,7 +482,6 @@ export function Dashboard({ user }: { user: AppUser | null }) {
             </div>
           </div>
         </div>
-
         {/* Distribuição por Categoria (Donut) */}
         <div className="col-span-12 lg:col-span-6">
           <div className="bg-bg-secondary rounded-[28px] p-5 border border-border shadow-sm flex flex-col min-h-[300px] h-full">

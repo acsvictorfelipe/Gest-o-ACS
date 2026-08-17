@@ -34,8 +34,7 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
         12, 0, 0
       );
       
-      return isSameDay(date, visitDate);
-    });
+      return isSameDay(date, visitDate);    });
   };
 
   const getTilesContent = ({ date, view }: { date: Date; view: string }) => {
@@ -49,8 +48,7 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
         const p = patients.find(p => p.id === v.patient_id);
         return (p?.categories || []) as string[];
       })
-    ));
-    
+    ));    
     const dots = [
       { key: 'Criança', color: CATEGORY_PALETTE.crianca.primary },
       { key: 'Gestante', color: CATEGORY_PALETTE.gestante.primary },
@@ -88,8 +86,7 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
   const handleDateClick = (date: Date) => {
     const dayVisits = getVisitsForDate(date);
     if (dayVisits.length > 0) {
-      setModalVisits(dayVisits);
-      setSelectedDate(date);
+      setModalVisits(dayVisits);      setSelectedDate(date);
       setIsModalOpen(true);
     } else {
       setSelectedDate(date);
@@ -337,13 +334,11 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
                       </div>
                     </div>
                   );
-                })}
-              </div>
+                })}              </div>
 
               <div className="p-3 bg-bg-primary border-t border-border text-center">
                  <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
-                   {modalVisits.length} visitas realizadas
-                 </p>
+                   {modalVisits.length} visitas realizadas                 </p>
               </div>
             </motion.div>
           </motion.div>
