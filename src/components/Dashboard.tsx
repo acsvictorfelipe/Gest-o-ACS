@@ -19,7 +19,10 @@ import {
   Heart,
   Stethoscope,
   Users,
-  Megaphone
+  Megaphone,
+  Sparkles,
+  UserPlus,
+  ArrowUpRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAgeInMonths, VACCINE_SCHEDULE, formatDate, calculateAge, getAgeNumber, getPatientLastVisitAt } from '../lib/dateUtils';
@@ -48,7 +51,6 @@ export function Dashboard({ user }: { user: AppUser | null }) {
       </React.Suspense>
     );
   }
-
 
   const {
     stats,
@@ -84,12 +86,6 @@ export function Dashboard({ user }: { user: AppUser | null }) {
     fetchCampaigns();
   }, []);
 
-  const thirtyDaysAgo = React.useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d;
-  }, []);
-
   const lastRegisteredPatients = React.useMemo(() => {
     return [...allPatients]
       .filter(p => p.created_at)
@@ -97,12 +93,79 @@ export function Dashboard({ user }: { user: AppUser | null }) {
       .slice(0, 5);
   }, [allPatients]);
 
-  const chartData = weeklyChartData;
+  const greeting = React.useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Bom dia';
+    if (hour < 18) return 'Boa tarde';
+    return 'Boa noite';
+  }, []);
+
+  const totalPriorityAlerts = (stats.childVisitAlerts || 0) + (stats.pendingVisits || 0) + (stats.lateVaccines || 0) + (stats.receitasAVencer || 0) + ((stats as any).gestantesPendentes || 0);
 
   if (loading) return null;
 
   return (
-    <div className="space-y-6 relative pb-8">
+    <div className="space-y-6 relative pb-10">
+      {/* 1. Hero Header Welcome Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: -15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="relative overflow-hidden rounded-[32px] bg-gradient-to-r from-teal-600 via-teal-700 to-emerald-800 p-6 md:p-8 text-white shadow-xl shadow-teal-900/10 border border-teal-500/30"
+      >
+        {/* Glow Effects */}
+        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-64 h-64 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 -mb-12 w-48 h-48 bg-teal-300/10 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-teal-100 text-[11px] font-bold uppercase tracking-wider border border-white/20">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                Painel do Agente Comunitário
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/20 text-teal-200 text-[10px] font-bold">
+                <MapPin className="w-3 h-3 text-teal-300" />
+                {user?.microarea ? `Microárea ${user.microarea}` : 'Microárea Geral'}
+              </span>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
+              {greeting}, {user?.name || 'Agente'}! 👋
+            </h1>
+
+            <p className="text-xs sm:text-sm text-teal-100/90 font-medium leading-relaxed max-w-xl">
+              Acompanhamento integrado da saúde da sua comunidade. {totalPriorityAlerts > 0 ? (
+                <span className="text-amber-200 font-bold underline decoration-amber-300 underline-offset-2">
+                  Você possui {totalPriorityAlerts} alerta(s) prioritário(s) para verificar hoje.
+                </span>
+              ) : (
+                <span className="text-emerald-200 font-bold">
+                  Todos os acompanhamentos prioritários estão em dia!
+                </span>
+              )}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <button
+              onClick={() => navigate('/pacientes?action=new')}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white text-teal-900 font-extrabold text-xs shadow-lg shadow-black/10 hover:bg-teal-50 active:scale-95 transition-all cursor-pointer"
+            >
+              <UserPlus className="w-4 h-4 text-teal-700" />
+              Novo Cidadão
+            </button>
+            <button
+              onClick={() => navigate('/domicilios')}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/15 hover:bg-white/25 backdrop-blur-md text-white font-extrabold text-xs border border-white/20 active:scale-95 transition-all cursor-pointer"
+            >
+              <MapPin className="w-4 h-4 text-teal-200" />
+              Buscar Domicílio
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Active Campaigns Banner */}
       {activeCampaigns.length > 0 && (
         <div className="space-y-3">
@@ -230,8 +293,6 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </div>
       )}
 
-
-
       {/* 2. Stat Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {statCards.map((stat, i) => {
@@ -241,30 +302,32 @@ export function Dashboard({ user }: { user: AppUser | null }) {
               key={stat.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06, type: 'spring', stiffness: 200, damping: 20 }}
+              transition={{ delay: i * 0.05, type: 'spring', stiffness: 200, damping: 20 }}
               onClick={() => navigate(stat.id === 'domicilios' ? '/domicilios' : `/pacientes?filter=${stat.filter}`)}
-              className="bg-bg-secondary rounded-[20px] p-4 border border-border shadow-sm cursor-pointer group relative overflow-hidden flex flex-col transition-all duration-300 hover:shadow-lg hover:-translate-y-1.5 hover:border-transparent h-full"
-              style={{ '--hover-shadow': `0 12px 32px ${stat.config.primary}22` } as any}
+              className="bg-bg-secondary rounded-[24px] p-4 border border-border shadow-sm cursor-pointer group relative overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-lg hover:-translate-y-1.5 hover:border-teal-500/30 h-full"
             >
               {/* Accent bar top */}
-              <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-[20px] opacity-80" style={{ background: `linear-gradient(90deg, ${stat.config.primary}, ${stat.config.primary}66)` }} />
+              <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-[24px] opacity-80" style={{ background: `linear-gradient(90deg, ${stat.config.primary}, ${stat.config.primary}66)` }} />
               {/* Subtle bg glow */}
               <div className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full blur-2xl opacity-20 transition-opacity group-hover:opacity-40" style={{ backgroundColor: stat.config.primary }} />
 
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-md mb-3 transition-transform group-hover:scale-110" style={{ background: `linear-gradient(135deg, ${stat.config.primary}dd, ${stat.config.primary})`, color: '#fff' }}>
-                <Icon className="w-5 h-5" />
+              <div>
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-md mb-3 transition-transform group-hover:scale-110" style={{ background: `linear-gradient(135deg, ${stat.config.primary}dd, ${stat.config.primary})`, color: '#fff' }}>
+                  <Icon className="w-5 h-5" />
+                </div>
+
+                <h4 className="text-[26px] font-black text-text-primary leading-none tabular-nums">{stat.value}</h4>
+                <p className="text-[10px] text-text-muted font-bold uppercase tracking-wide mt-1 truncate leading-tight">{stat.label}</p>
               </div>
 
-            <h4 className="text-[26px] font-black text-text-primary leading-none tabular-nums">{stat.value}</h4>
-            <p className="text-[10px] text-text-muted font-bold uppercase tracking-wide mt-1 truncate leading-tight">{stat.label}</p>
-
-            <div className="mt-3 pt-2.5 border-t border-border/60 flex items-center gap-1">
-              <div className={`flex items-center gap-1 text-[10px] font-black ${stat.trend.direction === 'up' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
-                {stat.trend.direction === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                <span>{stat.trend.value}</span>
+              <div className="mt-3 pt-2.5 border-t border-border/60 flex items-center justify-between">
+                <div className={`flex items-center gap-1 text-[10px] font-black ${stat.trend.direction === 'up' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                  {stat.trend.direction === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                  <span>{stat.trend.value}</span>
+                </div>
+                <ArrowUpRight className="w-3 h-3 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
           );
         })}
       </div>
@@ -272,8 +335,22 @@ export function Dashboard({ user }: { user: AppUser | null }) {
       {/* 3. Row 1: Planejamento e Acompanhamento (Calendário, Prioritários) */}
       <div className="grid grid-cols-12 gap-6 items-stretch">
         {/* Calendário de Visitas Realizadas */}
-        <div className="col-span-12 lg:col-span-8">
-          <div className="bg-bg-secondary rounded-[32px] p-3 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
+        <div className="col-span-12 lg:col-span-8 flex flex-col">
+          <div className="bg-bg-secondary rounded-[32px] p-4 sm:p-5 border border-border shadow-sm flex flex-col h-full">
+            <div className="flex items-center justify-between mb-4 shrink-0 px-2">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+                  <CalendarIcon className="w-4.5 h-4.5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-text-primary tracking-tight">Agenda de Visitas & Calendário</h3>
+                  <p className="text-[10px] text-text-muted font-semibold">Visitas realizadas e programadas do ACS</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/30 px-3 py-1 rounded-full border border-teal-200 dark:border-teal-900/40">
+                {visits?.length || 0} visitas no histórico
+              </span>
+            </div>
             <div className="flex-1 overflow-auto">
               <PendingCalendar visits={visits} patients={allPatients} />
             </div>
@@ -281,29 +358,37 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </div>
 
         {/* Acompanhamento Prioritário */}
-        <div className="col-span-12 lg:col-span-4">
-          <div className="bg-bg-secondary rounded-[28px] p-5 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
-            <div className="flex items-center gap-3 mb-4 shrink-0">
-              <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white shadow-md shadow-red-500/25">
-                <ShieldAlert className="w-4.5 h-4.5" />
+        <div className="col-span-12 lg:col-span-4 flex flex-col">
+          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col h-full">
+            <div className="flex items-center justify-between mb-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white shadow-md shadow-red-500/25">
+                  <ShieldAlert className="w-4.5 h-4.5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-text-primary tracking-tight">Acompanhamento Prioritário</h3>
+                  <p className="text-[10px] text-text-muted font-semibold">Alertas clínicos ativos</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-black text-text-primary tracking-tight">Acompanhamento Prioritário</h3>
-                <p className="text-[10px] text-text-muted font-semibold">Alertas de saúde ativos</p>
-              </div>
+              {totalPriorityAlerts > 0 && (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900/40">
+                  {totalPriorityAlerts}
+                </span>
+              )}
             </div>
-            <div className="space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+
+            <div className="space-y-2.5 flex-1 overflow-y-auto pr-1 custom-scrollbar">
               {/* Alerta 1: Crianças / Bebês */}
               <div 
                 onClick={() => navigate('/pacientes?filter=pending_6m')} 
-                className={`p-2.5 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
+                className={`p-3 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
                   stats.childVisitAlerts > 0
                     ? 'border-red-100 dark:border-red-950/30 bg-red-50/10 hover:bg-red-50/20'
                     : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
                 }`}
               >
                 <div className={`absolute top-0 left-0 w-[4px] h-full ${stats.childVisitAlerts > 0 ? 'bg-red-500' : 'bg-emerald-500'}`} />
-                <div className={`w-8.5 h-8.5 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${stats.childVisitAlerts > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${stats.childVisitAlerts > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
                   {stats.childVisitAlerts > 0 ? <Baby className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
                 </div>
                 <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
@@ -313,7 +398,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                     </h5>
                     <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Acompanhamento até 6m</p>
                   </div>
-                  <Badge variant={stats.childVisitAlerts > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0">
+                  <Badge variant={stats.childVisitAlerts > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-lg shrink-0">
                     {stats.childVisitAlerts > 0 ? 'PENDENTE' : 'EM DIA'}
                   </Badge>
                 </div>
@@ -322,14 +407,14 @@ export function Dashboard({ user }: { user: AppUser | null }) {
               {/* Alerta 2: Visitas em Atraso */}
               <div 
                 onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} 
-                className={`p-2.5 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
+                className={`p-3 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
                   stats.pendingVisits > 0
                     ? 'border-orange-100 dark:border-orange-950/30 bg-orange-50/10 hover:bg-orange-50/20'
                     : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
                 }`}
               >
                 <div className={`absolute top-0 left-0 w-[4px] h-full ${stats.pendingVisits > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`} />
-                <div className={`w-8.5 h-8.5 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${stats.pendingVisits > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`}>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${stats.pendingVisits > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`}>
                   {stats.pendingVisits > 0 ? <CalendarIcon className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
                 </div>
                 <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
@@ -348,14 +433,14 @@ export function Dashboard({ user }: { user: AppUser | null }) {
               {/* Alerta 3: Vacinas Atrasadas */}
               <div 
                 onClick={() => navigate('/pacientes?filter=vacinas_atrasadas')} 
-                className={`p-2.5 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
+                className={`p-3 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
                   stats.lateVaccines > 0
                     ? 'border-red-100 dark:border-red-950/30 bg-red-50/10 hover:bg-red-50/20'
                     : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
                 }`}
               >
                 <div className={`absolute top-0 left-0 w-[4px] h-full ${stats.lateVaccines > 0 ? 'bg-red-500' : 'bg-emerald-500'}`} />
-                <div className={`w-8.5 h-8.5 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${stats.lateVaccines > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${stats.lateVaccines > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
                   {stats.lateVaccines > 0 ? <ShieldAlert className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
                 </div>
                 <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
@@ -365,7 +450,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                     </h5>
                     <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Crianças menores de 2 anos</p>
                   </div>
-                  <Badge variant={stats.lateVaccines > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0">
+                  <Badge variant={stats.lateVaccines > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-lg shrink-0">
                     {stats.lateVaccines > 0 ? 'ATRASO' : 'COMPLETO'}
                   </Badge>
                 </div>
@@ -374,14 +459,14 @@ export function Dashboard({ user }: { user: AppUser | null }) {
               {/* Alerta 4: Receitas Vencendo */}
               <div 
                 onClick={() => navigate('/pacientes?filter=receitas_vencendo')} 
-                className={`p-2.5 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
+                className={`p-3 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
                   stats.receitasAVencer > 0
                     ? 'border-purple-100 dark:border-purple-950/30 bg-purple-50/10 hover:bg-purple-50/20'
                     : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
                 }`}
               >
                 <div className={`absolute top-0 left-0 w-[4px] h-full ${stats.receitasAVencer > 0 ? 'bg-purple-500' : 'bg-emerald-500'}`} />
-                <div className={`w-8.5 h-8.5 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${stats.receitasAVencer > 0 ? 'bg-purple-500' : 'bg-emerald-500'}`}>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${stats.receitasAVencer > 0 ? 'bg-purple-500' : 'bg-emerald-500'}`}>
                   {stats.receitasAVencer > 0 ? <Activity className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
                 </div>
                 <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
@@ -391,7 +476,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                     </h5>
                     <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Medicamentos controlados</p>
                   </div>
-                  <Badge variant={stats.receitasAVencer > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0 ${stats.receitasAVencer > 0 ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300' : ''}`}>
+                  <Badge variant={stats.receitasAVencer > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-lg shrink-0 ${stats.receitasAVencer > 0 ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300' : ''}`}>
                     {stats.receitasAVencer > 0 ? 'ATENÇÃO' : 'VÁLIDAS'}
                   </Badge>
                 </div>
@@ -400,14 +485,14 @@ export function Dashboard({ user }: { user: AppUser | null }) {
               {/* Alerta 5: Pré-Natal / Visitas Gestante Pendentes */}
               <div 
                 onClick={() => navigate('/pacientes?filter=gestantes')} 
-                className={`p-2.5 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
+                className={`p-3 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
                   (stats as any).gestantesPendentes > 0
                     ? 'border-pink-100 dark:border-pink-950/30 bg-pink-50/10 hover:bg-pink-50/20'
                     : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
                 }`}
               >
                 <div className={`absolute top-0 left-0 w-[4px] h-full ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-500' : 'bg-emerald-500'}`} />
-                <div className={`w-8.5 h-8.5 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-500' : 'bg-emerald-500'}`}>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-500' : 'bg-emerald-500'}`}>
                   {(stats as any).gestantesPendentes > 0 ? <Baby className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
                 </div>
                 <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
@@ -417,7 +502,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                     </h5>
                     <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Metas de Consultas (9) & ACS (3)</p>
                   </div>
-                  <Badge variant={(stats as any).gestantesPendentes > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300' : ''}`}>
+                  <Badge variant={(stats as any).gestantesPendentes > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-lg shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300' : ''}`}>
                     {(stats as any).gestantesPendentes > 0 ? 'ATENÇÃO' : 'COMPLETO'}
                   </Badge>
                 </div>
@@ -430,8 +515,8 @@ export function Dashboard({ user }: { user: AppUser | null }) {
       {/* 4. Row 2: Histórico e Análises (Últimos Cadastros, Rosca Demográfica) */}
       <div className="grid grid-cols-12 gap-6 items-stretch">
         {/* Últimos Cadastros */}
-        <div className="col-span-12 lg:col-span-6">
-          <div className="bg-bg-secondary rounded-[28px] p-5 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
+        <div className="col-span-12 lg:col-span-6 flex flex-col">
+          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col h-full min-h-[320px]">
             <div className="flex items-center justify-between mb-4 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/25">
@@ -463,18 +548,18 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                     className="flex items-center gap-3 p-3 rounded-2xl bg-bg-primary/50 dark:bg-slate-800/20 hover:bg-bg-primary dark:hover:bg-slate-800/40 border border-border/50 transition-all duration-200 cursor-pointer group"
                     onClick={() => navigate(`/domicilio/${p.household_id || ''}`)}
                   >
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-xs shrink-0 shadow-sm bg-gradient-to-br from-teal-400 to-emerald-600">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-xs shrink-0 shadow-sm bg-gradient-to-br from-teal-400 to-emerald-600">
                       {p.name?.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[12px] font-bold text-text-primary truncate leading-tight">{p.name}</p>
+                      <p className="text-[12px] font-bold text-text-primary truncate leading-tight group-hover:text-teal-600 transition-colors">{p.name}</p>
                       <p className="text-[9px] text-text-muted mt-0.5 font-semibold truncate">
                         {p.birth_date ? calculateAge(p.birth_date) : 'Idade não informada'}
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className="text-[9px] font-semibold text-text-muted">{p.created_at ? formatDate(p.created_at) : '--'}</span>
-                      <span className="px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wide bg-teal-100 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400">✦ Novo</span>
+                      <span className="px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wide bg-teal-100 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400">✦ Novo</span>
                     </div>
                   </motion.div>
                 ))
@@ -482,16 +567,17 @@ export function Dashboard({ user }: { user: AppUser | null }) {
             </div>
           </div>
         </div>
+
         {/* Distribuição por Categoria (Donut) */}
-        <div className="col-span-12 lg:col-span-6">
-          <div className="bg-bg-secondary rounded-[28px] p-5 border border-border shadow-sm flex flex-col min-h-[300px] h-full">
+        <div className="col-span-12 lg:col-span-6 flex flex-col">
+          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col h-full min-h-[320px]">
             <div className="flex items-center gap-3 mb-4 shrink-0">
               <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white shadow-md shadow-violet-500/25">
                 <Activity className="w-4.5 h-4.5" />
               </div>
               <div>
-                <h3 className="text-sm font-black text-text-primary tracking-tight">Cidadãos por Categoria</h3>
-                <p className="text-[10px] text-text-muted font-semibold">Perfil clínico da microárea</p>
+                <h3 className="text-sm font-black text-text-primary tracking-tight">Perfil Clínico da Microárea</h3>
+                <p className="text-[10px] text-text-muted font-semibold">Distribuição de comorbidades e faixas etárias</p>
               </div>
             </div>
             {distribuicaoData.length === 0 ? (
@@ -499,16 +585,16 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                 <p className="text-xs text-text-muted">Sem dados cadastrados.</p>
               </div>
             ) : (
-              <div className="flex-1 flex flex-row items-center justify-between gap-3 min-h-0">
-                <div className="relative w-[130px] h-[130px] shrink-0 flex items-center justify-center">
-                  <PieChart width={130} height={130}>
+              <div className="flex-1 flex flex-col sm:flex-row items-center justify-between gap-4 min-h-0">
+                <div className="relative w-[140px] h-[140px] shrink-0 flex items-center justify-center">
+                  <PieChart width={140} height={140}>
                     <Pie
                       data={distribuicaoData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={40}
-                      outerRadius={56}
-                      paddingAngle={2.5}
+                      innerRadius={42}
+                      outerRadius={60}
+                      paddingAngle={3}
                       dataKey="value"
                     >
                       {distribuicaoData.map((entry, index) => (
@@ -526,25 +612,25 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                     />
                   </PieChart>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-                    <span className="text-[18px] font-black text-text-primary leading-none">{stats.totalPatients}</span>
+                    <span className="text-[20px] font-black text-text-primary leading-none">{stats.totalPatients}</span>
                     <span className="text-[8px] text-text-muted font-black uppercase tracking-wider mt-0.5">Total</span>
                   </div>
                 </div>
-                <div className="flex-1 grid grid-cols-2 gap-x-2.5 gap-y-1.5 max-h-[230px] overflow-y-auto pr-1 custom-scrollbar">
+                <div className="flex-1 w-full grid grid-cols-2 gap-x-3 gap-y-2 max-h-[240px] overflow-y-auto pr-1 custom-scrollbar">
                   {distribuicaoData.map((d, index) => {
                     const pct = stats.totalPatients > 0 ? ((d.value / stats.totalPatients) * 100).toFixed(0) : '0';
                     return (
-                      <div key={index} className="flex flex-col gap-0.5 p-1.5 rounded-xl hover:bg-bg-primary/50 dark:hover:bg-slate-800/10 transition-colors min-w-0">
-                        <div className="flex items-center justify-between text-[9px] font-bold">
+                      <div key={index} className="flex flex-col gap-1 p-2 rounded-xl bg-bg-primary/30 dark:bg-slate-800/10 hover:bg-bg-primary/60 transition-colors min-w-0">
+                        <div className="flex items-center justify-between text-[10px] font-bold">
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                            <span className="text-text-secondary truncate uppercase leading-none">{d.name}</span>
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                            <span className="text-text-secondary truncate uppercase leading-none text-[9px] font-black">{d.name}</span>
                           </div>
                           <span className="text-text-primary font-black shrink-0 ml-1">{d.value}</span>
                         </div>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <div className="flex-1 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: d.color }} />
+                          <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: d.color }} />
                           </div>
                           <span className="text-[8px] text-text-muted font-extrabold leading-none shrink-0">{pct}%</span>
                         </div>
@@ -560,4 +646,3 @@ export function Dashboard({ user }: { user: AppUser | null }) {
     </div>
   );
 }
-
