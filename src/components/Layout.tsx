@@ -330,15 +330,11 @@ export function Layout({
             >
               <Menu className="w-6 h-6" />
             </button>
-            <div className="hidden sm:block">
-              <h2 className="text-2xl font-bold text-text-primary tracking-tight leading-none">
-                {(() => {
-                  const h = new Date().getHours();
-                  const greeting = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
-                return `${greeting}, ${user?.name?.split(' ')[0] || 'Agente'}! 👋`;
-                })()}
-              </h2>
-              <p className="text-[14px] text-text-muted font-semibold mt-1.5 uppercase tracking-tight">Aqui está o resumo da sua microárea hoje.</p>
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="text-sm font-extrabold text-text-primary uppercase tracking-tight">Gestão ACS</span>
+              <span className="text-[10px] font-black bg-teal-500/15 text-teal-700 dark:text-teal-300 px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-teal-500/20">
+                Acompanhamento Clínico
+              </span>
             </div>
           </div>
 

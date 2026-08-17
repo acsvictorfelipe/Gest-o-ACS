@@ -341,20 +341,6 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         {/* Calendário de Visitas Realizadas */}
         <div className="col-span-12 lg:col-span-8 flex flex-col">
           <div className="bg-bg-secondary rounded-[32px] p-4 sm:p-5 border border-border shadow-sm flex flex-col h-full">
-            <div className="flex items-center justify-between mb-4 shrink-0 px-2">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
-                  <CalendarIcon className="w-4.5 h-4.5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-text-primary tracking-tight">Agenda de Visitas & Calendário</h3>
-                  <p className="text-[10px] text-text-muted font-semibold">Visitas realizadas e programadas do ACS</p>
-                </div>
-              </div>
-              <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/30 px-3 py-1 rounded-full border border-teal-200 dark:border-teal-900/40">
-                {visits?.length || 0} visitas no histórico
-              </span>
-            </div>
             <div className="flex-1 overflow-auto">
               <PendingCalendar visits={visits} patients={allPatients} />
             </div>
