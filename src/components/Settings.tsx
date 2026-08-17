@@ -16,7 +16,8 @@ import {
   Pencil,
   X,
   Moon,
-  Sun
+  Sun,
+  Smartphone
 } from 'lucide-react';
 
 export function Settings({ 
@@ -251,6 +252,30 @@ export function Settings({
                 )}
               </button>
             )}
+          </div>
+
+          <div className="flex items-center justify-between p-4 bg-bg-primary dark:bg-slate-800 rounded-xl border border-border/50">
+            <div>
+              <p className="text-sm font-bold text-text-primary dark:text-white">Aplicativo no Dispositivo (PWA)</p>
+              <p className="text-xs text-text-muted font-medium mt-0.5">
+                Instale o Gestão ACS como aplicativo nativo no Android ou iOS para uso offline.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const prompt = (window as any).deferredPwaPrompt;
+                if (prompt) {
+                  prompt.prompt();
+                } else {
+                  alert('Passos para instalar no Android / iOS:\n\n📱 Android (Chrome):\nToque nos 3 pontos (⋮) no canto superior ➔ selecione "Instalar aplicativo".\n\n🍎 iPhone (Safari):\nToque no botão Compartilhar ➔ selecione "Adicionar à Tela de Início".');
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-bold text-xs transition-all shadow-sm hover:opacity-90 active:scale-95 cursor-pointer shrink-0"
+            >
+              <Smartphone className="w-4 h-4" />
+              Instalar App
+            </button>
           </div>
         </section>
 

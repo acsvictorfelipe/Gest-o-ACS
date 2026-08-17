@@ -5,8 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
     <title>Gestão ACS</title>
 
-    <!-- PWA Manifest (ambos os formatos para máxima compatibilidade) -->
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
     <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Script de Captura Global PWA & Registro SW Incondicional -->
+    <script>
+      window.deferredPwaPrompt = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.deferredPwaPrompt = e;
+        console.log('[PWA] Prompt de instalação capturado antecipadamente!');
+        if (window.onPwaPromptReady) window.onPwaPromptReady(e);
+      });
+
+      if ('serviceWorker' in navigator) {
+        var registerSW = function() {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(function(reg) {
+              console.log('[PWA] Service Worker ativo:', reg.scope);
+            })
+            .catch(function(err) {
+              console.warn('[PWA] Erro no registro do SW:', err);
+            });
+        };
+        if (document.readyState === 'complete') {
+          registerSW();
+        } else {
+          window.addEventListener('load', registerSW);
+        }
+      }
+    </script>
 
     <!-- Tema e cores -->
     <meta name="theme-color" content="#14B8A6" />

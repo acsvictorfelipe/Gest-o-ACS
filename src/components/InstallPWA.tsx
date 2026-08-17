@@ -48,15 +48,25 @@ export function InstallPWA() {
     setIsAndroid(isAndroidDevice);
     setIsWindows(isWindowsDevice);
 
+    // Check if early window.deferredPwaPrompt was captured before React mounted
+    if ((window as any).deferredPwaPrompt) {
+      setDeferredPrompt((window as any).deferredPwaPrompt);
+    }
+    (window as any).onPwaPromptReady = (e: any) => {
+      setDeferredPrompt(e);
+    };
+
     // Listen for beforeinstallprompt event (Chrome, Edge, Android)
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
+      (window as any).deferredPwaPrompt = e;
       setDeferredPrompt(e);
     };
 
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
+      (window as any).deferredPwaPrompt = null;
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -65,6 +75,7 @@ export function InstallPWA() {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      delete (window as any).onPwaPromptReady;
     };
   }, []);
 
@@ -78,14 +89,16 @@ export function InstallPWA() {
   };
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
+    const activePrompt = deferredPrompt || (window as any).deferredPwaPrompt;
+    if (activePrompt) {
       try {
-        await deferredPrompt.prompt();
-        const choiceResult = await deferredPrompt.userChoice;
+        await activePrompt.prompt();
+        const choiceResult = await activePrompt.userChoice;
         if (choiceResult.outcome === 'accepted') {
           setIsInstalled(true);
         }
         setDeferredPrompt(null);
+        (window as any).deferredPwaPrompt = null;
       } catch (err) {
         console.warn('Erro ao chamar instalador PWA:', err);
         if (isAndroid) setShowAndroidModal(true);
