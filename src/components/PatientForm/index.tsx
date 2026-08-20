@@ -819,7 +819,7 @@ export function PatientForm({ user }: { user: any }) {
         </div>
       )}
 
-      <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={methods.handleSubmit((data) => onSubmit(data))} className="space-y-6">
         <fieldset disabled={isReadOnly} className="space-y-8 contents">
           <DadosPessoaisSection
             formData={formData}
