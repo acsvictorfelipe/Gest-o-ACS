@@ -193,7 +193,7 @@ export const patientFormSchema = z.object({
       visita30dias: z.string().default(''),
       visita6meses: z.string().default(''),
       proximaVisitaSugerida: z.string().default(''),
-      vacinas: z.record(z.string(), z.string()).default({}),
+      vacinas: z.record(z.string(), z.any()).default({}),
       notes: z.string().default('')
     }).default({
       consultas: [],
