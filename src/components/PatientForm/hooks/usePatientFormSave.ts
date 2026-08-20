@@ -15,6 +15,7 @@ interface UsePatientFormSaveProps {
   originalLastVisitAt: string | null;
   setIsDirty: (dirty: boolean) => void;
   navigate: (path: string) => void;
+  fromHouseholdId?: string | null;
 }
 
 export function usePatientFormSave({
@@ -25,11 +26,12 @@ export function usePatientFormSave({
   toastError,
   originalLastVisitAt,
   setIsDirty,
-  navigate
+  navigate,
+  fromHouseholdId
 }: UsePatientFormSaveProps) {
   const [loading, setLoading] = useState(false);
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: any, options?: { andAddAnother?: boolean; resetForNextResident?: () => void }) => {
     const formData = { ...data };
     
     // Validação de CNS SUS do Paciente
@@ -230,14 +232,25 @@ export function usePatientFormSave({
           });
         }
 
-        success('Dados salvos localmente. Serão sincronizados quando houver internet.');
         queryClient.invalidateQueries({ queryKey: ['patients'] });
         queryClient.invalidateQueries({ queryKey: ['patientList'] });
         queryClient.invalidateQueries({ queryKey: ['householdsList'] });
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
         queryClient.invalidateQueries({ queryKey: ['visits'] });
+
+        if (options?.andAddAnother) {
+          success(`Morador "${formData.name}" salvo localmente! Pronto para o próximo cadastro.`);
+          options.resetForNextResident?.();
+          return;
+        }
+
+        success('Dados salvos localmente. Serão sincronizados quando houver internet.');
         setTimeout(() => {
-          navigate(`/pacientes?filter=${getRedirectFilter(finalCategories)}`);
+          if (fromHouseholdId) {
+            navigate(`/domicilio/${fromHouseholdId}`);
+          } else {
+            navigate(`/pacientes?filter=${getRedirectFilter(finalCategories)}`);
+          }
         }, 1500);
         return;
       }
@@ -380,14 +393,25 @@ export function usePatientFormSave({
         if (vError) throw vError;
       }
 
-      success('Paciente salvo com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       queryClient.invalidateQueries({ queryKey: ['patientList'] });
       queryClient.invalidateQueries({ queryKey: ['householdsList'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['visits'] });
+
+      if (options?.andAddAnother) {
+        success(`Morador "${formData.name}" salvo com sucesso! Pronto para o próximo cadastro.`);
+        options.resetForNextResident?.();
+        return;
+      }
+
+      success('Paciente salvo com sucesso!');
       setTimeout(() => {
-        navigate(`/pacientes?filter=${getRedirectFilter(formData.categories)}`);
+        if (fromHouseholdId) {
+          navigate(`/domicilio/${fromHouseholdId}`);
+        } else {
+          navigate(`/pacientes?filter=${getRedirectFilter(formData.categories)}`);
+        }
       }, 1500);
     } catch (error: any) {
       console.error("Error saving patient:", error);

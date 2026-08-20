@@ -6,9 +6,10 @@ interface DadosPessoaisSectionProps {
   formData: any;
   setFormData: (updater: any) => void;
   isReadOnly?: boolean;
+  parentHousehold?: any;
 }
 
-export function DadosPessoaisSection({ formData, setFormData, isReadOnly }: DadosPessoaisSectionProps) {
+export function DadosPessoaisSection({ formData, setFormData, isReadOnly, parentHousehold }: DadosPessoaisSectionProps) {
   return (
     <div className="space-y-6">
       {/* Seção de Identificação Geral */}
@@ -30,15 +31,17 @@ export function DadosPessoaisSection({ formData, setFormData, isReadOnly }: Dado
             />
           </div>
           <div className="md:col-span-2 space-y-1.5">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Responsável?</label>
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Responsável?</label>
+            </div>
             <select 
-              disabled={isReadOnly}
+              disabled={isReadOnly || Boolean(parentHousehold)}
               value={formData.isFamilyResponsible ? 'Sim' : 'Não'}
               onChange={e => setFormData({ ...formData, isFamilyResponsible: e.target.value === 'Sim' })}
-              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg py-2 px-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg py-2 px-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 disabled:opacity-60 disabled:bg-slate-100 dark:disabled:bg-slate-800/60"
             >
               <option className="text-slate-900 dark:text-slate-100 font-bold">Não</option>
-              <option className="text-slate-900 dark:text-slate-100 font-bold">Sim</option>
+              {!parentHousehold && <option className="text-slate-900 dark:text-slate-100 font-bold">Sim</option>}
             </select>
           </div>
           <div className="md:col-span-6 space-y-1.5">
@@ -59,8 +62,8 @@ export function DadosPessoaisSection({ formData, setFormData, isReadOnly }: Dado
               type="text" 
               value={(formData.isFamilyResponsible ? formData.cns : formData.responsibleCns) || ''}
               onChange={e => setFormData({ ...formData, responsibleCns: e.target.value.replace(/\s+/g, '') })}
-              disabled={formData.isFamilyResponsible || isReadOnly}
-              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg py-2 px-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 appearance-none disabled:opacity-50" 
+              disabled={formData.isFamilyResponsible || isReadOnly || Boolean(parentHousehold)}
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg py-2 px-3 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 appearance-none disabled:opacity-60 disabled:bg-slate-100 dark:disabled:bg-slate-800/60" 
               placeholder="000 0000 0000 0000" 
             />
           </div>

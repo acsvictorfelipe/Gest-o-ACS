@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { syncService } from '../lib/syncService';
 import { formatDate } from '../lib/dateUtils';
 import { useToast } from './Toast';
+import { queryClient } from '../lib/queryClient';
 import { 
   Home, 
   Users, 
@@ -20,13 +21,16 @@ import {
   Loader2,
   X,
   Eye,
-  Plus
+  Plus,
+  UserPlus,
+  Search,
+  Check
 } from 'lucide-react';
 
 export function HouseholdView({ user }: { user: any }) {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { info, error: toastError } = useToast();
+  const { info, error: toastError, success } = useToast();
   const [household, setHousehold] = useState<any>(null);
   const [residents, setResidents] = useState<any[]>([]);
   const [visits, setVisits] = useState<any[]>([]);
@@ -35,12 +39,124 @@ export function HouseholdView({ user }: { user: any }) {
   const [deleting, setDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showVisitModal, setShowVisitModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [linkingId, setLinkingId] = useState<string | null>(null);
+
   const [editForm, setEditForm] = useState({
     address: '',
     number: '',
     complement: '',
     responsible_name: ''
   });
+
+  const handleSearchPatients = async (query: string) => {
+    setSearchQuery(query);
+    const cleanQuery = query.trim();
+    if (cleanQuery.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      let q = supabase
+        .from('patients')
+        .select('*');
+
+      if (user.role !== 'Gestor') {
+        q = q.eq('agent_id', user.id);
+      }
+
+      q = q.or(`name.ilike.%${cleanQuery}%,cns.ilike.%${cleanQuery}%`).limit(15);
+
+      const { data, error } = await q;
+      if (error) throw error;
+
+      const existingIds = new Set(residents.map(r => r.id));
+      const filtered = (data || []).filter(p => !existingIds.has(p.id));
+      setSearchResults(filtered);
+    } catch (err) {
+      console.error("Error searching patients to link:", err);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleLinkPatient = async (patient: any) => {
+    if (!household || !id) return;
+    setLinkingId(patient.id);
+
+    try {
+      const updatedClinicalData = {
+        ...(patient.clinical_data || {}),
+        address: household.address,
+        address_number: household.number,
+        address_complement: household.complement,
+        responsible_cns: household.responsible_cns
+      };
+
+      const updatedPayload = {
+        household_id: id,
+        is_family_responsible: false,
+        clinical_data: updatedClinicalData
+      };
+
+      if (!navigator.onLine) {
+        await syncService.addToQueue('patients', 'UPDATE', {
+          id: patient.id,
+          ...updatedPayload
+        });
+        const updatedLocalPatient = { ...patient, ...updatedPayload };
+        setResidents(prev => [...prev, updatedLocalPatient]);
+        info('Morador vinculado localmente. Será sincronizado quando houver internet.');
+        setShowLinkModal(false);
+        setSearchQuery('');
+        setSearchResults([]);
+        return;
+      }
+
+      const { error } = await supabase
+        .from('patients')
+        .update(updatedPayload)
+        .eq('id', patient.id);
+
+      if (error) throw error;
+
+      const updatedLocalPatient = { ...patient, ...updatedPayload };
+      setResidents(prev => [...prev, updatedLocalPatient]);
+
+      try {
+        const { data: vData } = await supabase
+          .from('visits')
+          .select('*')
+          .eq('patient_id', patient.id)
+          .order('date', { ascending: false });
+        if (vData && vData.length > 0) {
+          setVisits(prev => [...vData, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        }
+      } catch (vErr) {
+        console.warn("Could not reload linked patient visits:", vErr);
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      queryClient.invalidateQueries({ queryKey: ['patientList'] });
+      queryClient.invalidateQueries({ queryKey: ['householdsList'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+
+      success(`"${patient.name}" vinculado a este domicílio com sucesso!`);
+      setShowLinkModal(false);
+      setSearchQuery('');
+      setSearchResults([]);
+    } catch (err: any) {
+      console.error("Error linking patient to household:", err);
+      toastError(err.message || "Erro ao vincular morador.");
+    } finally {
+      setLinkingId(null);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -246,15 +362,30 @@ export function HouseholdView({ user }: { user: any }) {
           <div className="bg-bg-secondary dark:bg-slate-900 p-8 rounded-[2rem] shadow-sm border border-border dark:border-slate-800">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
               <h3 className="text-xl font-bold font-headline text-text-primary">Moradores Dependentes</h3>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {user.role !== 'Gestor' && (
-                  <button 
-                    onClick={() => navigate(`/novo-cadastro?household=${household.id}`)}
-                    className="bg-primary hover:bg-primary/90 text-white text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all shadow-sm"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Adicionar Morador
-                  </button>
+                  <>
+                    <button 
+                      onClick={() => navigate(`/novo-cadastro?household=${household.id}`)}
+                      className="bg-primary hover:bg-primary/90 text-white text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                      title="Cadastrar novo morador neste domicílio"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Novo Morador
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setShowLinkModal(true);
+                        setSearchQuery('');
+                        setSearchResults([]);
+                      }}
+                      className="bg-teal-50 hover:bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:hover:bg-teal-950/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800/80 text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all shadow-xs active:scale-95"
+                      title="Vincular cidadão já cadastrado a esta residência"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      Vincular Existente
+                    </button>
+                  </>
                 )}
                 <span className="bg-primary/10 text-primary text-xs px-3 py-1.5 rounded-full font-bold">{residents.length} Residentes</span>
               </div>
@@ -495,6 +626,109 @@ export function HouseholdView({ user }: { user: any }) {
             >
               Cancelar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Link Existing Patient Modal */}
+      {showLinkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-bg-secondary dark:bg-slate-900 rounded-[2.5rem] p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-border dark:border-slate-800 animate-in zoom-in-95 duration-300 flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between pb-4 border-b border-border dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-text-primary font-headline">Vincular Cidadão à Residência</h3>
+                  <p className="text-xs text-text-muted dark:text-text-secondary">Associe um paciente já cadastrado a este domicílio</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowLinkModal(false)}
+                className="p-2 hover:bg-bg-primary rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-text-muted" />
+              </button>
+            </div>
+            
+            <div className="pt-4 pb-2">
+              <div className="relative">
+                <input 
+                  type="text"
+                  autoFocus
+                  value={searchQuery}
+                  onChange={e => handleSearchPatients(e.target.value)}
+                  placeholder="Digite o Nome ou Cartão SUS (CNS)..."
+                  className="w-full bg-bg-primary border border-border dark:border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 text-text-primary outline-none"
+                />
+                <Search className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
+                {searching && (
+                  <Loader2 className="w-4 h-4 text-primary animate-spin absolute right-3.5 top-1/2 -translate-y-1/2" />
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-2 space-y-2 custom-scrollbar">
+              {searchQuery.trim().length < 2 ? (
+                <div className="py-12 text-center text-xs text-text-muted italic">
+                  Digite pelo menos 2 caracteres do nome ou CNS para buscar.
+                </div>
+              ) : searchResults.length > 0 ? (
+                searchResults.map(p => (
+                  <div 
+                    key={p.id}
+                    className="flex items-center justify-between p-3.5 rounded-2xl bg-bg-primary/60 dark:bg-slate-800/40 border border-border/60 dark:border-slate-800 hover:bg-bg-primary dark:hover:bg-slate-800 transition-all gap-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                        {p.name?.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-text-primary truncate">{p.name}</p>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] text-text-muted font-medium">CNS: {p.cns || 'Sem CNS'}</span>
+                          {p.birth_date && (
+                            <span className="text-[9px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded font-bold">
+                              {formatDate(p.birth_date)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={linkingId === p.id}
+                      onClick={() => handleLinkPatient(p)}
+                      className="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                    >
+                      {linkingId === p.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Check className="w-3.5 h-3.5" />
+                      )}
+                      Vincular
+                    </button>
+                  </div>
+                ))
+              ) : (
+                !searching && (
+                  <div className="py-12 text-center text-xs text-text-muted">
+                    Nenhum cidadão encontrado para "{searchQuery}".
+                  </div>
+                )
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-border dark:border-slate-800">
+              <button 
+                onClick={() => setShowLinkModal(false)}
+                className="w-full py-3 bg-bg-primary text-text-secondary rounded-xl font-bold text-xs hover:bg-border transition-all"
+              >
+                Fechar
+              </button>
+            </div>
           </div>
         </div>
       )}

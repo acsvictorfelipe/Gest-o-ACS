@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Loader2, Home, X, CheckCircle2 } from 'lucide-react';
+import { Loader2, Home, X, CheckCircle2, MapPin } from 'lucide-react';
 
 import { supabase } from '../../lib/supabase';
 import { syncService } from '../../lib/syncService';
@@ -29,6 +29,18 @@ const safeMergeClinicalData = (dbClinical: any, defaultClinical: any): any => {
     return JSON.parse(JSON.stringify(defaultClinical));
   }
   
+  if (
+    typeof defaultClinical === 'object' &&
+    defaultClinical !== null &&
+    !Array.isArray(defaultClinical) &&
+    Object.keys(defaultClinical).length === 0 &&
+    typeof dbClinical === 'object' &&
+    dbClinical !== null &&
+    !Array.isArray(dbClinical)
+  ) {
+    return { ...dbClinical };
+  }
+
   const result = JSON.parse(JSON.stringify(defaultClinical));
   
   for (const key of Object.keys(result)) {
@@ -42,7 +54,11 @@ const safeMergeClinicalData = (dbClinical: any, defaultClinical: any): any => {
     if (Array.isArray(defaultVal)) {
       result[key] = Array.isArray(dbVal) ? dbVal : [];
     } else if (typeof defaultVal === 'object' && defaultVal !== null) {
-      result[key] = safeMergeClinicalData(dbVal, defaultVal);
+      if (Object.keys(defaultVal).length === 0 && typeof dbVal === 'object' && dbVal !== null && !Array.isArray(dbVal)) {
+        result[key] = { ...dbVal };
+      } else {
+        result[key] = safeMergeClinicalData(dbVal, defaultVal);
+      }
     } else {
       if (typeof defaultVal === typeof dbVal) {
         result[key] = dbVal;
@@ -79,6 +95,7 @@ export function PatientForm({ user }: { user: any }) {
   const [householdResidents, setHouseholdResidents] = useState<any[]>([]);
   const [householdVisits, setHouseholdVisits] = useState<any[]>([]);
   const [loadingHousehold, setLoadingHousehold] = useState(false);
+  const [parentHousehold, setParentHousehold] = useState<any>(null);
 
   const isReadOnly = user.role === 'Gestor';
 
@@ -266,6 +283,7 @@ export function PatientForm({ user }: { user: any }) {
 
           if (error) throw error;
           if (data) {
+            setParentHousehold(data);
             setFormData({
               ...initialDefaultValues,
               householdId: data.id,
@@ -404,6 +422,9 @@ export function PatientForm({ user }: { user: any }) {
   // Hook for category automation by age
   usePatientCategories(formData.birthDate, setFormData, !!id);
 
+  const queryParams = new URLSearchParams(location.search);
+  const fromHouseholdId = queryParams.get('household');
+
   // Hook for form submit & save
   const { onSubmit, loading: saveLoading } = usePatientFormSave({
     user,
@@ -413,8 +434,36 @@ export function PatientForm({ user }: { user: any }) {
     toastError,
     originalLastVisitAt,
     setIsDirty,
-    navigate
+    navigate,
+    fromHouseholdId
   });
+
+  const handleSaveAndAddAnother = () => {
+    methods.handleSubmit((data) => {
+      return onSubmit(data, {
+        andAddAnother: true,
+        resetForNextResident: () => {
+          const hId = parentHousehold?.id || fromHouseholdId || '';
+          const hAddr = parentHousehold?.address || formData.address || '';
+          const hNum = parentHousehold?.number || formData.number || '';
+          const hComp = parentHousehold?.complement || formData.complement || '';
+          const hRespCns = parentHousehold?.responsible_cns || formData.responsibleCns || '';
+
+          methods.reset({
+            ...initialDefaultValues,
+            householdId: hId,
+            address: hAddr,
+            number: hNum,
+            complement: hComp,
+            responsibleCns: hRespCns,
+            isFamilyResponsible: false
+          });
+          setIsDirty(false);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+    })();
+  };
 
   // Action: Delete Patient
   const handleDelete = async () => {
@@ -736,12 +785,47 @@ export function PatientForm({ user }: { user: any }) {
         onQuickVisit={handleQuickVisit}
       />
 
+      {parentHousehold && (
+        <div className="bg-gradient-to-r from-teal-500/10 via-emerald-500/10 to-teal-500/10 dark:from-teal-950/30 dark:via-emerald-950/30 dark:to-teal-950/30 border-2 border-teal-500/30 dark:border-teal-700/50 rounded-2xl p-5 shadow-sm space-y-3 animate-in fade-in slide-in-from-top-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-teal-600 dark:bg-teal-700 text-white flex items-center justify-center shrink-0 shadow-md">
+                <Home className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-400 block">
+                  Novo Morador do Domicílio
+                </span>
+                <h4 className="text-base font-extrabold text-slate-800 dark:text-slate-100 font-headline">
+                  Família de {parentHousehold.responsible_name || 'Responsável não identificado'}
+                </h4>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold px-3 py-1 bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 rounded-lg border border-teal-200 dark:border-teal-800/80 shadow-xs">
+                CNS Resp: {parentHousehold.responsible_cns || 'N/A'}
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-300 font-medium pt-2 border-t border-teal-200/60 dark:border-teal-800/40">
+            <div className="flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+              <span>{parentHousehold.address}, {parentHousehold.number}{parentHousehold.complement ? ` - ${parentHousehold.complement}` : ''}</span>
+            </div>
+            <span className="text-[11px] text-teal-700 dark:text-teal-400 font-bold">
+              • Endereço e responsável vinculados automaticamente
+            </span>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-6">
         <fieldset disabled={isReadOnly} className="space-y-8 contents">
           <DadosPessoaisSection
             formData={formData}
             setFormData={setFormData}
             isReadOnly={isReadOnly}
+            parentHousehold={parentHousehold}
           />
           <EnderecoSection
             formData={formData}
@@ -785,9 +869,15 @@ export function PatientForm({ user }: { user: any }) {
               });
               if (!ok) return;
             }
-            navigate('/pacientes');
+            if (fromHouseholdId) {
+              navigate(`/domicilio/${fromHouseholdId}`);
+            } else {
+              navigate('/pacientes');
+            }
           }}
           isReadOnly={isReadOnly}
+          showSaveAndAddAnother={!id && Boolean(fromHouseholdId || parentHousehold)}
+          onSaveAndAddAnother={handleSaveAndAddAnother}
         />
       </form>
 
