@@ -202,7 +202,21 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      let data: any = {};
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        if (!response.ok) {
+          throw new Error(
+            response.status === 404
+              ? 'Rota do servidor não encontrada (404). Verifique se as funções de API estão implantadas na hospedagem (Vercel).'
+              : `Erro no servidor (${response.status}): ${text.slice(0, 120)}`
+          );
+        }
+      }
+
       if (!response.ok) throw new Error(data.error || 'Erro ao criar usuário');
 
       // Log activity
@@ -291,7 +305,20 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
         method: 'DELETE',
         headers
       });
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      let data: any = {};
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        if (!response.ok) {
+          throw new Error(
+            response.status === 404
+              ? 'Rota do servidor não encontrada (404).'
+              : `Erro no servidor (${response.status}): ${text.slice(0, 120)}`
+          );
+        }
+      }
       if (!response.ok) throw new Error(data.error || 'Erro ao excluir usuário');
 
       await logActivity(currentUser.id, 'Exclusão de Usuário', `Excluiu o usuário ${userName} do sistema.`);
