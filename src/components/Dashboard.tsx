@@ -104,6 +104,8 @@ export function Dashboard({ user }: { user: AppUser | null }) {
     return 'Boa noite';
   }, []);
 
+  const totalPriorityAlerts = (stats.childVisitAlerts || 0) + (stats.pendingVisits || 0) + (stats.lateVaccines || 0) + (stats.receitasAVencer || 0) + ((stats as any).gestantesPendentes || 0);
+
   if (loading) return null;
 
   return (
