@@ -203,6 +203,10 @@ async function startServer() {
       return res.status(400).json({ error: 'O agente de origem e destino devem ser diferentes.' });
     }
 
+    if ((!targetHouseholdIds || targetHouseholdIds.length === 0) && (!targetPatientIds || targetPatientIds.length === 0)) {
+      return res.status(400).json({ error: 'Nenhum domicílio ou cidadão foi selecionado para a transferência.' });
+    }
+
     try {
       const { data: targetAgent, error: targetErr } = await supabaseAdmin
         .from('profiles')
@@ -270,6 +274,7 @@ async function startServer() {
           const { error: vErr } = await supabaseAdmin
             .from('visits')
             .update({
+              agent_id: toAgentId,
               area_color: targetAgent.color,
               microarea: targetAgent.microarea
             })
@@ -286,10 +291,19 @@ async function startServer() {
       const targetName = targetAgent.name || 'Agente';
       const authUser = (req as any).user;
       if (authUser?.id) {
+        let logDetail = '';
+        if (targetHouseholdIds.length > 0 && targetPatientIds.length > 0) {
+          logDetail = `Transferiu ${targetHouseholdIds.length} domicílios e ${targetPatientIds.length} cidadãos do ACS ${sourceName} para o ACS ${targetName}.`;
+        } else if (targetPatientIds.length > 0) {
+          logDetail = `Transferiu ${targetPatientIds.length} cidadão(s) do ACS ${sourceName} para o ACS ${targetName}.`;
+        } else {
+          logDetail = `Transferiu ${targetHouseholdIds.length} domicílio(s) do ACS ${sourceName} para o ACS ${targetName}.`;
+        }
+
         await supabaseAdmin.from('system_logs').insert({
           user_id: authUser.id,
           action: 'Redistribuição de Microárea',
-          details: `Transferiu ${targetHouseholdIds.length} domicílios e ${targetPatientIds.length} cidadãos do ACS ${sourceName} para o ACS ${targetName}.`
+          details: logDetail
         });
       }
 

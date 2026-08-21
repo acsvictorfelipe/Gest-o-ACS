@@ -61,6 +61,10 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'O agente de origem e destino devem ser diferentes.' });
     }
 
+    if ((!targetHouseholdIds || targetHouseholdIds.length === 0) && (!targetPatientIds || targetPatientIds.length === 0)) {
+      return res.status(400).json({ error: 'Nenhum domicílio ou cidadão foi selecionado para a transferência.' });
+    }
+
     // Fetch target agent details to copy color and microarea
     const { data: targetAgent, error: targetErr } = await supabaseAdmin
       .from('profiles')
@@ -129,6 +133,7 @@ export default async function handler(req: any, res: any) {
         const { error: vErr } = await supabaseAdmin
           .from('visits')
           .update({
+            agent_id: toAgentId,
             area_color: targetAgent.color,
             microarea: targetAgent.microarea
           })
@@ -143,10 +148,19 @@ export default async function handler(req: any, res: any) {
     // 4. Log the activity
     const sourceName = sourceAgent?.name || 'Agente';
     const targetName = targetAgent.name || 'Agente';
+    let logDetail = '';
+    if (targetHouseholdIds.length > 0 && targetPatientIds.length > 0) {
+      logDetail = `Transferiu ${targetHouseholdIds.length} domicílios e ${targetPatientIds.length} cidadãos do ACS ${sourceName} para o ACS ${targetName}.`;
+    } else if (targetPatientIds.length > 0) {
+      logDetail = `Transferiu ${targetPatientIds.length} cidadão(s) do ACS ${sourceName} para o ACS ${targetName}.`;
+    } else {
+      logDetail = `Transferiu ${targetHouseholdIds.length} domicílio(s) do ACS ${sourceName} para o ACS ${targetName}.`;
+    }
+
     await supabaseAdmin.from('system_logs').insert({
       user_id: user.id,
       action: 'Redistribuição de Microárea',
-      details: `Transferiu ${targetHouseholdIds.length} domicílios e ${targetPatientIds.length} cidadãos do ACS ${sourceName} para o ACS ${targetName}.`
+      details: logDetail
     });
 
     return res.status(200).json({

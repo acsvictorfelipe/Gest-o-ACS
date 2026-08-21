@@ -87,11 +87,15 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
   // Tab 4: Transfer Form
   const [fromAgentId, setFromAgentId] = useState('');
   const [toAgentId, setToAgentId] = useState('');
+  const [transferScope, setTransferScope] = useState<'households' | 'patients'>('households');
   const [transferType, setTransferType] = useState<'all' | 'microarea' | 'selected'>('all');
   const [selectedMicroarea, setSelectedMicroarea] = useState('');
   const [selectedHouseholds, setSelectedHouseholds] = useState<string[]>([]);
+  const [selectedPatients, setSelectedPatients] = useState<string[]>([]);
   const [transferring, setTransferring] = useState(false);
   const [householdSearch, setHouseholdSearch] = useState('');
+  const [patientSearch, setPatientSearch] = useState('');
+  const [transferHouseholdsWithPatients, setTransferHouseholdsWithPatients] = useState(false);
 
   // Tab 5: Campaign Form
   const [campaignForm, setCampaignForm] = useState({
@@ -331,7 +335,7 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
     }
   };
 
-  // Tab 4: Mass Transfer of Households & Patients
+  // Tab 4: Transfer of Households & Patients
   const handleTransfer = async () => {
     if (!fromAgentId || !toAgentId) {
       warning("Selecione os agentes de origem e destino.");
@@ -347,9 +351,55 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
 
     if (!sourceAgent || !targetAgent) return;
 
+    let targetHouseholdIds: string[] = [];
+    let targetPatientIds: string[] = [];
+
+    if (transferScope === 'patients') {
+      if (selectedPatients.length === 0) {
+        warning("Selecione pelo menos um paciente para transferir.");
+        return;
+      }
+      targetPatientIds = selectedPatients;
+      if (transferHouseholdsWithPatients) {
+        const linkedHIds = patients
+          .filter(p => selectedPatients.includes(p.id) && p.household_id)
+          .map(p => p.household_id as string);
+        targetHouseholdIds = Array.from(new Set(linkedHIds));
+      }
+    } else {
+      // transferScope === 'households'
+      if (transferType === 'all') {
+        targetHouseholdIds = households.filter(h => h.agent_id === fromAgentId).map(h => h.id);
+        targetPatientIds = patients.filter(p => p.agent_id === fromAgentId).map(p => p.id);
+      } else if (transferType === 'microarea') {
+        targetHouseholdIds = households.filter(h => h.agent_id === fromAgentId && h.microarea === selectedMicroarea).map(h => h.id);
+        targetPatientIds = patients.filter(p => p.agent_id === fromAgentId && p.microarea === selectedMicroarea).map(p => p.id);
+      } else {
+        targetHouseholdIds = selectedHouseholds;
+        targetPatientIds = patients.filter(p => p.household_id && targetHouseholdIds.includes(p.household_id)).map(p => p.id);
+      }
+
+      if (targetHouseholdIds.length === 0 && targetPatientIds.length === 0) {
+        warning("Nenhum domicílio ou paciente encontrado para os critérios de transferência selecionados.");
+        return;
+      }
+    }
+
+    if (targetHouseholdIds.length === 0 && targetPatientIds.length === 0) {
+      warning("Nenhum registro selecionado para transferência.");
+      return;
+    }
+
+    let confirmMsg = '';
+    if (transferScope === 'patients') {
+      confirmMsg = `Confirma a transferência de ${targetPatientIds.length} cidadão(s) ${targetHouseholdIds.length > 0 ? `(e seus ${targetHouseholdIds.length} domicílios vinculados)` : ''} do ACS ${sourceAgent.name} para o ACS ${targetAgent.name}?`;
+    } else {
+      confirmMsg = `Confirma a transferência de ${targetHouseholdIds.length} domicílio(s) e ${targetPatientIds.length} cidadão(s) do ACS ${sourceAgent.name} para o ACS ${targetAgent.name}?`;
+    }
+
     const ok = await confirm({
       title: 'Confirmar Transferência',
-      message: `Confirma a transferência dos domicílios e pacientes do ACS ${sourceAgent.name} para o ACS ${targetAgent.name}?`,
+      message: confirmMsg,
       variant: 'warning',
       confirmLabel: 'Transferir',
       cancelLabel: 'Cancelar'
@@ -358,32 +408,6 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
 
     setTransferring(true);
     try {
-      // Find households to update
-      let targetHouseholdIds: string[] = [];
-      if (transferType === 'all') {
-        targetHouseholdIds = households.filter(h => h.agent_id === fromAgentId).map(h => h.id);
-      } else if (transferType === 'microarea') {
-        targetHouseholdIds = households.filter(h => h.agent_id === fromAgentId && h.microarea === selectedMicroarea).map(h => h.id);
-      } else {
-        targetHouseholdIds = selectedHouseholds;
-      }
-
-      if (targetHouseholdIds.length === 0) {
-        warning("Nenhum domicílio encontrado para os critérios de transferência selecionados.");
-        setTransferring(false);
-        return;
-      }
-
-      // Find patients under those households or directly assigned to the source agent
-      let targetPatientIds: string[] = [];
-      if (transferType === 'all') {
-        targetPatientIds = patients.filter(p => p.agent_id === fromAgentId).map(p => p.id);
-      } else if (transferType === 'microarea') {
-        targetPatientIds = patients.filter(p => p.agent_id === fromAgentId && p.microarea === selectedMicroarea).map(p => p.id);
-      } else {
-        targetPatientIds = patients.filter(p => p.household_id && targetHouseholdIds.includes(p.household_id)).map(p => p.id);
-      }
-
       let transferSuccessful = false;
 
       // First attempt: Secure Server API endpoint (bypasses RLS limits and executes atomically)
@@ -430,18 +454,20 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
         };
 
         // 1. Update households in Supabase (updating agent, color, and new microarea)
-        const householdChunks = chunkArray(targetHouseholdIds, 100);
-        for (const chunk of householdChunks) {
-          const { error: hError } = await supabase
-            .from('households')
-            .update({ 
-              agent_id: toAgentId, 
-              area_color: targetAgent.color,
-              microarea: targetAgent.microarea 
-            })
-            .in('id', chunk);
+        if (targetHouseholdIds.length > 0) {
+          const householdChunks = chunkArray(targetHouseholdIds, 100);
+          for (const chunk of householdChunks) {
+            const { error: hError } = await supabase
+              .from('households')
+              .update({ 
+                agent_id: toAgentId, 
+                area_color: targetAgent.color,
+                microarea: targetAgent.microarea 
+              })
+              .in('id', chunk);
 
-          if (hError) throw new Error(`Falha ao atualizar domicílios: ${hError.message}`);
+            if (hError) throw new Error(`Falha ao atualizar domicílios: ${hError.message}`);
+          }
         }
 
         // 2. Update patients in Supabase
@@ -465,6 +491,7 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
             await supabase
               .from('visits')
               .update({ 
+                agent_id: toAgentId,
                 area_color: targetAgent.color,
                 microarea: targetAgent.microarea 
               })
@@ -473,22 +500,42 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
         }
 
         // Log this major activity
+        let logDetail = '';
+        if (targetHouseholdIds.length > 0 && targetPatientIds.length > 0) {
+          logDetail = `Transferiu ${targetHouseholdIds.length} domicílios e ${targetPatientIds.length} cidadãos do ACS ${sourceAgent.name} para o ACS ${targetAgent.name}.`;
+        } else if (targetPatientIds.length > 0) {
+          logDetail = `Transferiu ${targetPatientIds.length} cidadão(s) do ACS ${sourceAgent.name} para o ACS ${targetAgent.name}.`;
+        } else {
+          logDetail = `Transferiu ${targetHouseholdIds.length} domicílio(s) do ACS ${sourceAgent.name} para o ACS ${targetAgent.name}.`;
+        }
+
         await logActivity(
           currentUser.id, 
           'Redistribuição de Microárea', 
-          `Transferiu ${targetHouseholdIds.length} domicílios e ${targetPatientIds.length} cidadãos do ACS ${sourceAgent.name} para o ACS ${targetAgent.name}.`
+          logDetail
         );
+      }
+
+      let successMsg = '';
+      if (targetHouseholdIds.length > 0 && targetPatientIds.length > 0) {
+        successMsg = `Sucesso! ${targetHouseholdIds.length} domicílios e ${targetPatientIds.length} cidadãos transferidos para ${targetAgent.name}.`;
+      } else if (targetPatientIds.length > 0) {
+        successMsg = `Sucesso! ${targetPatientIds.length} cidadão(s) transferido(s) para ${targetAgent.name}.`;
+      } else {
+        successMsg = `Sucesso! ${targetHouseholdIds.length} domicílio(s) transferido(s) para ${targetAgent.name}.`;
       }
 
       setMessage({ 
         type: 'success', 
-        text: `Sucesso! ${targetHouseholdIds.length} domicílios e ${targetPatientIds.length} cidadãos transferidos para ${targetAgent.name}.` 
+        text: successMsg 
       });
 
       setFromAgentId('');
       setToAgentId('');
       setSelectedHouseholds([]);
+      setSelectedPatients([]);
       setHouseholdSearch('');
+      setPatientSearch('');
       fetchData();
     } catch (e: any) {
       console.error("Transfer error:", e);
@@ -787,6 +834,11 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
     return households.filter(h => h.agent_id === fromAgentId);
   }, [fromAgentId, households]);
 
+  const sourceAgentPatients = useMemo(() => {
+    if (!fromAgentId) return [];
+    return patients.filter(p => p.agent_id === fromAgentId);
+  }, [fromAgentId, patients]);
+
   const filteredHouseholds = useMemo(() => {
     if (!householdSearch.trim()) return sourceAgentHouseholds;
     const query = householdSearch.toLowerCase();
@@ -803,6 +855,28 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
       );
     });
   }, [sourceAgentHouseholds, householdSearch]);
+
+  const filteredPatients = useMemo(() => {
+    if (!patientSearch.trim()) return sourceAgentPatients;
+    const query = patientSearch.toLowerCase();
+    return sourceAgentPatients.filter(p => {
+      const name = (p.name || '').toLowerCase();
+      const cns = (p.cns || '').toLowerCase();
+      const microarea = (p.microarea || '').toLowerCase();
+      const birth = (p.birth_date || '').toLowerCase();
+      const linkedHousehold = p.household_id ? households.find(h => h.id === p.household_id) : null;
+      const address = ((linkedHousehold?.address || p.clinical_data?.address) || '').toLowerCase();
+      const num = ((linkedHousehold?.number || p.clinical_data?.address_number) || '').toLowerCase();
+      return (
+        name.includes(query) ||
+        cns.includes(query) ||
+        microarea.includes(query) ||
+        birth.includes(query) ||
+        address.includes(query) ||
+        num.includes(query)
+      );
+    });
+  }, [sourceAgentPatients, patientSearch, households]);
 
   // Tab definitions
   const tabs = [
@@ -898,23 +972,34 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
           <RedistribuicaoTab
             users={users}
             patients={patients}
+            households={households}
             fromAgentId={fromAgentId}
             setFromAgentId={setFromAgentId}
             toAgentId={toAgentId}
             setToAgentId={setToAgentId}
+            transferScope={transferScope}
+            setTransferScope={setTransferScope}
             transferType={transferType}
             setTransferType={setTransferType}
             selectedMicroarea={selectedMicroarea}
             setSelectedMicroarea={setSelectedMicroarea}
             selectedHouseholds={selectedHouseholds}
             setSelectedHouseholds={setSelectedHouseholds}
+            selectedPatients={selectedPatients}
+            setSelectedPatients={setSelectedPatients}
             householdSearch={householdSearch}
             setHouseholdSearch={setHouseholdSearch}
+            patientSearch={patientSearch}
+            setPatientSearch={setPatientSearch}
+            transferHouseholdsWithPatients={transferHouseholdsWithPatients}
+            setTransferHouseholdsWithPatients={setTransferHouseholdsWithPatients}
             transferring={transferring}
             handleTransfer={handleTransfer}
             sourceAgentHouseholds={sourceAgentHouseholds}
+            sourceAgentPatients={sourceAgentPatients}
             sourceAgentMicroareas={sourceAgentMicroareas}
             filteredHouseholds={filteredHouseholds}
+            filteredPatients={filteredPatients}
             handleRenameMicroarea={handleRenameMicroarea}
           />
         )}
