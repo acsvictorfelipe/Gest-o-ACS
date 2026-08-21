@@ -3,7 +3,7 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { format, isSameDay, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, X, MapPin, Calendar as CalendarIcon, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, CreditCard, Calendar as CalendarIcon, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UI_CONFIG, CATEGORY_PALETTE } from '../constants';
 import { motion, AnimatePresence } from 'motion/react';
@@ -348,8 +348,10 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
                       )}
 
                       <div className="flex items-center gap-1.5 text-text-muted pt-1">
-                        <MapPin className="w-3.5 h-3.5 text-teal-500" />
-                        <span className="text-[10px] font-bold truncate">{p?.address || 'Endereço registrado na ficha'}</span>
+                        <CreditCard className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+                        <span className="text-[11px] font-mono font-bold text-slate-600 dark:text-slate-300 truncate">
+                          {p?.cns ? `CNS: ${p.cns}` : 'CNS não informado'}
+                        </span>
                       </div>
                     </div>
                   );

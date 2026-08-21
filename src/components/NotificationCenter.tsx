@@ -86,6 +86,9 @@ export function NotificationCenter({ isOpen, onClose, notifications, counts }: N
 
   const filtered = useMemo(() => {
     if (activeFilter === 'all') return notifications;
+    if (activeFilter === 'gestantes') {
+      return notifications.filter((n) => n.category === 'Gestante' || n.type === 'gestante_pending');
+    }
     const tab = FILTER_TABS.find((t) => t.key === activeFilter);
     if (!tab) return notifications;
     return notifications.filter((n) => tab.types.includes(n.type));

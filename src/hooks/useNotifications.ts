@@ -223,37 +223,7 @@ export function useNotifications(allPatients: any[]) {
         }
       }
 
-      // ── 6. Gestante com Acompanhamento Pendente ──────────────
-      if (categories.includes('Gestante')) {
-        const gConsultas =
-          clinical.gestante?.consultas?.filter(
-            (c: string) => c && c.trim() !== ''
-          ).length || 0;
-        const gVisitas =
-          clinical.gestante?.visitasAcs?.filter(
-            (v: string) => v && v.trim() !== ''
-          ).length || 0;
-
-        if (gConsultas < 9 || gVisitas < 3) {
-          const details: string[] = [];
-          if (gConsultas < 9)
-            details.push(`${gConsultas}/9 consultas pré-natal`);
-          if (gVisitas < 3) details.push(`${gVisitas}/3 visitas ACS`);
-
-          result.push({
-            id: `gestante_pending_${p.id}`,
-            type: 'gestante_pending',
-            priority: gConsultas < 6 || gVisitas < 2 ? 'high' : 'medium',
-            patientId: p.id,
-            patientName: p.name,
-            message: 'Acompanhamento gestacional incompleto',
-            detail: details.join(' • '),
-            daysInfo: 9 - gConsultas,
-            category: 'Gestante',
-            actionRoute: `/editar-paciente/${p.id}`,
-          });
-        }
-      }
+      // ── 6. (Alertas de Gestantes concentrados exclusivamente em: sem visita nenhuma ou >60 dias) ──
 
       // ── 7. Bebê ≤6 meses: Marcos de 1º e 6º Mês ───────────────
       if (categories.includes('Criança') && ageInMonths <= 6) {

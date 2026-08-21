@@ -211,24 +211,12 @@ export function PatientFormHeader({
           <button
             type="button"
             onClick={() => onQuickVisit?.('geral')}
-            className="flex items-center gap-1.5 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold uppercase transition-all shadow-sm active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold uppercase transition-all shadow-sm active:scale-95 cursor-pointer"
             title="Registrar Visita ACS Padrão realizada hoje"
           >
             <Plus className="w-4 h-4" />
             + Visita ACS (Geral)
           </button>
-
-          {Array.isArray(formData.categories) && formData.categories.includes('Gestante') && (
-            <button
-              type="button"
-              onClick={() => onQuickVisit?.('gestante')}
-              className="flex items-center gap-1.5 px-3 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold uppercase transition-all shadow-sm active:scale-95"
-              title="Registrar Visita de Acompanhamento da Gestante"
-            >
-              <Baby className="w-4 h-4" />
-              + Visita Gestante (Pré-Natal)
-            </button>
-          )}
 
           {(formData.clinicalData?.chronic?.hipertensao === 'Sim' ||
             formData.clinicalData?.chronic?.diabetes === 'Sim' ||
