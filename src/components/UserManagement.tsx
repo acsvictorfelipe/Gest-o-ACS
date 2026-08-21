@@ -384,47 +384,101 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
         targetPatientIds = patients.filter(p => p.household_id && targetHouseholdIds.includes(p.household_id)).map(p => p.id);
       }
 
-      // 1. Update households in Supabase (updating agent, color, and new microarea)
-      const { error: hError } = await supabase
-        .from('households')
-        .update({ 
-          agent_id: toAgentId, 
-          area_color: targetAgent.color,
-          microarea: targetAgent.microarea 
-        })
-        .in('id', targetHouseholdIds);
+      let transferSuccessful = false;
 
-      if (hError) throw hError;
+      // First attempt: Secure Server API endpoint (bypasses RLS limits and executes atomically)
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
 
-      // 2. Update patients in Supabase
-      if (targetPatientIds.length > 0) {
-        const { error: pError } = await supabase
-          .from('patients')
-          .update({ 
-            agent_id: toAgentId, 
-            area_color: targetAgent.color,
-            microarea: targetAgent.microarea 
+        const response = await fetch('/api/admin/transfer-patients', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            fromAgentId,
+            toAgentId,
+            targetHouseholdIds,
+            targetPatientIds
           })
-          .in('id', targetPatientIds);
+        });
 
-        if (pError) throw pError;
-
-        // 3. Update visits under those patients to have the new area color and microarea
-        await supabase
-          .from('visits')
-          .update({ 
-            area_color: targetAgent.color,
-            microarea: targetAgent.microarea 
-          })
-          .in('patient_id', targetPatientIds);
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const apiData = await response.json();
+          if (response.ok) {
+            transferSuccessful = true;
+          } else if (response.status !== 404 && response.status !== 502) {
+            throw new Error(apiData.error || `Erro ${response.status} na API de transferência`);
+          }
+        }
+      } catch (apiErr: any) {
+        console.warn('Backend transfer endpoint failed, falling back to direct client execution:', apiErr);
       }
 
-      // Log this major activity
-      await logActivity(
-        currentUser.id, 
-        'Redistribuição de Microárea', 
-        `Transferiu ${targetHouseholdIds.length} domicílios e ${targetPatientIds.length} cidadãos do ACS ${sourceAgent.name} para o ACS ${targetAgent.name}.`
-      );
+      // Second attempt / Fallback: Direct Client chunked Supabase updates
+      if (!transferSuccessful) {
+        const chunkArray = <T,>(arr: T[], size: number): T[][] => {
+          const chunks: T[][] = [];
+          for (let i = 0; i < arr.length; i += size) {
+            chunks.push(arr.slice(i, i + size));
+          }
+          return chunks;
+        };
+
+        // 1. Update households in Supabase (updating agent, color, and new microarea)
+        const householdChunks = chunkArray(targetHouseholdIds, 100);
+        for (const chunk of householdChunks) {
+          const { error: hError } = await supabase
+            .from('households')
+            .update({ 
+              agent_id: toAgentId, 
+              area_color: targetAgent.color,
+              microarea: targetAgent.microarea 
+            })
+            .in('id', chunk);
+
+          if (hError) throw new Error(`Falha ao atualizar domicílios: ${hError.message}`);
+        }
+
+        // 2. Update patients in Supabase
+        if (targetPatientIds.length > 0) {
+          const patientChunks = chunkArray(targetPatientIds, 100);
+          for (const chunk of patientChunks) {
+            const { error: pError } = await supabase
+              .from('patients')
+              .update({ 
+                agent_id: toAgentId, 
+                area_color: targetAgent.color,
+                microarea: targetAgent.microarea 
+              })
+              .in('id', chunk);
+
+            if (pError) throw new Error(`Falha ao atualizar cidadãos: ${pError.message}`);
+          }
+
+          // 3. Update visits under those patients to have the new area color and microarea
+          for (const chunk of patientChunks) {
+            await supabase
+              .from('visits')
+              .update({ 
+                area_color: targetAgent.color,
+                microarea: targetAgent.microarea 
+              })
+              .in('patient_id', chunk);
+          }
+        }
+
+        // Log this major activity
+        await logActivity(
+          currentUser.id, 
+          'Redistribuição de Microárea', 
+          `Transferiu ${targetHouseholdIds.length} domicílios e ${targetPatientIds.length} cidadãos do ACS ${sourceAgent.name} para o ACS ${targetAgent.name}.`
+        );
+      }
 
       setMessage({ 
         type: 'success', 
@@ -438,7 +492,10 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
       fetchData();
     } catch (e: any) {
       console.error("Transfer error:", e);
-      setMessage({ type: 'error', text: `Erro na transferência: ${e.message}` });
+      const userFriendlyMsg = e?.message?.includes('Failed to fetch')
+        ? 'Erro de conexão: Não foi possível comunicar com o servidor ou banco de dados. Verifique a conexão com a internet ou tente novamente em instantes.'
+        : (e.message || 'Erro ao realizar a transferência.');
+      setMessage({ type: 'error', text: `Erro na transferência: ${userFriendlyMsg}` });
     } finally {
       setTransferring(false);
     }

@@ -186,6 +186,125 @@ async function startServer() {
     }
   });
 
+  // API Route for transferring patients and households
+  app.post('/api/admin/transfer-patients', requireAdminOrGestor, async (req, res) => {
+    const { 
+      fromAgentId, 
+      toAgentId, 
+      targetHouseholdIds = [], 
+      targetPatientIds = [] 
+    } = req.body || {};
+
+    if (!fromAgentId || !toAgentId) {
+      return res.status(400).json({ error: 'Agente de origem e agente de destino são obrigatórios.' });
+    }
+
+    if (fromAgentId === toAgentId) {
+      return res.status(400).json({ error: 'O agente de origem e destino devem ser diferentes.' });
+    }
+
+    try {
+      const { data: targetAgent, error: targetErr } = await supabaseAdmin
+        .from('profiles')
+        .select('id, name, color, microarea')
+        .eq('id', toAgentId)
+        .maybeSingle();
+
+      if (targetErr || !targetAgent) {
+        return res.status(404).json({ error: 'Agente de destino não encontrado no banco de dados.' });
+      }
+
+      const { data: sourceAgent } = await supabaseAdmin
+        .from('profiles')
+        .select('id, name')
+        .eq('id', fromAgentId)
+        .maybeSingle();
+
+      const chunkArray = <T>(arr: T[], size: number): T[][] => {
+        const chunks: T[][] = [];
+        for (let i = 0; i < arr.length; i += size) {
+          chunks.push(arr.slice(i, i + size));
+        }
+        return chunks;
+      };
+
+      // 1. Update households
+      if (targetHouseholdIds.length > 0) {
+        const householdChunks = chunkArray(targetHouseholdIds, 100);
+        for (const chunk of householdChunks) {
+          const { error: hErr } = await supabaseAdmin
+            .from('households')
+            .update({
+              agent_id: toAgentId,
+              area_color: targetAgent.color,
+              microarea: targetAgent.microarea
+            })
+            .in('id', chunk);
+
+          if (hErr) {
+            throw new Error(`Erro ao atualizar domicílios: ${hErr.message}`);
+          }
+        }
+      }
+
+      // 2. Update patients
+      if (targetPatientIds.length > 0) {
+        const patientChunks = chunkArray(targetPatientIds, 100);
+        for (const chunk of patientChunks) {
+          const { error: pErr } = await supabaseAdmin
+            .from('patients')
+            .update({
+              agent_id: toAgentId,
+              area_color: targetAgent.color,
+              microarea: targetAgent.microarea
+            })
+            .in('id', chunk);
+
+          if (pErr) {
+            throw new Error(`Erro ao atualizar pacientes: ${pErr.message}`);
+          }
+        }
+
+        // 3. Update visits
+        for (const chunk of patientChunks) {
+          const { error: vErr } = await supabaseAdmin
+            .from('visits')
+            .update({
+              area_color: targetAgent.color,
+              microarea: targetAgent.microarea
+            })
+            .in('patient_id', chunk);
+
+          if (vErr) {
+            console.warn('Warning updating visits for transferred patients:', vErr.message);
+          }
+        }
+      }
+
+      // 4. Log the activity
+      const sourceName = sourceAgent?.name || 'Agente';
+      const targetName = targetAgent.name || 'Agente';
+      const authUser = (req as any).user;
+      if (authUser?.id) {
+        await supabaseAdmin.from('system_logs').insert({
+          user_id: authUser.id,
+          action: 'Redistribuição de Microárea',
+          details: `Transferiu ${targetHouseholdIds.length} domicílios e ${targetPatientIds.length} cidadãos do ACS ${sourceName} para o ACS ${targetName}.`
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        transferredHouseholds: targetHouseholdIds.length,
+        transferredPatients: targetPatientIds.length,
+        targetAgentName: targetName
+      });
+    } catch (error: any) {
+      console.error('Error in transfer-patients route:', error);
+      return res.status(500).json({ error: error.message || 'Erro ao realizar transferência' });
+    }
+  });
+
   // API Route to ensure a profile exists for an authenticated user
   app.post('/api/profile/ensure', async (req, res) => {
     const authHeader = req.headers.authorization;
