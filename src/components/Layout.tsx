@@ -34,6 +34,9 @@ import { syncService } from '../lib/syncService';
 import { motion, AnimatePresence } from 'motion/react';
 import { AppUser } from '../types';
 
+import { useNotifications } from '../hooks/useNotifications';
+import { NotificationCenter } from './NotificationCenter';
+
 export function Layout({ 
   user, 
   onProfileUpdate, 
@@ -48,8 +51,8 @@ export function Layout({
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
-  const [criticalAlerts, setCriticalAlerts] = React.useState<any[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
+  const [patientsData, setPatientsData] = React.useState<any[]>([]);
   const [syncQueueLength, setSyncQueueLength] = React.useState(syncService.getQueueLength());
   const [isOnline, setIsOnline] = React.useState(syncService.isOnline());
   const [isSyncing, setIsSyncing] = React.useState(syncService.isSyncing());
@@ -79,88 +82,53 @@ export function Layout({
   }, []);
 
   React.useEffect(() => {
-    const fetchAlerts = async () => {
+    const fetchPatients = async () => {
       if (!user) return;
       try {
         let alertQuery = supabase.from('patients').select('*');
+        let visitsQuery = supabase.from('visits').select('patient_id, date');
         if (isGestorRole(user.role)) {
           alertQuery = alertQuery.eq('area_color', user.color);
+          visitsQuery = visitsQuery.eq('area_color', user.color);
         } else if (!isAdminRole(user.role)) {
           alertQuery = alertQuery.eq('agent_id', user.id);
+          visitsQuery = visitsQuery.eq('agent_id', user.id);
         }
-        const { data, error } = await alertQuery;
-        if (error) throw error;
-        if (data) {
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          thirtyDaysAgo.setHours(0, 0, 0, 0);
 
-          const isDateRecent = (dateStr: any): boolean => {
-            if (!dateStr) return false;
-            try {
-              // Handle both ISO strings and plain date strings (YYYY-MM-DD)
-              const clean = typeof dateStr === 'string' && dateStr.includes('T')
-                ? dateStr.split('T')[0]
-                : String(dateStr);
-              const parts = clean.split('-');
-              if (parts.length !== 3) return false;
-              const d = new Date(
-                parseInt(parts[0]),
-                parseInt(parts[1]) - 1,
-                parseInt(parts[2]),
-                12, 0, 0
-              );
-              return !isNaN(d.getTime()) && d >= thirtyDaysAgo;
-            } catch {
-              return false;
+        const [patientsRes, visitsRes] = await Promise.all([alertQuery, visitsQuery]);
+        if (patientsRes.data) {
+          const visitsMap: Record<string, string> = {};
+          if (visitsRes.data) {
+            visitsRes.data.forEach((v: any) => {
+              if (v.patient_id && v.date) {
+                const cleanDate = v.date.split('T')[0];
+                const current = visitsMap[v.patient_id];
+                if (!current || cleanDate > current) {
+                  visitsMap[v.patient_id] = cleanDate;
+                }
+              }
+            });
+          }
+
+          const reconciledPatients = patientsRes.data.map(p => {
+            const dbVisitMax = visitsMap[p.id] || null;
+            const currentLastVisit = p.last_visit_at ? p.last_visit_at.split('T')[0] : null;
+            if (dbVisitMax && (!currentLastVisit || dbVisitMax > currentLastVisit)) {
+              return { ...p, last_visit_at: dbVisitMax };
             }
-          };
-
-          const pending = data.filter(p => {
-            // Only alert for babies under 6 months
-            if (!p.categories?.includes('Criança') || !p.birth_date) return false;
-            const age = getAgeInMonths(p.birth_date);
-            if (age > 6) return false;
-
-            const crianca = p.clinical_data?.crianca || {};
-
-            // 1. If visita6meses is set AND it's recent → not pending
-            if (crianca.visita6meses && isDateRecent(crianca.visita6meses)) return false;
-
-            // 2. If visita30dias is set AND it's recent → not pending
-            if (crianca.visita30dias && isDateRecent(crianca.visita30dias)) return false;
-
-            // 3. Check any ACS visit in the last 30 days
-            if (Array.isArray(crianca.visitasAcs) && crianca.visitasAcs.some(isDateRecent)) return false;
-
-            // 4. Check any puericultura consultation (consultas) in the last 30 days
-            if (Array.isArray(crianca.consultas) && crianca.consultas.some(isDateRecent)) return false;
-
-            // 5. Check last_visit_at on the patient record (set when VisitaSection is saved)
-            if (p.last_visit_at && isDateRecent(p.last_visit_at)) return false;
-
-            // 6. Check general ACS visits (visitasGerais)
-            const visitasGerais = p.clinical_data?.visitasGerais || [];
-            if (Array.isArray(visitasGerais)) {
-              const hasRecentGeneral = visitasGerais.some((v: any) => {
-                if (typeof v === 'string') return isDateRecent(v);
-                if (v && typeof v === 'object') return isDateRecent(v.date);
-                return false;
-              });
-              if (hasRecentGeneral) return false;
-            }
-
-            // All checks failed — patient is genuinely pending
-            return true;
+            return p;
           });
-          setCriticalAlerts(pending);
+
+          setPatientsData(reconciledPatients);
         }
       } catch (err) {
-        console.warn('Silent fallback for patients fetch in layout (missing/unconfigured Supabase keys):', err);
+        console.warn('Silent fallback for patients fetch in layout:', err);
       }
     };
-    fetchAlerts();
-  }, [user]);
+    fetchPatients();
+  }, [user, location.pathname]);
+
+  const { notifications, counts } = useNotifications(patientsData);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -179,8 +147,8 @@ export function Layout({
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-bg-secondary border-r border-border">
-      {/* Brand */}
-      <div className="p-6">
+      {/* Brand & Notifications Bell */}
+      <div className="p-6 pb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/30 shrink-0">
             <Stethoscope className="w-6 h-6" />
@@ -190,6 +158,20 @@ export function Layout({
             <p className="text-[10px] text-text-muted font-semibold mt-1 uppercase tracking-widest truncate">Prontuário Digital</p>
           </div>
         </div>
+        <button
+          onClick={() => setIsNotificationsOpen(true)}
+          className="relative p-2.5 rounded-xl hover:bg-bg-primary text-text-muted hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer"
+          title="Central de Notificações"
+        >
+          <Bell className="w-5 h-5" />
+          {counts.total > 0 && (
+            <span className={`absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-black text-white flex items-center justify-center border-2 border-bg-secondary ${
+              counts.critical > 0 ? 'bg-red-500 animate-pulse' : counts.high > 0 ? 'bg-orange-500' : 'bg-amber-500'
+            }`}>
+              {counts.total > 99 ? '99+' : counts.total}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Navigation */}
@@ -322,7 +304,7 @@ export function Layout({
       {/* Main Content */}
       <main className="flex-1 lg:ml-[240px] flex flex-col h-full overflow-hidden">
         {/* Topbar (Mobile Only) */}
-        <header className="lg:hidden h-[56px] bg-bg-secondary/80 backdrop-blur-md border-b border-border flex items-center justify-between px-4 sticky top-0 z-30">
+        <header className="lg:hidden h-[58px] bg-bg-secondary/90 backdrop-blur-md border-b border-border flex items-center justify-between px-3 sm:px-4 sticky top-0 z-30">
           <button 
             onClick={() => setIsMobileMenuOpen(true)}
             className="p-2 text-text-secondary rounded-xl hover:bg-bg-primary transition-colors cursor-pointer"
@@ -330,60 +312,30 @@ export function Layout({
             <Menu className="w-6 h-6" />
           </button>
 
-          <div className="flex items-center gap-2 relative">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white shadow-xs shrink-0">
+              <Stethoscope className="w-4 h-4" />
+            </div>
+            <span className="font-extrabold text-sm text-text-primary tracking-tight font-headline truncate">
+              Gestão ACS
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1">
             <button 
-              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+              onClick={() => setIsNotificationsOpen(true)}
               className="p-2 text-text-muted hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-xl transition-all relative cursor-pointer"
+              title="Central de Notificações"
             >
               <Bell className="w-5.5 h-5.5" />
-              {criticalAlerts.length > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-red-500 border-2 border-bg-secondary rounded-full flex items-center justify-center">
-                  <span className="text-[8px] font-bold text-white">{criticalAlerts.length}</span>
+              {counts.total > 0 && (
+                <span className={`absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-black text-white flex items-center justify-center border-2 border-bg-secondary ${
+                  counts.critical > 0 ? 'bg-red-500 animate-pulse' : counts.high > 0 ? 'bg-orange-500' : 'bg-amber-500'
+                }`}>
+                  {counts.total > 99 ? '99+' : counts.total}
                 </span>
               )}
             </button>
-
-            {isNotificationsOpen && (
-              <div className="absolute top-[120%] right-0 mt-2 w-80 bg-bg-secondary border border-border rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
-                <div className="p-4 border-b border-border bg-bg-primary flex items-center justify-between">
-                  <h3 className="font-semibold text-text-primary text-sm">Notificações</h3>
-                  {criticalAlerts.length > 0 && (
-                    <span className="bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">
-                      {criticalAlerts.length} Pendentes
-                    </span>
-                  )}
-                </div>
-                <div className="max-h-96 overflow-y-auto custom-scrollbar">
-                  {criticalAlerts.length > 0 ? (
-                    criticalAlerts.map(alert => (
-                      <div 
-                        key={alert.id} 
-                        className="p-4 border-b border-border hover:bg-bg-primary transition-colors cursor-pointer group"
-                        onClick={() => { setIsNotificationsOpen(false); navigate(`/editar-paciente/${alert.id}`); }}
-                      >
-                        <p className="text-sm font-semibold text-text-primary group-hover:text-primary transition-colors">{alert.name}</p>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded font-semibold uppercase">
-                            Bebê (Até 6m)
-                          </span>
-                          <span className="text-[10px] text-text-muted font-semibold uppercase">
-                            Pendente
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-8 text-center">
-                      <div className="w-12 h-12 bg-bg-primary rounded-full flex items-center justify-center mx-auto mb-3">
-                        <Bell className="w-5 h-5 text-text-muted opacity-50" />
-                      </div>
-                      <p className="text-text-secondary text-sm font-medium">Tudo certo por aqui!</p>
-                      <p className="text-text-muted text-xs mt-1">Nenhuma notificação no momento.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </header>
 
@@ -476,6 +428,14 @@ export function Layout({
           </div>
         </div>
       )}
+
+      {/* Central de Notificações Inteligente */}
+      <NotificationCenter
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+        notifications={notifications}
+        counts={counts}
+      />
     </div>
   );
 }

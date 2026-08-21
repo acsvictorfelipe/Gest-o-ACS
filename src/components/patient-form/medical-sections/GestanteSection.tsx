@@ -89,32 +89,41 @@ export function GestanteSection({
 
           <div className="flex items-center justify-between mt-2">
             <label className="block text-[10px] font-semibold uppercase text-text-muted">Consultas de Pré-Natal</label>
-            <button 
-              type="button"
-              onClick={() => addDateToList('gestante', 'consultas')}
-              className="text-primary hover:text-primary/80 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
+            {!isReadOnly && (
+              <button 
+                type="button"
+                onClick={() => addDateToList('gestante', 'consultas')}
+                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 active:scale-95"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Adicionar Consulta
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {data.consultas?.map((date: string, index: number) => (
               <div key={index} className="flex items-center gap-2 bg-bg-primary dark:bg-slate-800 p-2 rounded-lg border border-border dark:border-slate-700">
                 <input 
                   type="date" 
+                  disabled={isReadOnly}
                   value={date || ''}
                   onChange={e => updateDateInList('gestante', 'consultas', index, e.target.value)}
-                  className="bg-transparent border-none text-[10px] font-semibold text-text-primary dark:text-white w-full" 
+                  className="bg-transparent border-none text-[10px] font-semibold text-text-primary dark:text-white w-full outline-none focus:ring-0" 
                 />
-                <button 
-                  type="button"
-                  onClick={() => removeDateFromList('gestante', 'consultas', index)}
-                  className="text-slate-300 hover:text-red-500 transition-colors"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
+                {!isReadOnly && (
+                  <button 
+                    type="button"
+                    onClick={() => removeDateFromList('gestante', 'consultas', index)}
+                    className="text-slate-300 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             ))}
+            {(!data.consultas || data.consultas.length === 0) && (
+              <p className="col-span-full text-[10px] text-text-muted italic py-2">Nenhuma consulta pré-natal registrada.</p>
+            )}
           </div>
         </div>
 
@@ -139,25 +148,41 @@ export function GestanteSection({
 
           <div className="flex items-center justify-between mt-2">
             <label className="block text-[10px] font-semibold uppercase text-text-muted">Visitas ACS na Gestação</label>
+            {!isReadOnly && (
+              <button 
+                type="button"
+                onClick={() => addDateToList('gestante', 'visitasAcs')}
+                className="px-3 py-1 bg-pink-600 hover:bg-pink-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 active:scale-95"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Adicionar Visita
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {data.visitasAcs?.map((date: string, index: number) => (
               <div key={index} className="flex items-center gap-2 bg-bg-primary dark:bg-slate-800 p-2 rounded-lg border border-border dark:border-slate-700">
                 <input 
                   type="date" 
+                  disabled={isReadOnly}
                   value={date || ''}
                   onChange={e => updateDateInList('gestante', 'visitasAcs', index, e.target.value)}
-                  className="bg-transparent border-none text-[10px] font-semibold text-text-primary dark:text-white w-full" 
+                  className="bg-transparent border-none text-[10px] font-semibold text-text-primary dark:text-white w-full outline-none focus:ring-0" 
                 />
-                <button 
-                  type="button"
-                  onClick={() => removeDateFromList('gestante', 'visitasAcs', index)}
-                  className="text-slate-300 hover:text-red-500 transition-colors"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
+                {!isReadOnly && (
+                  <button 
+                    type="button"
+                    onClick={() => removeDateFromList('gestante', 'visitasAcs', index)}
+                    className="text-slate-300 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             ))}
+            {(!data.visitasAcs || data.visitasAcs.length === 0) && (
+              <p className="col-span-full text-[10px] text-text-muted italic py-2">Nenhuma visita ACS na gestação registrada.</p>
+            )}
           </div>
         </div>
 

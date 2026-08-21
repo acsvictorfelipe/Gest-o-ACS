@@ -235,8 +235,8 @@ export function useDashboard(user: any) {
       }
 
       if (p.birth_date && ageInMonths <= 6 && categories.includes('Criança')) {
-        // If visita6meses was recorded in clinical form, don't count as alert
-        if (!clinical.crianca?.visita6meses) {
+        // If visita6meses or visita6mesesNaoRealizada was recorded in clinical form, don't count as alert
+        if (!clinical.crianca?.visita6meses && !clinical.crianca?.visita6mesesNaoRealizada) {
           const isAtrazo = isVisitLate(realLastVisitStr, p);
           if (isAtrazo) {
             newStats.childVisitAlerts++;

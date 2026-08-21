@@ -1,5 +1,5 @@
 import React from 'react';
-import { Smile, Plus, Trash2, CheckCircle2, Stethoscope, MapPin, Baby, Clock } from 'lucide-react';
+import { Smile, Plus, Trash2, CheckCircle2, Stethoscope, MapPin, Baby, Clock, XCircle } from 'lucide-react';
 import { calculateAge } from '../../../lib/dateUtils';
 
 interface CriancaSectionProps {
@@ -62,9 +62,10 @@ export function CriancaSection({
               <button 
                 type="button"
                 onClick={() => addDateToList('crianca', 'consultas')}
-                className="text-primary hover:text-primary/80 transition-colors"
+                className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 active:scale-95"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5" />
+                Adicionar Consulta
               </button>
             )}
           </div>
@@ -103,9 +104,10 @@ export function CriancaSection({
               <button 
                 type="button"
                 onClick={() => addDateToList('crianca', 'visitasAcs')}
-                className="text-primary hover:text-primary/80 transition-colors"
+                className="px-3 py-1 bg-green-600/90 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 active:scale-95"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5" />
+                Adicionar Visita
               </button>
             )}
           </div>
@@ -144,107 +146,193 @@ export function CriancaSection({
           <h4 className="text-[10px] font-black uppercase tracking-widest">Visitas de Acompanhamento do Bebê</h4>
         </div>
         <p className="text-[10px] text-amber-600 dark:text-amber-500 font-medium">
-          Registre as datas das visitas obrigatórias de acompanhamento nos primeiros 6 meses de vida.
+          Registre as datas das visitas nos primeiros 6 meses de vida ou marque como não realizada caso o período tenha decorrido sem visita.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Visita do 1º Mês */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              {data.visita30dias
-                ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                : <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              }
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
-                Visita do 1º Mês (30 dias)
-              </label>
-            </div>
-            <div className={`flex items-center gap-2 rounded-lg px-3 py-2 border ${
-              data.visita30dias
-                ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40'
-                : 'bg-white dark:bg-slate-800 border-amber-200 dark:border-amber-800'
-            }`}>
-              <input
-                type="date"
-                disabled={isReadOnly}
-                value={data.visita30dias || ''}
-                onChange={e => setFormData((prev: any) => ({
-                  ...prev,
-                  clinicalData: {
-                    ...prev.clinicalData,
-                    crianca: {
-                      ...(prev.clinicalData?.crianca || {}),
-                      visita30dias: e.target.value
-                    }
-                  }
-                }))}
-                className="bg-transparent border-none text-xs font-bold text-text-primary dark:text-white w-full outline-none focus:ring-0 disabled:opacity-50"
-              />
-              {data.visita30dias && !isReadOnly && (
+          <div className="space-y-1.5 bg-white dark:bg-slate-800/80 p-3 rounded-xl border border-border dark:border-slate-700/60 shadow-xs">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                {data.visita30diasNaoRealizada ? (
+                  <XCircle className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                ) : data.visita30dias ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                ) : (
+                  <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                )}
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-700 dark:text-slate-300">
+                  Visita do 1º Mês (30 dias)
+                </label>
+              </div>
+
+              {!isReadOnly && (
                 <button
                   type="button"
-                  onClick={() => setFormData((prev: any) => ({
-                    ...prev,
-                    clinicalData: {
-                      ...prev.clinicalData,
-                      crianca: { ...(prev.clinicalData?.crianca || {}), visita30dias: '' }
-                    }
-                  }))}
-                  className="text-slate-300 hover:text-red-500 transition-colors shrink-0"
+                  onClick={() => setFormData((prev: any) => {
+                    const isCurrentlyNaoRealizada = Boolean(prev.clinicalData?.crianca?.visita30diasNaoRealizada);
+                    return {
+                      ...prev,
+                      clinicalData: {
+                        ...prev.clinicalData,
+                        crianca: {
+                          ...(prev.clinicalData?.crianca || {}),
+                          visita30diasNaoRealizada: !isCurrentlyNaoRealizada,
+                          ...(isCurrentlyNaoRealizada ? {} : { visita30dias: '' })
+                        }
+                      }
+                    };
+                  })}
+                  className={`text-[9px] font-bold px-2 py-0.5 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
+                    data.visita30diasNaoRealizada
+                      ? 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
+                      : 'bg-amber-100/70 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 hover:bg-amber-200/70 border border-amber-300/60 dark:border-amber-800/50'
+                  }`}
+                  title="Marcar que a visita não foi realizada para não alertar como atraso"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  {data.visita30diasNaoRealizada ? 'Desmarcar' : 'Não Realizada?'}
                 </button>
               )}
             </div>
+
+            {data.visita30diasNaoRealizada ? (
+              <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-800/60 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 italic">
+                  Visita não realizada no período (Justificada)
+                </span>
+              </div>
+            ) : (
+              <div className={`flex items-center gap-2 rounded-lg px-3 py-2 border ${
+                data.visita30dias
+                  ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40'
+                  : 'bg-white dark:bg-slate-800 border-border dark:border-slate-700'
+              }`}>
+                <input
+                  type="date"
+                  disabled={isReadOnly}
+                  value={data.visita30dias || ''}
+                  onChange={e => setFormData((prev: any) => ({
+                    ...prev,
+                    clinicalData: {
+                      ...prev.clinicalData,
+                      crianca: {
+                        ...(prev.clinicalData?.crianca || {}),
+                        visita30dias: e.target.value,
+                        visita30diasNaoRealizada: false
+                      }
+                    }
+                  }))}
+                  className="bg-transparent border-none text-xs font-bold text-text-primary dark:text-white w-full outline-none focus:ring-0 disabled:opacity-50"
+                />
+                {data.visita30dias && !isReadOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData((prev: any) => ({
+                      ...prev,
+                      clinicalData: {
+                        ...prev.clinicalData,
+                        crianca: { ...(prev.clinicalData?.crianca || {}), visita30dias: '' }
+                      }
+                    }))}
+                    className="text-slate-300 hover:text-red-500 transition-colors shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Visita do 6º Mês */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              {data.visita6meses
-                ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                : <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              }
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
-                Visita do 6º Mês
-              </label>
-            </div>
-            <div className={`flex items-center gap-2 rounded-lg px-3 py-2 border ${
-              data.visita6meses
-                ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40'
-                : 'bg-white dark:bg-slate-800 border-amber-200 dark:border-amber-800'
-            }`}>
-              <input
-                type="date"
-                disabled={isReadOnly}
-                value={data.visita6meses || ''}
-                onChange={e => setFormData((prev: any) => ({
-                  ...prev,
-                  clinicalData: {
-                    ...prev.clinicalData,
-                    crianca: {
-                      ...(prev.clinicalData?.crianca || {}),
-                      visita6meses: e.target.value
-                    }
-                  }
-                }))}
-                className="bg-transparent border-none text-xs font-bold text-text-primary dark:text-white w-full outline-none focus:ring-0 disabled:opacity-50"
-              />
-              {data.visita6meses && !isReadOnly && (
+          <div className="space-y-1.5 bg-white dark:bg-slate-800/80 p-3 rounded-xl border border-border dark:border-slate-700/60 shadow-xs">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                {data.visita6mesesNaoRealizada ? (
+                  <XCircle className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                ) : data.visita6meses ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                ) : (
+                  <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                )}
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-700 dark:text-slate-300">
+                  Visita do 6º Mês
+                </label>
+              </div>
+
+              {!isReadOnly && (
                 <button
                   type="button"
-                  onClick={() => setFormData((prev: any) => ({
-                    ...prev,
-                    clinicalData: {
-                      ...prev.clinicalData,
-                      crianca: { ...(prev.clinicalData?.crianca || {}), visita6meses: '' }
-                    }
-                  }))}
-                  className="text-slate-300 hover:text-red-500 transition-colors shrink-0"
+                  onClick={() => setFormData((prev: any) => {
+                    const isCurrentlyNaoRealizada = Boolean(prev.clinicalData?.crianca?.visita6mesesNaoRealizada);
+                    return {
+                      ...prev,
+                      clinicalData: {
+                        ...prev.clinicalData,
+                        crianca: {
+                          ...(prev.clinicalData?.crianca || {}),
+                          visita6mesesNaoRealizada: !isCurrentlyNaoRealizada,
+                          ...(isCurrentlyNaoRealizada ? {} : { visita6meses: '' })
+                        }
+                      }
+                    };
+                  })}
+                  className={`text-[9px] font-bold px-2 py-0.5 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
+                    data.visita6mesesNaoRealizada
+                      ? 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
+                      : 'bg-amber-100/70 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 hover:bg-amber-200/70 border border-amber-300/60 dark:border-amber-800/50'
+                  }`}
+                  title="Marcar que a visita não foi realizada para não alertar como atraso"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  {data.visita6mesesNaoRealizada ? 'Desmarcar' : 'Não Realizada?'}
                 </button>
               )}
             </div>
+
+            {data.visita6mesesNaoRealizada ? (
+              <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-800/60 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 italic">
+                  Visita não realizada no período (Justificada)
+                </span>
+              </div>
+            ) : (
+              <div className={`flex items-center gap-2 rounded-lg px-3 py-2 border ${
+                data.visita6meses
+                  ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40'
+                  : 'bg-white dark:bg-slate-800 border-border dark:border-slate-700'
+              }`}>
+                <input
+                  type="date"
+                  disabled={isReadOnly}
+                  value={data.visita6meses || ''}
+                  onChange={e => setFormData((prev: any) => ({
+                    ...prev,
+                    clinicalData: {
+                      ...prev.clinicalData,
+                      crianca: {
+                        ...(prev.clinicalData?.crianca || {}),
+                        visita6meses: e.target.value,
+                        visita6mesesNaoRealizada: false
+                      }
+                    }
+                  }))}
+                  className="bg-transparent border-none text-xs font-bold text-text-primary dark:text-white w-full outline-none focus:ring-0 disabled:opacity-50"
+                />
+                {data.visita6meses && !isReadOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData((prev: any) => ({
+                      ...prev,
+                      clinicalData: {
+                        ...prev.clinicalData,
+                        crianca: { ...(prev.clinicalData?.crianca || {}), visita6meses: '' }
+                      }
+                    }))}
+                    className="text-slate-300 hover:text-red-500 transition-colors shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { formatDate } from '../../../lib/dateUtils';
 import { useToast } from '../../Toast';
+import { getTemplateForType } from '../../../constants/visitTemplates';
 import { 
   Calendar, 
   Trash2, 
@@ -601,15 +602,39 @@ export function VisitasHistoricoSection({
                               <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Tipo de Visita</label>
                               <select
                                 value={editType}
-                                onChange={e => setEditType(e.target.value)}
+                                onChange={e => {
+                                  const newType = e.target.value;
+                                  setEditType(newType);
+                                  const tmpl = getTemplateForType(newType);
+                                  if (!editSummary.trim() && tmpl) {
+                                    setEditSummary(tmpl.defaultText);
+                                  }
+                                }}
                                 className="bg-white dark:bg-slate-800 border border-border dark:border-slate-800 rounded px-2 py-1 text-xs font-semibold w-full focus:ring-2 focus:ring-primary/20 text-slate-800 dark:text-white"
                               >
-                                <option value="Rotina">Rotina</option>
-                                <option value="Acompanhamento">Acompanhamento</option>
-                                <option value="Urgência">Urgência</option>
-                                <option value="Pós-Parto">Pós-Parto</option>
-                                <option value="Recém-Nascido">Recém-Nascido</option>
-                                <option value="Ausente">Ausente (Cidadão Ausente)</option>
+                                <optgroup label="Geral & Cadastro">
+                                  <option value="Rotina">Rotina</option>
+                                  <option value="Acompanhamento">Acompanhamento</option>
+                                  <option value="Atualização de Cadastro">Atualização de Cadastro</option>
+                                  <option value="Urgência">Urgência</option>
+                                  <option value="Ausente">Ausente (Cidadão Ausente)</option>
+                                </optgroup>
+                                <optgroup label="Gestante & Puerpério">
+                                  <option value="Visita Gestante">Visita Gestante</option>
+                                  <option value="Fechamento Pré-Natal">Fechamento Pré-Natal</option>
+                                  <option value="Fechamento Pré-Natal e 1ª Consulta RN">Fechamento Pré-Natal e 1ª Consulta RN</option>
+                                  <option value="Pós-Parto">Pós-Parto</option>
+                                  <option value="Recém-Nascido">Recém-Nascido</option>
+                                </optgroup>
+                                <optgroup label="Equipe Multiprofissional">
+                                  <option value="Médico / Enfermeira">Médico / Enfermeira</option>
+                                </optgroup>
+                                <optgroup label="Exames & Procedimentos">
+                                  <option value="Coleta de Exames">Coleta de Exames</option>
+                                </optgroup>
+                                <optgroup label="Busca Ativa">
+                                  <option value="Busca Ativa">Busca Ativa</option>
+                                </optgroup>
                               </select>
                             </div>
                           )}

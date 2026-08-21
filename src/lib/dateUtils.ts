@@ -279,7 +279,7 @@ export function getPatientLastVisitAt(p: any): string | null {
 }
 
 export function getPatientVisitInterval(p: any): number {
-  if (!p) return 30; // Padrão: 30 dias
+  if (!p) return 180; // Padrão semestral
 
   const categories = p.categories || [];
   const clinical = p.clinical_data || {};
@@ -304,25 +304,51 @@ export function getPatientVisitInterval(p: any): number {
                        clinical.idoso?.hipertensao === 'Sim' || 
                        clinical.idoso?.pressaoAlta === 'Sim';
 
-  // Verifica idade de crianças menores de 2 anos (24 meses)
-  const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 999;
-  const isChildUnder2 = categories.includes('Criança') && ageInMonths <= 24;
-
-  // Grupos Prioritários / Alto Risco -> visita a cada 30 dias (mensal)
-  if (isGestante || isAcamado || isSaudeMental || isDiabetico || isHipertenso || isChildUnder2) {
-    return 30;
-  }
-
-  // Idosos sem outras comorbidades/flags prioritárias -> visita a cada 60 dias (bimestral)
-  if (categories.includes('Idoso') || categories.includes('Idosos')) {
+  // 1. Gestantes: recomendação mensal, com tolerância máxima de 60 dias para atraso (mínimo de 3 visitas ACS no pré-natal)
+  if (isGestante) {
     return 60;
   }
 
-  // Cidadãos saudáveis e população geral (adultos saudáveis, crianças maiores de 2 anos, etc.) -> visita a cada 90 dias (trimestral)
-  return 90;
+  // 2. Acamados e Saúde Mental de alta prioridade: acompanhamento a cada 60 dias
+  if (isAcamado || isSaudeMental) {
+    return 60;
+  }
+
+  // 3. Hipertensos e Diabéticos: acompanhamento semestral (2 visitas no ano = 180 dias / D+180)
+  if (isDiabetico || isHipertenso) {
+    return 180;
+  }
+
+  // 4. Crianças menores de 2 anos: acompanhamento por marcos de desenvolvimento (semestral 180 dias para rotina geral)
+  const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 999;
+  if (categories.includes('Criança') && ageInMonths <= 24) {
+    return 180;
+  }
+
+  // 5. Idosos e População Geral: semestral (180 dias)
+  return 180;
 }
 
 export function isVisitLate(lastVisitAt: string | null | undefined, patient?: any): boolean {
+  if (!patient) {
+    if (!lastVisitAt) return true;
+    return false;
+  }
+
+  const categories = patient.categories || [];
+  const clinical = patient.clinical_data || {};
+  const ageInMonths = patient.birth_date ? getAgeInMonths(patient.birth_date) : 999;
+
+  // Criança de 1 a 5 meses que já realizou a visita de 30 dias (ou marcada como não realizada): não está em atraso
+  if (categories.includes('Criança') && ageInMonths < 6) {
+    const has30DaysHandled = Boolean(clinical.crianca?.visita30dias) || 
+                             Boolean(clinical.crianca?.visita30diasNaoRealizada) || 
+                             Boolean(lastVisitAt);
+    if (has30DaysHandled && ageInMonths >= 1) {
+      return false;
+    }
+  }
+
   if (!lastVisitAt) return true;
   
   const allowedInterval = getPatientVisitInterval(patient);
@@ -348,6 +374,81 @@ export function isVisitLate(lastVisitAt: string | null | undefined, patient?: an
   } catch (e) {
     console.warn('Error parsing last visit date in isVisitLate:', e);
     return true;
+  }
+}
+
+/**
+ * Retorna status granular da visita de um paciente, com detecção de faixa
+ * intermediária "expiring" adaptada por categoria (ex: ≤30 dias para semestral 180d, ≤15 dias para gestantes).
+ */
+export function getVisitStatus(lastVisitAt: string | null | undefined, patient?: any): {
+  status: 'ok' | 'expiring' | 'overdue' | 'never';
+  daysRemaining: number;
+  daysSinceVisit: number;
+  interval: number;
+} {
+  const interval = getPatientVisitInterval(patient);
+
+  if (!patient) {
+    return { status: lastVisitAt ? 'ok' : 'never', daysRemaining: 0, daysSinceVisit: 0, interval };
+  }
+
+  const categories = patient.categories || [];
+  const clinical = patient.clinical_data || {};
+  const ageInMonths = patient.birth_date ? getAgeInMonths(patient.birth_date) : 999;
+
+  // Regra de marcos para crianças até 6 meses (respeitando justificativa de não realizada)
+  if (categories.includes('Criança') && ageInMonths < 6) {
+    const has30DaysHandled = Boolean(clinical.crianca?.visita30dias) || 
+                             Boolean(clinical.crianca?.visita30diasNaoRealizada) || 
+                             Boolean(lastVisitAt);
+    if (has30DaysHandled) {
+      if (ageInMonths >= 5 && !clinical.crianca?.visita6meses && !clinical.crianca?.visita6mesesNaoRealizada) {
+        return { status: 'expiring', daysRemaining: 15, daysSinceVisit: 150, interval: 180 };
+      }
+      return { status: 'ok', daysRemaining: 60, daysSinceVisit: 30, interval: 180 };
+    }
+  }
+
+  if (!lastVisitAt) {
+    return { status: 'never', daysRemaining: 0, daysSinceVisit: 999, interval };
+  }
+
+  try {
+    const cleanDateStr = lastVisitAt.includes('T') ? lastVisitAt.split('T')[0] : lastVisitAt;
+    const parts = cleanDateStr.split('-');
+    if (parts.length !== 3) {
+      return { status: 'never', daysRemaining: 0, daysSinceVisit: 999, interval };
+    }
+
+    const year = parseInt(parts[0]);
+    const month = parseInt(parts[1]) - 1;
+    const day = parseInt(parts[2]);
+
+    const lastVisitDate = new Date(year, month, day, 12, 0, 0);
+    const today = new Date();
+    const todayNoon = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 0, 0);
+
+    const diffTime = todayNoon.getTime() - lastVisitDate.getTime();
+    const daysSinceVisit = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const daysRemaining = interval - daysSinceVisit;
+
+    if (daysSinceVisit > interval) {
+      return { status: 'overdue', daysRemaining, daysSinceVisit, interval };
+    }
+
+    // Faixa de atenção de proximidade:
+    // Para prazos semestrais (180 dias / hipertensos / diabéticos), alertar com 30 dias de antecedência
+    // Para gestantes e demais, alertar com 15 dias de antecedência
+    const expiringThreshold = interval >= 180 ? 30 : 15;
+    if (daysRemaining <= expiringThreshold) {
+      return { status: 'expiring', daysRemaining, daysSinceVisit, interval };
+    }
+
+    return { status: 'ok', daysRemaining, daysSinceVisit, interval };
+  } catch (e) {
+    console.warn('Error in getVisitStatus:', e);
+    return { status: 'never', daysRemaining: 0, daysSinceVisit: 999, interval };
   }
 }
 

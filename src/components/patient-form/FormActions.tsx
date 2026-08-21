@@ -28,55 +28,57 @@ export function FormActions({
 }: FormActionsProps) {
   return (
     <>
-      <div className="flex flex-wrap items-center justify-end gap-3 pt-6 border-t border-border dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 pt-6 border-t border-border dark:border-slate-800">
         {!isReadOnly && id && (
           <button 
             type="button"
             onClick={() => setDeleteConfirm(true)}
-            className="mr-auto flex items-center gap-2 py-2 px-4 text-red-500 font-bold hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg text-xs transition-all tracking-tight uppercase"
+            className="sm:mr-auto flex items-center justify-center gap-2 py-2.5 px-4 text-red-500 font-bold hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl text-xs transition-all tracking-tight uppercase cursor-pointer"
           >
             <Trash2 className="w-4 h-4" />
             Excluir Registro
           </button>
         )}
-        <button 
-          type="button"
-          onClick={onCancel}
-          className="px-5 py-2.5 text-text-secondary dark:text-text-muted font-bold hover:text-text-primary dark:hover:text-white transition-colors text-xs uppercase tracking-widest"
-        >
-          {isReadOnly ? 'Voltar' : 'Cancelar'}
-        </button>
-        {!isReadOnly && showSaveAndAddAnother && onSaveAndAddAnother && (
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <button 
             type="button"
-            disabled={loading}
-            onClick={onSaveAndAddAnother}
-            className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs uppercase tracking-wider active:scale-95"
-            title="Salva este morador e prepara o formulário para o próximo da mesma família"
+            onClick={onCancel}
+            className="flex-1 sm:flex-none px-4 sm:px-5 py-3 sm:py-2.5 text-text-secondary dark:text-text-muted font-bold hover:text-text-primary dark:hover:text-white transition-colors text-xs uppercase tracking-wider rounded-xl bg-slate-100 dark:bg-slate-800 sm:bg-transparent"
           >
-            <UserPlus className="w-4 h-4" />
-            Salvar e Cadastrar Outro
+            {isReadOnly ? 'Voltar' : 'Cancelar'}
           </button>
-        )}
-        {!isReadOnly && (
-          <button 
-            type="submit"
-            disabled={loading}
-            className="px-7 py-2.5 bg-primary text-white rounded-lg font-bold shadow-sm hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 min-w-[150px] uppercase text-xs tracking-widest"
-          >
-            {loading ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                Salvando...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                {id ? 'Salvar Alterações' : 'Concluir Cadastro'}
-              </>
-            )}
-          </button>
-        )}
+          {!isReadOnly && showSaveAndAddAnother && onSaveAndAddAnother && (
+            <button 
+              type="button"
+              disabled={loading}
+              onClick={onSaveAndAddAnother}
+              className="flex-1 sm:flex-none px-4 sm:px-5 py-3 sm:py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs uppercase tracking-wider active:scale-95 cursor-pointer"
+              title="Salva este morador e prepara o formulário para o próximo da mesma família"
+            >
+              <UserPlus className="w-4 h-4 shrink-0" />
+              <span className="truncate">Salvar e Próximo</span>
+            </button>
+          )}
+          {!isReadOnly && (
+            <button 
+              type="submit"
+              disabled={loading}
+              className="flex-1 sm:flex-none px-6 sm:px-7 py-3 sm:py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold shadow-md hover:opacity-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 min-w-[140px] uppercase text-xs tracking-wider cursor-pointer active:scale-95"
+            >
+              {loading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 shrink-0" />
+                  {id ? 'Salvar' : 'Concluir'}
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Delete Confirmation Modal */}

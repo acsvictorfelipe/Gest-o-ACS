@@ -16,6 +16,7 @@ interface PatientFormHeaderProps {
   hasExpiredPrescription: boolean;
   errors: any;
   onQuickVisit?: (category: 'geral' | 'gestante' | 'cronicos') => void;
+  onOpenHouseholdModal?: () => void;
 }
 
 export function PatientFormHeader({
@@ -30,7 +31,8 @@ export function PatientFormHeader({
   confirm,
   hasExpiredPrescription,
   errors,
-  onQuickVisit
+  onQuickVisit,
+  onOpenHouseholdModal
 }: PatientFormHeaderProps) {
   const navigate = useNavigate();
 
@@ -141,28 +143,16 @@ export function PatientFormHeader({
             <span>SUS Atualizado</span>
           </label>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {formData.householdId && (
             <button 
               type="button" 
-              onClick={async () => {
-                if (isDirty) {
-                  const ok = await confirm({
-                    title: 'Alterações não salvas',
-                    message: 'Há alterações não salvas. Deseja sair sem salvar para acessar o cadastro do domicílio?',
-                    variant: 'warning',
-                    confirmLabel: 'Sair sem salvar',
-                    cancelLabel: 'Ficar'
-                  });
-                  if (!ok) return;
-                }
-                navigate(`/domicilio/${formData.householdId}`);
-              }}
-              className="p-2 text-slate-500 hover:text-primary dark:hover:text-teal-400 transition-colors bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center gap-1.5 text-xs font-semibold"
-              title="Acessar Cadastro do Domicílio"
+              onClick={onOpenHouseholdModal}
+              className="px-3 py-2 text-teal-700 dark:text-teal-300 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-950/60 border border-teal-200/80 dark:border-teal-800 rounded-xl flex items-center gap-1.5 text-xs font-extrabold shadow-xs transition-all cursor-pointer active:scale-95"
+              title="Visualizar todos os moradores deste domicílio"
             >
-              <Home className="w-4 h-4" />
-              <span className="hidden sm:inline">Ver Domicílio</span>
+              <Home className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+              <span>Moradores</span>
             </button>
           )}
           {id && (

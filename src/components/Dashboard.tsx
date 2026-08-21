@@ -104,8 +104,6 @@ export function Dashboard({ user }: { user: AppUser | null }) {
     return 'Boa noite';
   }, []);
 
-  const totalPriorityAlerts = (stats.childVisitAlerts || 0) + (stats.pendingVisits || 0) + (stats.lateVaccines || 0) + (stats.receitasAVencer || 0) + ((stats as any).gestantesPendentes || 0);
-
   if (loading) return null;
 
   return (
@@ -139,15 +137,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
             </h1>
 
             <p className="text-xs sm:text-sm text-teal-100/90 font-medium leading-relaxed max-w-xl">
-              Acompanhamento integrado da saúde da sua comunidade. {totalPriorityAlerts > 0 ? (
-                <span className="text-amber-200 font-bold underline decoration-amber-300 underline-offset-2">
-                  Você possui {totalPriorityAlerts} alerta(s) prioritário(s) para verificar hoje.
-                </span>
-              ) : (
-                <span className="text-emerald-200 font-bold">
-                  Todos os acompanhamentos prioritários estão em dia!
-                </span>
-              )}
+              Acompanhamento integrado da saúde da sua comunidade.
             </p>
           </div>
 
