@@ -1,0 +1,24 @@
+# Padronização automática de quebras de linha (evita avisos LF/CRLF no Windows e GitHub Desktop)
+* text=auto eol=lf
+
+# Arquivos de código e texto sempre com quebras de linha normalizadas
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+*.svg text eol=lf
+
+# Arquivos binários
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary

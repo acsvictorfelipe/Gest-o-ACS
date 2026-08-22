@@ -205,6 +205,8 @@ export function PatientForm({ user }: { user: any }) {
                 ...initialDefaultValues.clinicalData.crianca,
                 ...(cleanClinical.crianca || {}),
                 consultas: cleanClinical.crianca?.consultas || [],
+                visita30diasNaoRealizada: Boolean(cleanClinical.crianca?.visita30diasNaoRealizada),
+                visita6mesesNaoRealizada: Boolean(cleanClinical.crianca?.visita6mesesNaoRealizada),
                 vacinas: {
                   ...initialDefaultValues.clinicalData.crianca.vacinas,
                   ...(cleanClinical.crianca?.vacinas || {})

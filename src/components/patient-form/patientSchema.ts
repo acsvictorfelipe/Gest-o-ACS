@@ -192,6 +192,8 @@ export const patientFormSchema = z.object({
       visitasAcs: z.array(z.string()).default([]),
       visita30dias: z.string().default(''),
       visita6meses: z.string().default(''),
+      visita30diasNaoRealizada: z.boolean().default(false),
+      visita6mesesNaoRealizada: z.boolean().default(false),
       proximaVisitaSugerida: z.string().default(''),
       vacinas: z.record(z.string(), z.any()).default({}),
       notes: z.string().default('')
@@ -200,6 +202,8 @@ export const patientFormSchema = z.object({
       visitasAcs: [],
       visita30dias: '',
       visita6meses: '',
+      visita30diasNaoRealizada: false,
+      visita6mesesNaoRealizada: false,
       proximaVisitaSugerida: '',
       vacinas: {},
       notes: ''
@@ -552,6 +556,8 @@ export const initialDefaultValues: PatientFormValues = {
       visitasAcs: [],
       visita30dias: '',
       visita6meses: '',
+      visita30diasNaoRealizada: false,
+      visita6mesesNaoRealizada: false,
       proximaVisitaSugerida: '',
       vacinas: {},
       notes: ''
