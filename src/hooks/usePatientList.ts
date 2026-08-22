@@ -7,7 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useToast } from '../components/Toast';
 import { safeStorage } from '../lib/safeStorage';
 import { isSameDay } from 'date-fns';
-import { getAgeInMonths, isChildAge, VACCINE_SCHEDULE, getPatientLastVisitAt, isVisitLate, getPatientVisitInterval } from '../lib/dateUtils';
+import { getAgeInMonths, getAgeNumber, isChildAge, VACCINE_SCHEDULE, getPatientLastVisitAt, isVisitLate, getPatientVisitInterval } from '../lib/dateUtils';
 import { AppUser, Patient, Household } from '../types';
 import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 
