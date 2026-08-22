@@ -3,6 +3,7 @@ import {
   getPatientLastVisitAt,
   getVisitStatus,
   getAgeInMonths,
+  isChildAge,
   VACCINE_SCHEDULE,
   getPatientVisitInterval
 } from '../lib/dateUtils';
@@ -152,7 +153,7 @@ export function useNotifications(allPatients: any[]) {
       }
 
       // ── 4. Vacinas Atrasadas (criança ≤24 meses) ─────────────
-      if (categories.includes('Criança') && ageInMonths <= 24) {
+      if (categories.includes('Criança') && isChildAge(p.birth_date)) {
         const vacinas = clinical.crianca?.vacinas || {};
         const pendingVaccines: string[] = [];
         VACCINE_SCHEDULE.forEach((group) => {

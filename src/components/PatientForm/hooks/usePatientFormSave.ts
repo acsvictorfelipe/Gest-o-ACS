@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { syncService } from '../../../lib/syncService';
 import { generateUUID } from '../../../lib/utils';
-import { validateCNS, getPatientLastVisitAt, getAgeNumber } from '../../../lib/dateUtils';
+import { validateCNS, getPatientLastVisitAt, getAgeNumber, isChildAge } from '../../../lib/dateUtils';
 import { getRedirectFilter } from '../utils/getRedirectFilter';
 import { queryClient } from '../../../lib/queryClient';
 
@@ -124,6 +124,31 @@ export function usePatientFormSave({
       formData.categories = formData.categories.filter((cat: string) => cat !== 'Gestante');
       isArchived = true;
     }
+
+    // ── Transição automática de Criança para Adulto ao atingir 24 meses e 1 dia ──
+    let finalCategories = Array.isArray(formData.categories) ? [...formData.categories] : [];
+    if (formData.birthDate) {
+      const isChild = isChildAge(formData.birthDate);
+      const ageNum = getAgeNumber(formData.birthDate);
+      
+      if (!isChild) {
+        // Remove selo de Criança
+        finalCategories = finalCategories.filter((c: string) => c !== 'Criança');
+        
+        // Atribui Adulto ou Idoso (conforme a idade)
+        if (ageNum >= 60) {
+          if (!finalCategories.includes('Idoso')) finalCategories.push('Idoso');
+          finalCategories = finalCategories.filter((c: string) => c !== 'Adulto');
+        } else {
+          if (!finalCategories.includes('Adulto')) finalCategories.push('Adulto');
+          finalCategories = finalCategories.filter((c: string) => c !== 'Idoso');
+        }
+      } else {
+        if (!finalCategories.includes('Criança')) finalCategories.push('Criança');
+        finalCategories = finalCategories.filter((c: string) => c !== 'Adulto' && c !== 'Idoso');
+      }
+    }
+    formData.categories = finalCategories;
 
     if (isArchived) {
       success("Visita de puerpério detectada: a gestação atual foi arquivada no histórico com sucesso, e a paciente foi removida da categoria Gestantes.");

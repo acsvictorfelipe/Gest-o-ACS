@@ -142,6 +142,26 @@ export const getAgeInMonths = (birthDate: string) => {
   return Math.max(0, months);
 };
 
+// Verifica se o cidadão está na faixa etária de Criança (até 24 meses / 2 anos de vida exatos).
+// Ao completar 24 meses e 1 dia, a função retorna false (deve transicionar para Adulto).
+export const isChildAge = (birthDate: string): boolean => {
+  if (!birthDate) return false;
+  const parts = birthDate.split('-');
+  if (parts.length !== 3) return false;
+  const birthYear = parseInt(parts[0]);
+  const birthMonth = parseInt(parts[1]) - 1;
+  const birthDay = parseInt(parts[2]);
+  
+  const birth = new Date(birthYear, birthMonth, birthDay, 0, 0, 0);
+  if (isNaN(birth.getTime())) return false;
+  
+  // Data exata de 2 anos (24 meses)
+  const twoYears = new Date(birthYear + 2, birthMonth, birthDay, 23, 59, 59);
+  const today = new Date();
+  
+  return today <= twoYears;
+};
+
 export const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
   // Handle ISO strings by taking only the date part

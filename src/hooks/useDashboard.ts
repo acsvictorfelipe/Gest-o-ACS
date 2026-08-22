@@ -12,7 +12,7 @@ import {
   ShieldAlert,
   Users
 } from 'lucide-react';
-import { getAgeInMonths, VACCINE_SCHEDULE, getAgeNumber, getPatientLastVisitAt, isVisitLate } from '../lib/dateUtils';
+import { getAgeInMonths, isChildAge, VACCINE_SCHEDULE, getAgeNumber, getPatientLastVisitAt, isVisitLate } from '../lib/dateUtils';
 import { generateUUID } from '../lib/utils';
 import { UI_CONFIG } from '../constants';
 import { useDashboardWeeklyChart } from './useDashboardWeeklyChart';
@@ -216,7 +216,7 @@ export function useDashboard(user: any) {
 
       const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 999;
 
-      if (categories.includes('Criança') && ageInMonths <= 24) {
+      if (categories.includes('Criança') && isChildAge(p.birth_date)) {
         newStats.criancasTotal++;
         newStats.criancas2y++;
 

@@ -1,48 +1,19 @@
-import { useEffect, useRef } from 'react';
-import { getAgeNumber, getAgeInMonths } from '../../../lib/dateUtils';
+import { useEffect } from 'react';
+import { getAgeNumber, isChildAge } from '../../../lib/dateUtils';
 
-export function usePatientCategories(birthDate: string, setFormData: (updater: any) => void, isEdit: boolean) {
-  const initialBirthDateRef = useRef<string | null>(null);
-
+export function usePatientCategories(birthDate: string, setFormData: (updater: any) => void, _isEdit: boolean) {
   useEffect(() => {
     if (!birthDate) return;
-    
-    // Capture the first loaded birth date for existing patients
-    if (isEdit && initialBirthDateRef.current === null) {
-      initialBirthDateRef.current = birthDate;
-      return; // Do not auto-calculate on initial load for existing patients
-    }
-
-    // For existing patients, if the birth date has not changed from the initial loaded one, do nothing
-    if (isEdit && birthDate === initialBirthDateRef.current) {
-      return;
-    }
 
     const ageNum = getAgeNumber(birthDate);
-    const ageInMonths = getAgeInMonths(birthDate);
-    
+    const isChild = isChildAge(birthDate);
+
     setFormData((prev: any) => {
-      const currentCategories = [...prev.categories];
+      const currentCategories = Array.isArray(prev.categories) ? [...prev.categories] : [];
       let changed = false;
 
-      // Rule for Idoso (60+ years)
-      if (ageNum >= 60) {
-        if (!currentCategories.includes('Idoso')) {
-          currentCategories.push('Idoso');
-          changed = true;
-        }
-      } else {
-        if (currentCategories.includes('Idoso')) {
-          const index = currentCategories.indexOf('Idoso');
-          if (index > -1) {
-            currentCategories.splice(index, 1);
-            changed = true;
-          }
-        }
-      }
-
-      // Rule for Criança (0-24 months)
-      if (ageInMonths <= 24) {
+      // 1. Regra para Criança (0 a 24 meses exatos):
+      if (isChild) {
         if (!currentCategories.includes('Criança')) {
           currentCategories.push('Criança');
           changed = true;
@@ -51,16 +22,40 @@ export function usePatientCategories(birthDate: string, setFormData: (updater: a
           currentCategories.splice(currentCategories.indexOf('Adulto'), 1);
           changed = true;
         }
-      } 
-      // Rule for Adulto (24 months to 60 years)
-      else if (ageNum < 60) {
-        if (!currentCategories.includes('Adulto')) {
-          currentCategories.push('Adulto');
+        if (currentCategories.includes('Idoso')) {
+          currentCategories.splice(currentCategories.indexOf('Idoso'), 1);
           changed = true;
         }
+      } 
+      // 2. Regra ao atingir 24 meses e 1 dia ou mais (perde selo Criança e vira Adulto / Idoso):
+      else {
+        // Remove selo de Criança
         if (currentCategories.includes('Criança')) {
           currentCategories.splice(currentCategories.indexOf('Criança'), 1);
           changed = true;
+        }
+
+        // Se tem 60 anos ou mais: Idoso
+        if (ageNum >= 60) {
+          if (!currentCategories.includes('Idoso')) {
+            currentCategories.push('Idoso');
+            changed = true;
+          }
+          if (currentCategories.includes('Adulto')) {
+            currentCategories.splice(currentCategories.indexOf('Adulto'), 1);
+            changed = true;
+          }
+        } 
+        // Se tem entre 24m+1d e 59 anos: Adulto
+        else {
+          if (!currentCategories.includes('Adulto')) {
+            currentCategories.push('Adulto');
+            changed = true;
+          }
+          if (currentCategories.includes('Idoso')) {
+            currentCategories.splice(currentCategories.indexOf('Idoso'), 1);
+            changed = true;
+          }
         }
       }
 
@@ -69,5 +64,5 @@ export function usePatientCategories(birthDate: string, setFormData: (updater: a
       }
       return prev;
     });
-  }, [birthDate, setFormData, isEdit]);
+  }, [birthDate, setFormData]);
 }

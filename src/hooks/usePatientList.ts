@@ -7,7 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useToast } from '../components/Toast';
 import { safeStorage } from '../lib/safeStorage';
 import { isSameDay } from 'date-fns';
-import { getAgeInMonths, VACCINE_SCHEDULE, getPatientLastVisitAt, isVisitLate, getPatientVisitInterval } from '../lib/dateUtils';
+import { getAgeInMonths, isChildAge, VACCINE_SCHEDULE, getPatientLastVisitAt, isVisitLate, getPatientVisitInterval } from '../lib/dateUtils';
 import { AppUser, Patient, Household } from '../types';
 import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 
@@ -270,10 +270,8 @@ export function usePatientList(user: AppUser | null | undefined) {
     }
 
     if (activeFilter === 'criancas') {
-      const isChild = p.categories?.includes('Criança');
-      if (!isChild) return false;
-      const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
-      return matchesSearch && ageInMonths < 144;
+      const isChild = p.categories?.includes('Criança') && isChildAge(p.birth_date);
+      return matchesSearch && isChild;
     }
 
     if (activeFilter === 'gestantes') return matchesSearch && p.categories?.includes('Gestante');
