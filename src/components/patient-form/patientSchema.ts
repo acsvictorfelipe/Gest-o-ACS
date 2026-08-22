@@ -398,6 +398,8 @@ export const patientFormSchema = z.object({
       visitasAcs: [],
       visita30dias: '',
       visita6meses: '',
+      visita30diasNaoRealizada: false,
+      visita6mesesNaoRealizada: false,
       proximaVisitaSugerida: '',
       vacinas: {},
       notes: ''
