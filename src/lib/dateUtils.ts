@@ -71,21 +71,61 @@ export const vaccineLabels: Record<string, string> = {
   vacinaHpv: 'Vacina HPV'
 };
 
+export const parseBirthDate = (birthDate: any): Date | null => {
+  if (!birthDate) return null;
+  if (birthDate instanceof Date) return isNaN(birthDate.getTime()) ? null : birthDate;
+  if (typeof birthDate !== 'string') return null;
+  
+  const clean = birthDate.trim();
+  if (!clean) return null;
+
+  // Handle ISO strings (ex: 2024-05-10T12:00:00Z)
+  const datePart = clean.includes('T') ? clean.split('T')[0] : clean;
+
+  // Handle YYYY-MM-DD
+  if (datePart.includes('-')) {
+    const parts = datePart.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        return new Date(y, m, d, 12, 0, 0);
+      }
+    }
+  }
+
+  // Handle DD/MM/YYYY or YYYY/MM/DD
+  if (datePart.includes('/')) {
+    const parts = datePart.split('/');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const d = parseInt(parts[2], 10);
+        return new Date(y, m, d, 12, 0, 0);
+      } else {
+        const d = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const y = parseInt(parts[2], 10);
+        return new Date(y, m, d, 12, 0, 0);
+      }
+    }
+  }
+
+  const fallback = new Date(clean);
+  return isNaN(fallback.getTime()) ? null : fallback;
+};
+
 export const calculateAge = (birthDate: string) => {
-  if (!birthDate) return '';
+  const birth = parseBirthDate(birthDate);
+  if (!birth) return '';
   const today = new Date();
   
-  // Split the date string (YYYY-MM-DD) to avoid timezone shifts
-  const parts = birthDate.split('-');
-  if (parts.length !== 3) return '';
-  const birthYear = parseInt(parts[0]);
-  const birthMonth = parseInt(parts[1]) - 1; // 0-indexed
-  const birthDay = parseInt(parts[2]);
+  let years = today.getFullYear() - birth.getFullYear();
+  let months = today.getMonth() - birth.getMonth();
   
-  let years = today.getFullYear() - birthYear;
-  let months = today.getMonth() - birthMonth;
-  
-  if (today.getDate() < birthDay) {
+  if (today.getDate() < birth.getDate()) {
     months--;
   }
   
@@ -106,37 +146,27 @@ export const calculateAge = (birthDate: string) => {
   return yearsStr;
 };
 
-export const getAgeNumber = (birthDate: string) => {
-  if (!birthDate) return 0;
+export const getAgeNumber = (birthDate: string): number => {
+  const birth = parseBirthDate(birthDate);
+  if (!birth) return 0;
   const today = new Date();
   
-  const parts = birthDate.split('-');
-  if (parts.length !== 3) return 0;
-  const birthYear = parseInt(parts[0]);
-  const birthMonth = parseInt(parts[1]) - 1;
-  const birthDay = parseInt(parts[2]);
-  
-  let age = today.getFullYear() - birthYear;
-  const m = today.getMonth() - birthMonth;
-  if (m < 0 || (m === 0 && today.getDate() < birthDay)) {
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
     age--;
   }
-  return age;
+  return Math.max(0, age);
 };
 
-export const getAgeInMonths = (birthDate: string) => {
-  if (!birthDate) return 0;
-  
-  const parts = birthDate.split('-');
-  if (parts.length !== 3) return 0;
-  const birthYear = parseInt(parts[0]);
-  const birthMonth = parseInt(parts[1]) - 1;
-  const birthDay = parseInt(parts[2]);
+export const getAgeInMonths = (birthDate: string): number => {
+  const birth = parseBirthDate(birthDate);
+  if (!birth) return 0;
   
   const today = new Date();
-  let months = (today.getFullYear() - birthYear) * 12;
-  months += today.getMonth() - birthMonth;
-  if (today.getDate() < birthDay) {
+  let months = (today.getFullYear() - birth.getFullYear()) * 12;
+  months += today.getMonth() - birth.getMonth();
+  if (today.getDate() < birth.getDate()) {
     months--;
   }
   return Math.max(0, months);
@@ -145,20 +175,14 @@ export const getAgeInMonths = (birthDate: string) => {
 // Verifica se o cidadão está na faixa etária de Criança (até 24 meses / 2 anos de vida exatos).
 // Ao completar 24 meses e 1 dia, a função retorna false (deve transicionar para Adulto).
 export const isChildAge = (birthDate: string): boolean => {
-  if (!birthDate) return false;
-  const parts = birthDate.split('-');
-  if (parts.length !== 3) return false;
-  const birthYear = parseInt(parts[0]);
-  const birthMonth = parseInt(parts[1]) - 1;
-  const birthDay = parseInt(parts[2]);
+  const birth = parseBirthDate(birthDate);
+  if (!birth) return false;
   
-  const birth = new Date(birthYear, birthMonth, birthDay, 0, 0, 0);
-  if (isNaN(birth.getTime())) return false;
+  const twoYears = new Date(birth);
+  twoYears.setFullYear(twoYears.getFullYear() + 2);
+  twoYears.setHours(23, 59, 59, 999);
   
-  // Data exata de 2 anos (24 meses)
-  const twoYears = new Date(birthYear + 2, birthMonth, birthDay, 23, 59, 59);
   const today = new Date();
-  
   return today <= twoYears;
 };
 

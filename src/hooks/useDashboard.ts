@@ -207,7 +207,9 @@ export function useDashboard(user: any) {
 
     activePatients.forEach(p => {
       const clinical = p.clinical_data || {};
-      const categories = p.categories || [];
+      const categories = Array.isArray(p.categories) ? p.categories : [];
+      const hasChildTag = categories.includes('Criança') || categories.includes('crianca') || categories.includes('Crianças');
+      const isChild = p.birth_date ? isChildAge(p.birth_date) : hasChildTag;
 
       const realLastVisitStr = getPatientLastVisitAt(p);
       if (isVisitLate(realLastVisitStr, p)) {
@@ -215,8 +217,9 @@ export function useDashboard(user: any) {
       }
 
       const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 999;
+      const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
 
-      if (categories.includes('Criança') && isChildAge(p.birth_date)) {
+      if (isChild) {
         newStats.criancasTotal++;
         newStats.criancas2y++;
 
@@ -234,7 +237,7 @@ export function useDashboard(user: any) {
         }
       }
 
-      if (p.birth_date && ageInMonths <= 6 && categories.includes('Criança')) {
+      if (p.birth_date && ageInMonths <= 6 && isChild) {
         // If visita6meses or visita6mesesNaoRealizada was recorded in clinical form, don't count as alert
         if (!clinical.crianca?.visita6meses && !clinical.crianca?.visita6mesesNaoRealizada) {
           const isAtrazo = isVisitLate(realLastVisitStr, p);
@@ -259,8 +262,8 @@ export function useDashboard(user: any) {
         }
       }
       if (categories.includes('AcamadoDomiciliado')) newStats.acamados++;
-      if (categories.includes('Idoso') || categories.includes('Idosos')) newStats.idosos++;
-      if (categories.includes('Adulto')) newStats.adultos++;
+      if (categories.includes('Idoso') || categories.includes('Idosos') || (ageNum >= 60 && !isChild)) newStats.idosos++;
+      if (categories.includes('Adulto') || (!isChild && ageNum < 60 && p.birth_date)) newStats.adultos++;
       if (categories.includes('SaudeMental') || categories.includes('Saúde Mental')) newStats.saudeMental++;
 
       const createdAt = p.created_at ? new Date(p.created_at) : null;
@@ -269,8 +272,8 @@ export function useDashboard(user: any) {
       if (isNewThisMonth) {
         newStats.newCidadaos++;
         if (categories.includes('Gestante')) newStats.newGestantes++;
-        if (categories.includes('Criança') && ageInMonths <= 24) newStats.newCriancas++;
-        if (categories.includes('Idoso') || categories.includes('Idosos')) newStats.newIdosos++;
+        if (isChild) newStats.newCriancas++;
+        if (categories.includes('Idoso') || categories.includes('Idosos') || (ageNum >= 60 && !isChild)) newStats.newIdosos++;
         if (categories.includes('AcamadoDomiciliado')) newStats.newAcamados++;
         if (isDiabetico) newStats.newDiabeticos++;
         if (isHipertenso) newStats.newHipertensos++;

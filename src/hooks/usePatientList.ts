@@ -270,7 +270,9 @@ export function usePatientList(user: AppUser | null | undefined) {
     }
 
     if (activeFilter === 'criancas') {
-      const isChild = p.categories?.includes('Criança') && isChildAge(p.birth_date);
+      const categories = Array.isArray(p.categories) ? p.categories : [];
+      const hasChildTag = categories.includes('Criança') || categories.includes('crianca') || categories.includes('Crianças');
+      const isChild = p.birth_date ? isChildAge(p.birth_date) : hasChildTag;
       return matchesSearch && isChild;
     }
 
@@ -278,10 +280,18 @@ export function usePatientList(user: AppUser | null | undefined) {
     if (activeFilter === 'acamados') return matchesSearch && p.categories?.includes('AcamadoDomiciliado');
 
     if (activeFilter === 'idosos') {
-      return matchesSearch && (p.categories?.includes('Idoso') || p.categories?.includes('Idosos'));
+      const categories = Array.isArray(p.categories) ? p.categories : [];
+      const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
+      return matchesSearch && (categories.includes('Idoso') || categories.includes('Idosos') || ageNum >= 60);
     }
 
-    if (activeFilter === 'adultos') return matchesSearch && p.categories?.includes('Adulto');
+    if (activeFilter === 'adultos') {
+      const categories = Array.isArray(p.categories) ? p.categories : [];
+      const hasChildTag = categories.includes('Criança') || categories.includes('crianca') || categories.includes('Crianças');
+      const isChild = p.birth_date ? isChildAge(p.birth_date) : hasChildTag;
+      const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 30;
+      return matchesSearch && (categories.includes('Adulto') || (!isChild && ageNum < 60));
+    }
     if (activeFilter === 'saudemental') return matchesSearch && p.categories?.includes('SaudeMental');
 
     if (activeFilter === 'hipertensos') {
