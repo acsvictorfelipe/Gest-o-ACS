@@ -7,7 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useToast } from '../components/Toast';
 import { safeStorage } from '../lib/safeStorage';
 import { isSameDay } from 'date-fns';
-import { getAgeInMonths, getAgeNumber, isChildAge, VACCINE_SCHEDULE, getPatientLastVisitAt, isVisitLate, getPatientVisitInterval } from '../lib/dateUtils';
+import { getAgeInMonths, getAgeNumber, isChildAge, isPatientChild, VACCINE_SCHEDULE, getPatientLastVisitAt, isVisitLate, getPatientVisitInterval } from '../lib/dateUtils';
 import { AppUser, Patient, Household } from '../types';
 import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 
@@ -110,13 +110,37 @@ export function usePatientList(user: AppUser | null | undefined) {
         console.error("Error healing patient visit dates:", syncErr);
       }
 
-      return { patients: allData, householdsMap: map };
+      // Fetch Agents/Profiles mapping for Admins and Gestores
+      const agentsMap: Record<string, { name: string; microarea: string; color: string; email?: string }> = {};
+      if (isAdminRole(user.role) || isGestorRole(user.role)) {
+        try {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, name, microarea, color, email, role');
+          
+          if (profilesData) {
+            profilesData.forEach((pr: any) => {
+              agentsMap[pr.id] = {
+                name: pr.name || 'Agente',
+                microarea: pr.microarea || '',
+                color: pr.color || '#00488d',
+                email: pr.email || ''
+              };
+            });
+          }
+        } catch (profileErr) {
+          console.warn('Could not fetch profiles for agent mapping:', profileErr);
+        }
+      }
+
+      return { patients: allData, householdsMap: map, agentsMap };
     },
     enabled: !!user && (!!user.microarea || user.role === 'Administrador' || user.role === 'Gestor'),
   });
 
   const patients = queryData?.patients || [];
   const householdsMap = queryData?.householdsMap || {};
+  const agentsMap = queryData?.agentsMap || {};
 
 
 
@@ -205,14 +229,34 @@ export function usePatientList(user: AppUser | null | undefined) {
       }
     }
 
-    return status;
+  const getAgentInfo = (p: any) => {
+    if (!p) return null;
+    const agent = p.agent_id ? agentsMap[p.agent_id] : null;
+    if (agent) {
+      return {
+        name: agent.name || 'Agente',
+        microarea: agent.microarea || p.microarea || '',
+        color: agent.color || p.area_color || '#00488d'
+      };
+    }
+    if (p.microarea) {
+      return {
+        name: `Agente MA ${p.microarea}`,
+        microarea: p.microarea,
+        color: p.area_color || '#00488d'
+      };
+    }
+    return null;
   };
 
   const filteredPatients = patients.filter(p => {
     const addr = getPatientAddress(p);
+    const agentInfo = (isAdminRole(user?.role) || isGestorRole(user?.role)) ? getAgentInfo(p) : null;
     const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          p.cns?.includes(searchTerm) ||
-                         (addr.address && addr.address.toLowerCase().includes(searchTerm.toLowerCase()));
+                         (addr.address && addr.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (agentInfo?.name && agentInfo.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (agentInfo?.microarea && `ma ${agentInfo.microarea}`.includes(searchTerm.toLowerCase()));
     
     const isDeceased = p.clinical_data?.obito?.flg_obito || false;
 
@@ -239,23 +283,32 @@ export function usePatientList(user: AppUser | null | undefined) {
       return matchesSearch && isSameDay(targetDate, dueDate);
     }
 
-    if (activeFilter === 'visitas_atrasadas') {
+    if (activeFilter === 'visitas_atrasadas' || activeFilter === 'visitas-atraso') {
       const realLastVisitStr = getPatientLastVisitAt(p);
       return matchesSearch && isVisitLate(realLastVisitStr, p);
     }
 
-    if (activeFilter === 'pending_6m') {
-      const isChild = p.categories?.includes('Criança');
-      if (!isChild || !p.birth_date) return false;
-      const ageInMonths = getAgeInMonths(p.birth_date);
-      if (ageInMonths > 6) return false;
-      if (p.clinical_data?.crianca?.visita6meses) return false;
-      const realLastVisitStr = getPatientLastVisitAt(p);
-      return matchesSearch && isVisitLate(realLastVisitStr, p);
+    if (activeFilter === 'sem_domicilio' || activeFilter === 'sem-domicilio') {
+      return matchesSearch && isPatientSemDomicilio(p);
     }
 
-    if (activeFilter === 'vacinas_atrasadas') {
-      const isChild = p.categories?.includes('Criança');
+    if (
+      activeFilter === 'criancas_visitas_pendentes' || 
+      activeFilter === 'bebes-pendentes' || 
+      activeFilter === 'pending_6m'
+    ) {
+      const isChild = isPatientChild(p);
+      if (!isChild) return false;
+      const realLastVisitStr = getPatientLastVisitAt(p);
+      const isLate = isVisitLate(realLastVisitStr, p);
+      const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
+      const missing6m = ageInMonths >= 6 && !p.clinical_data?.crianca?.visita6meses;
+      const missing30d = ageInMonths >= 1 && !p.clinical_data?.crianca?.visita30dias;
+      return matchesSearch && (isLate || missing6m || missing30d);
+    }
+
+    if (activeFilter === 'vacinas_atrasadas' || activeFilter === 'vacinas_pendentes') {
+      const isChild = isPatientChild(p);
       if (!isChild) return false;
       const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
       if (ageInMonths > 24) return false;
@@ -270,9 +323,7 @@ export function usePatientList(user: AppUser | null | undefined) {
     }
 
     if (activeFilter === 'criancas') {
-      const categories = Array.isArray(p.categories) ? p.categories : [];
-      const hasChildTag = categories.includes('Criança') || categories.includes('crianca') || categories.includes('Crianças');
-      const isChild = p.birth_date ? isChildAge(p.birth_date) : hasChildTag;
+      const isChild = isPatientChild(p);
       return matchesSearch && isChild;
     }
 
@@ -287,8 +338,7 @@ export function usePatientList(user: AppUser | null | undefined) {
 
     if (activeFilter === 'adultos') {
       const categories = Array.isArray(p.categories) ? p.categories : [];
-      const hasChildTag = categories.includes('Criança') || categories.includes('crianca') || categories.includes('Crianças');
-      const isChild = p.birth_date ? isChildAge(p.birth_date) : hasChildTag;
+      const isChild = isPatientChild(p);
       const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 30;
       return matchesSearch && (categories.includes('Adulto') || (!isChild && ageNum < 60));
     }
@@ -334,6 +384,8 @@ export function usePatientList(user: AppUser | null | undefined) {
 
   const clearFilter = () => {
     setActiveFilter('all');
+    setSelectedStreet('');
+    setSearchTerm('');
     setSearchParams({});
   };
 
@@ -472,7 +524,8 @@ export function usePatientList(user: AppUser | null | undefined) {
     handleDelete,
     copyToClipboard,
     handleWhatsApp,
-    getPrescriptionStatus
+    getPrescriptionStatus,
+    agentsMap,
+    getAgentInfo
   };
-
 }

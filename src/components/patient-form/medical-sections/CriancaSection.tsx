@@ -4,7 +4,6 @@ import {
   Plus, 
   Trash2, 
   CheckCircle2, 
-  Stethoscope, 
   Baby, 
   Clock, 
   XCircle,
@@ -12,7 +11,6 @@ import {
   ShieldCheck,
   Check,
   Sparkles,
-  Calendar,
   AlertCircle
 } from 'lucide-react';
 import { calculateAge, VACCINE_SCHEDULE } from '../../../lib/dateUtils';

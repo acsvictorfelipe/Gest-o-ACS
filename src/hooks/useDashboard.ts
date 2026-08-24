@@ -12,7 +12,7 @@ import {
   ShieldAlert,
   Users
 } from 'lucide-react';
-import { getAgeInMonths, isChildAge, VACCINE_SCHEDULE, getAgeNumber, getPatientLastVisitAt, isVisitLate } from '../lib/dateUtils';
+import { getAgeInMonths, isChildAge, isPatientChild, VACCINE_SCHEDULE, getAgeNumber, getPatientLastVisitAt, isVisitLate } from '../lib/dateUtils';
 import { generateUUID } from '../lib/utils';
 import { UI_CONFIG } from '../constants';
 import { useDashboardWeeklyChart } from './useDashboardWeeklyChart';
@@ -208,8 +208,7 @@ export function useDashboard(user: any) {
     activePatients.forEach(p => {
       const clinical = p.clinical_data || {};
       const categories = Array.isArray(p.categories) ? p.categories : [];
-      const hasChildTag = categories.includes('Criança') || categories.includes('crianca') || categories.includes('Crianças');
-      const isChild = p.birth_date ? isChildAge(p.birth_date) : hasChildTag;
+      const isChild = isPatientChild(p);
 
       const realLastVisitStr = getPatientLastVisitAt(p);
       if (isVisitLate(realLastVisitStr, p)) {

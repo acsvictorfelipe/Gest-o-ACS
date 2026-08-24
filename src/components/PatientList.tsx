@@ -43,6 +43,7 @@ import { AppUser, Patient } from '../types';
 
 import { format, isSameDay } from 'date-fns';
 import { calculateAge, getAgeInMonths, getAgeNumber, formatDate, getPatientLastVisitAt, isVisitLate } from '../lib/dateUtils';
+import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 
 import { usePatientList } from '../hooks/usePatientList';
 
@@ -66,6 +67,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
     availableStreets,
     sortPatientsByAddressNumber,
     filteredPatients,
+    unpaginatedFilteredPatients,
     currentPage,
     setCurrentPage,
     pageSize,
@@ -76,7 +78,8 @@ export function PatientList({ user }: { user: AppUser | null }) {
     handleDelete,
     copyToClipboard,
     handleWhatsApp,
-    getPrescriptionStatus
+    getPrescriptionStatus,
+    getAgentInfo
   } = usePatientList(user);
 
   const getCategoryIcon = (categories: string[]) => {
@@ -101,8 +104,10 @@ export function PatientList({ user }: { user: AppUser | null }) {
              activeFilter === 'diabeticos' || activeFilter === 'diabéticos' ? 'Diabéticos' :
              activeFilter === 'adultos' ? 'Adultos' :
              activeFilter === 'saudemental' || activeFilter === 'saude-mental' ? 'Saúde Mental' :
-             activeFilter === 'bebes-pendentes' ? 'Bebês com Visitas Pendentes' :
-             activeFilter === 'visitas-atraso' ? 'Visitas em Atraso' :
+             activeFilter === 'criancas_visitas_pendentes' || activeFilter === 'bebes-pendentes' ? 'Crianças com Visitas Pendentes' :
+             activeFilter === 'vacinas_atrasadas' || activeFilter === 'vacinas_pendentes' ? 'Crianças com Vacinas Pendentes' :
+             activeFilter === 'visitas_atrasadas' || activeFilter === 'visitas-atraso' ? 'Pacientes com Visitas Pendentes' :
+             activeFilter === 'sem_domicilio' || activeFilter === 'sem-domicilio' ? 'Pessoas sem Domicílio Cadastrado' :
              activeFilter === 'receitas_vencendo' ? 'Receitas a Vencer' :
              activeFilter === 'sus_atualizado' ? 'SUS Atualizado' :
              activeFilter === 'falecidos' ? 'Falecidos / Óbitos' :
@@ -122,8 +127,9 @@ export function PatientList({ user }: { user: AppUser | null }) {
       {/* Search Bar & Filters */}
       <div className="space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full">
-            <div className="relative group flex-1">
+          <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full flex-wrap xl:flex-nowrap">
+            {/* 1. Campo de Busca */}
+            <div className="relative group flex-1 min-w-[240px]">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-600 transition-colors" />
               <input 
                 type="text" 
@@ -134,8 +140,44 @@ export function PatientList({ user }: { user: AppUser | null }) {
               />
             </div>
 
-            {/* Roteiro por Rua Dropdown Select */}
-            <div className="relative min-w-[220px]">
+            {/* 2. Filtro Discreto de Pendências (Visitas, Vacinas e Domicílio) */}
+            <div className="relative min-w-[215px]">
+              <AlertCircle className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 shrink-0 transition-colors ${
+                ['visitas_atrasadas', 'visitas-atraso', 'criancas_visitas_pendentes', 'bebes-pendentes', 'vacinas_atrasadas', 'vacinas_pendentes', 'sem_domicilio', 'sem-domicilio'].includes(activeFilter)
+                  ? 'text-amber-500'
+                  : 'text-teal-600'
+              }`} />
+              <select
+                value={
+                  ['visitas_atrasadas', 'visitas-atraso', 'criancas_visitas_pendentes', 'bebes-pendentes', 'vacinas_atrasadas', 'vacinas_pendentes', 'sem_domicilio', 'sem-domicilio'].includes(activeFilter)
+                    ? (activeFilter === 'visitas-atraso' ? 'visitas_atrasadas' : activeFilter === 'bebes-pendentes' ? 'criancas_visitas_pendentes' : activeFilter === 'vacinas_pendentes' ? 'vacinas_atrasadas' : activeFilter === 'sem-domicilio' ? 'sem_domicilio' : activeFilter)
+                    : ''
+                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val) {
+                    setActiveFilter(val);
+                  } else if (['visitas_atrasadas', 'visitas-atraso', 'criancas_visitas_pendentes', 'bebes-pendentes', 'vacinas_atrasadas', 'vacinas_pendentes', 'sem_domicilio', 'sem-domicilio'].includes(activeFilter)) {
+                    setActiveFilter('all');
+                  }
+                }}
+                className={`w-full bg-bg-secondary border rounded-xl py-3 pl-11 pr-10 shadow-sm focus:ring-2 focus:ring-teal-600/10 focus:border-teal-600/30 transition-all text-[13px] font-bold appearance-none cursor-pointer ${
+                  ['visitas_atrasadas', 'visitas-atraso', 'criancas_visitas_pendentes', 'bebes-pendentes', 'vacinas_atrasadas', 'vacinas_pendentes', 'sem_domicilio', 'sem-domicilio'].includes(activeFilter)
+                    ? 'border-amber-500/60 text-amber-700 dark:text-amber-300 bg-amber-500/10 ring-1 ring-amber-500/20'
+                    : 'border-border text-slate-800 dark:text-white'
+                }`}
+              >
+                <option value="">⚡ Pendências: Todas</option>
+                <option value="visitas_atrasadas">⚠️ Visitas Pendentes (Geral)</option>
+                <option value="criancas_visitas_pendentes">👶 Crianças: Visitas Pendentes</option>
+                <option value="vacinas_atrasadas">💉 Crianças: Vacinas Pendentes</option>
+                <option value="sem_domicilio">🏠 Sem Domicílio Cadastrado</option>
+              </select>
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
+
+            {/* 3. Roteiro por Rua Dropdown Select */}
+            <div className="relative min-w-[200px]">
               <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-600 shrink-0" />
               <select
                 value={selectedStreet}
@@ -150,11 +192,15 @@ export function PatientList({ user }: { user: AppUser | null }) {
               <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             </div>
 
-            {/* Categorias Dropdown Select */}
-            <div className="relative min-w-[220px]">
+            {/* 4. Categorias Dropdown Select */}
+            <div className="relative min-w-[200px]">
               <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-600 shrink-0" />
               <select
-                value={activeFilter}
+                value={
+                  !['visitas_atrasadas', 'visitas-atraso', 'criancas_visitas_pendentes', 'bebes-pendentes', 'vacinas_atrasadas', 'vacinas_pendentes'].includes(activeFilter)
+                    ? activeFilter
+                    : 'all'
+                }
                 onChange={(e) => setActiveFilter(e.target.value)}
                 className="w-full bg-bg-secondary border border-border rounded-xl py-3 pl-11 pr-10 shadow-sm focus:ring-2 focus:ring-teal-600/10 focus:border-teal-600/30 transition-all text-[13px] font-bold text-slate-800 dark:text-white appearance-none cursor-pointer"
               >
@@ -166,6 +212,9 @@ export function PatientList({ user }: { user: AppUser | null }) {
                   { id: 'hipertensos', label: 'Hipertensos' },
                   { id: 'diabéticos', label: 'Diabéticos' },
                   { id: 'acamados', label: 'Acamados' },
+                  { id: 'adultos', label: 'Adultos' },
+                  { id: 'saudemental', label: 'Saúde Mental' },
+                  { id: 'sem_domicilio', label: '🏠 Sem Domicílio Cadastrado' },
                   { id: 'receitas_vencendo', label: 'Receitas a Vencer' },
                   { id: 'sus_atualizado', label: 'SUS Atualizado' },
                   { id: 'falecidos', label: '💀 Falecidos / Óbitos' },
@@ -189,22 +238,53 @@ export function PatientList({ user }: { user: AppUser | null }) {
       ) : (
         <div className="space-y-4">
           {/* Dynamic Search/Filter Stats */}
-          {(searchTerm || selectedStreet) && (
+          {(searchTerm || selectedStreet || activeFilter !== 'all') && (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-teal-50/45 dark:bg-emerald-950/10 border border-teal-100 dark:border-emerald-900/30 p-4 rounded-2xl animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="flex items-center gap-2 text-teal-800 dark:text-teal-300">
+              <div className="flex items-center gap-2 text-teal-800 dark:text-teal-300 flex-wrap">
                 <Search className="w-4 h-4 text-teal-600 shrink-0" />
                 <p className="text-xs font-semibold">
                   Filtrando por: <span className="font-bold text-teal-700 dark:text-teal-400">
+                    {activeFilter !== 'all' ? (
+                      activeFilter === 'visitas_atrasadas' || activeFilter === 'visitas-atraso' ? '⚠️ Visitas Pendentes (Geral)' :
+                      activeFilter === 'criancas_visitas_pendentes' || activeFilter === 'bebes-pendentes' ? '👶 Crianças: Visitas Pendentes' :
+                      activeFilter === 'vacinas_atrasadas' || activeFilter === 'vacinas_pendentes' ? '💉 Crianças: Vacinas Pendentes' :
+                      activeFilter === 'sem_domicilio' || activeFilter === 'sem-domicilio' ? '🏠 Sem Domicílio Cadastrado' :
+                      `Categoria: ${activeFilter}`
+                    ) : ''}
+                    {activeFilter !== 'all' && (selectedStreet || searchTerm) ? ' • ' : ''}
                     {selectedStreet ? `Rua: ${selectedStreet}` : ''}
-                    {selectedStreet && searchTerm ? ' + ' : ''}
+                    {selectedStreet && searchTerm ? ' • ' : ''}
                     {searchTerm ? `Termo: "${searchTerm}"` : ''}
                   </span>
                 </p>
+                <button
+                  type="button"
+                  onClick={clearFilter}
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 hover:text-rose-700 dark:text-rose-400 ml-2 px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 hover:bg-rose-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                  Limpar Filtros
+                </button>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-100 dark:border-slate-800">
-                  Resultado: {filteredPatients.length} {filteredPatients.length === 1 ? 'paciente' : 'pacientes'}
+                  Resultado: {totalCount} {totalCount === 1 ? 'paciente' : 'pacientes'}
                 </span>
+                {((isAdminRole(user?.role) || isGestorRole(user?.role)) && searchTerm && (unpaginatedFilteredPatients || filteredPatients).length === 1) && (() => {
+                  const singlePatient = (unpaginatedFilteredPatients || filteredPatients)[0];
+                  const agentInfo = getAgentInfo(singlePatient);
+                  if (!agentInfo) return null;
+                  return (
+                    <span 
+                      className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg text-white flex items-center gap-1.5 shadow-sm"
+                      style={{ backgroundColor: agentInfo.color }}
+                      title={`Vinculado ao Agente ${agentInfo.name} na Microárea ${agentInfo.microarea || 'Geral'}`}
+                    >
+                      <User className="w-3.5 h-3.5" />
+                      Vinculado a: {agentInfo.name} {agentInfo.microarea ? `(MA ${agentInfo.microarea})` : ''}
+                    </span>
+                  );
+                })()}
                 {(() => {
                   const householdsCount = (() => {
                     if (selectedStreet) {
@@ -231,16 +311,23 @@ export function PatientList({ user }: { user: AppUser | null }) {
                   );
                 })()}
                 {(() => {
-                  const semDomicilioCount = filteredPatients.filter(isPatientSemDomicilio).length;
+                  const totalSemDomicilio = (unpaginatedFilteredPatients || filteredPatients).filter(isPatientSemDomicilio).length;
                   return (
-                    <span className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg border flex items-center gap-1.5 ${
-                      semDomicilioCount > 0 
-                        ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/35' 
-                        : 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                    }`}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveFilter(activeFilter === 'sem_domicilio' ? 'all' : 'sem_domicilio')}
+                      className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg border flex items-center gap-1.5 transition-all cursor-pointer ${
+                        activeFilter === 'sem_domicilio' || activeFilter === 'sem-domicilio'
+                          ? 'bg-rose-600 text-white border-rose-600 shadow-sm ring-2 ring-rose-600/30'
+                          : totalSemDomicilio > 0 
+                            ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/40' 
+                            : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                      }`}
+                      title={activeFilter === 'sem_domicilio' ? 'Clique para desativar o filtro' : 'Clique para filtrar apenas pessoas sem domicílio'}
+                    >
                       <AlertCircle className="w-3.5 h-3.5" />
-                      Sem Domicílio: {semDomicilioCount} {semDomicilioCount === 1 ? 'pessoa' : 'pessoas'}
-                    </span>
+                      Sem Domicílio: {totalSemDomicilio} {totalSemDomicilio === 1 ? 'pessoa' : 'pessoas'}
+                    </button>
                   );
                 })()}
               </div>
@@ -322,13 +409,29 @@ export function PatientList({ user }: { user: AppUser | null }) {
                                      </button>
                                    )}
                                  </div>
-                                 <p className="text-[11px] text-teal-600 dark:text-teal-400 font-bold mt-1.5 uppercase flex items-center gap-1 bg-teal-50/50 dark:bg-teal-950/20 px-2 py-0.5 rounded-md w-fit border border-teal-100/50 dark:border-teal-900/30">
-                                   <MapPin className="w-3.5 h-3.5 shrink-0 text-teal-500" />
-                                   {(() => {
-                                     const addr = getPatientAddress(p);
-                                     return addr.address ? `${addr.address}, ${addr.number}${addr.complement ? ` - ${addr.complement}` : ''}` : 'Sem endereço';
+                                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                   <p className="text-[11px] text-teal-600 dark:text-teal-400 font-bold uppercase flex items-center gap-1 bg-teal-50/50 dark:bg-teal-950/20 px-2 py-0.5 rounded-md w-fit border border-teal-100/50 dark:border-teal-900/30">
+                                     <MapPin className="w-3.5 h-3.5 shrink-0 text-teal-500" />
+                                     {(() => {
+                                       const addr = getPatientAddress(p);
+                                       return addr.address ? `${addr.address}, ${addr.number}${addr.complement ? ` - ${addr.complement}` : ''}` : 'Sem endereço';
+                                     })()}
+                                   </p>
+                                   {(isAdminRole(user?.role) || isGestorRole(user?.role)) && (() => {
+                                     const agentInfo = getAgentInfo(p);
+                                     if (!agentInfo) return null;
+                                     return (
+                                       <span 
+                                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-white shadow-xs"
+                                         style={{ backgroundColor: agentInfo.color }}
+                                         title={`Vinculado ao Agente: ${agentInfo.name}`}
+                                       >
+                                         <User className="w-3 h-3" />
+                                         Agente: {agentInfo.name} {agentInfo.microarea ? `(MA ${agentInfo.microarea})` : ''}
+                                       </span>
+                                     );
                                    })()}
-                                 </p>
+                                 </div>
                               </div>
                             </div>
                           </td>
@@ -555,13 +658,28 @@ export function PatientList({ user }: { user: AppUser | null }) {
                               </button>
                             </div>
                           )}
-                          <p className="text-[10px] text-teal-600 dark:text-teal-400 font-bold mt-1.5 uppercase flex items-center gap-1 bg-teal-50/50 dark:bg-teal-950/20 px-2 py-0.5 rounded-md w-fit border border-teal-100/50 dark:border-teal-900/30">
-                            <MapPin className="w-3.5 h-3.5 shrink-0 text-teal-500" />
-                            {(() => {
-                              const addr = getPatientAddress(p);
-                              return addr.address ? `${addr.address}, ${addr.number}${addr.complement ? ` - ${addr.complement}` : ''}` : 'Sem endereço';
+                          <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                            <p className="text-[10px] text-teal-600 dark:text-teal-400 font-bold uppercase flex items-center gap-1 bg-teal-50/50 dark:bg-teal-950/20 px-2 py-0.5 rounded-md w-fit border border-teal-100/50 dark:border-teal-900/30">
+                              <MapPin className="w-3.5 h-3.5 shrink-0 text-teal-500" />
+                              {(() => {
+                                const addr = getPatientAddress(p);
+                                return addr.address ? `${addr.address}, ${addr.number}${addr.complement ? ` - ${addr.complement}` : ''}` : 'Sem endereço';
+                              })()}
+                            </p>
+                            {(isAdminRole(user?.role) || isGestorRole(user?.role)) && (() => {
+                              const agentInfo = getAgentInfo(p);
+                              if (!agentInfo) return null;
+                              return (
+                                <span 
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider text-white shadow-xs"
+                                  style={{ backgroundColor: agentInfo.color }}
+                                >
+                                  <User className="w-2.5 h-2.5" />
+                                  Agente: {agentInfo.name} {agentInfo.microarea ? `(MA ${agentInfo.microarea})` : ''}
+                                </span>
+                              );
                             })()}
-                          </p>
+                          </div>
                           </div>
                           <div className="flex flex-wrap gap-2 mt-2">
                             {p.clinical_data?.contact && (

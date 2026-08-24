@@ -614,3 +614,5 @@ export const initialDefaultValues: PatientFormValues = {
     }
   }
 };
+
+export type PatientFormData = z.infer<typeof patientFormSchema>;

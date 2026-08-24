@@ -6,6 +6,7 @@ import { supabase } from './lib/supabase';
 import { Layout } from './components/Layout';
 import { ToastProvider } from './components/Toast';
 import { ConfirmDialogProvider } from './components/ui/ConfirmDialog';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { syncService } from './lib/syncService';
 import { encryptionService } from './lib/encryption';
 import { safeStorage } from './lib/safeStorage';
@@ -238,34 +239,36 @@ export default function App() {
       <ToastProvider>
         <ConfirmDialogProvider>
           <Router>
-            <Suspense fallback={
-              <div className="min-h-screen flex items-center justify-center bg-surface">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-              </div>
-            }>
-              <Routes>
-                <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-                
-                {user ? (
-                  <Route element={<Layout user={user} theme={theme} toggleTheme={toggleTheme} onProfileUpdate={() => user && fetchProfile(user)} />}>
-                    <Route path="/" element={<Dashboard user={user} />} />
-                    <Route path="/pacientes" element={<PatientList user={user} />} />
-                    <Route path="/domicilios" element={<HouseholdList user={user} />} />
-                    <Route path="/configuracoes" element={<Settings user={user} onProfileUpdate={() => user && fetchProfile(user)} theme={theme} toggleTheme={toggleTheme} />} />
-                    <Route path="/relatorios" element={<Reports user={user} />} />
-                    <Route path="/historico" element={<VisitHistory user={user} />} />
-                    <Route path="/novo-cadastro" element={<PatientForm user={user} />} />
-                    <Route path="/editar-paciente/:id" element={<PatientForm user={user} />} />
-                    <Route path="/domicilio/:id" element={<HouseholdView user={user} />} />
-                    <Route path="/usuarios" element={<UserManagement currentUser={user} />} />
-                    <Route path="/exportar" element={<ExportTool user={user} />} />
-                    <Route path="*" element={<Navigate to="/" />} />
-                  </Route>
-                ) : (
-                  <Route path="*" element={<Navigate to="/login" />} />
-                )}
-              </Routes>
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={
+                <div className="min-h-screen flex items-center justify-center bg-surface">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+                </div>
+              }>
+                <Routes>
+                  <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+                  
+                  {user ? (
+                    <Route element={<Layout user={user} theme={theme} toggleTheme={toggleTheme} onProfileUpdate={() => user && fetchProfile(user)} />}>
+                      <Route path="/" element={<Dashboard user={user} />} />
+                      <Route path="/pacientes" element={<PatientList user={user} />} />
+                      <Route path="/domicilios" element={<HouseholdList user={user} />} />
+                      <Route path="/configuracoes" element={<Settings user={user} onProfileUpdate={() => user && fetchProfile(user)} theme={theme} toggleTheme={toggleTheme} />} />
+                      <Route path="/relatorios" element={<Reports user={user} />} />
+                      <Route path="/historico" element={<VisitHistory user={user} />} />
+                      <Route path="/novo-cadastro" element={<PatientForm user={user} />} />
+                      <Route path="/editar-paciente/:id" element={<PatientForm user={user} />} />
+                      <Route path="/domicilio/:id" element={<HouseholdView user={user} />} />
+                      <Route path="/usuarios" element={<UserManagement currentUser={user} />} />
+                      <Route path="/exportar" element={<ExportTool user={user} />} />
+                      <Route path="*" element={<Navigate to="/" />} />
+                    </Route>
+                  ) : (
+                    <Route path="*" element={<Navigate to="/login" />} />
+                  )}
+                </Routes>
+              </Suspense>
+            </ErrorBoundary>
           </Router>
         </ConfirmDialogProvider>
       </ToastProvider>

@@ -71,6 +71,37 @@ export const vaccineLabels: Record<string, string> = {
   vacinaHpv: 'Vacina HPV'
 };
 
+/**
+ * Categorias válidas de pacientes.
+ * Use sempre essas constantes para evitar typos.
+ */
+export const PATIENT_CATEGORIES = {
+  CRIANCA:           'Criança',
+  GESTANTE:          'Gestante',
+  ADULTO:            'Adulto',
+  IDOSO:             'Idoso',
+  ACAMADO:           'AcamadoDomiciliado',
+  SAUDE_MENTAL:      'SaudeMental',
+} as const;
+
+export type PatientCategory = (typeof PATIENT_CATEGORIES)[keyof typeof PATIENT_CATEGORIES];
+
+/**
+ * Verifica se um paciente deve ser tratado como Criança (≤ 24 meses).
+ * Centraliza a regra que antes estava duplicada em useDashboard, usePatientList e usePatientFormSave.
+ *
+ * Regra de desempate:
+ *  - Se birth_date existir → usa isChildAge (cálculo de data exato)
+ *  - Caso contrário → verifica se a categoria 'Criança' está no array (cadastro incompleto)
+ */
+export function isPatientChild(patient: { birth_date?: string | null; categories?: string[] | null }): boolean {
+  if (patient.birth_date) {
+    return isChildAge(patient.birth_date);
+  }
+  const cats = Array.isArray(patient.categories) ? patient.categories : [];
+  return cats.some(c => c === 'Criança' || c === 'crianca' || c === 'Crianças');
+}
+
 export const parseBirthDate = (birthDate: any): Date | null => {
   if (!birthDate) return null;
   if (birthDate instanceof Date) return isNaN(birthDate.getTime()) ? null : birthDate;
