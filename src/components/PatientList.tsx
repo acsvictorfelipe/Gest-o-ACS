@@ -104,7 +104,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
              activeFilter === 'diabeticos' || activeFilter === 'diabéticos' ? 'Diabéticos' :
              activeFilter === 'adultos' ? 'Adultos' :
              activeFilter === 'saudemental' || activeFilter === 'saude-mental' ? 'Saúde Mental' :
-             activeFilter === 'criancas_visitas_pendentes' || activeFilter === 'bebes-pendentes' ? 'Crianças com Visitas Pendentes' :
+             activeFilter === 'criancas_visitas_pendentes' || activeFilter === 'bebes-pendentes' ? 'Crianças ≤ 6 Meses com Visitas Pendentes' :
              activeFilter === 'vacinas_atrasadas' || activeFilter === 'vacinas_pendentes' ? 'Crianças com Vacinas Pendentes' :
              activeFilter === 'visitas_atrasadas' || activeFilter === 'visitas-atraso' ? 'Pacientes com Visitas Pendentes' :
              activeFilter === 'sem_domicilio' || activeFilter === 'sem-domicilio' ? 'Pessoas sem Domicílio Cadastrado' :
@@ -169,7 +169,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
               >
                 <option value="">⚡ Pendências: Todas</option>
                 <option value="visitas_atrasadas">⚠️ Visitas Pendentes (Geral)</option>
-                <option value="criancas_visitas_pendentes">👶 Crianças: Visitas Pendentes</option>
+                <option value="criancas_visitas_pendentes">👶 Crianças ≤ 6m: Visitas Pendentes</option>
                 <option value="vacinas_atrasadas">💉 Crianças: Vacinas Pendentes</option>
                 <option value="sem_domicilio">🏠 Sem Domicílio Cadastrado</option>
               </select>
@@ -246,7 +246,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
                   Filtrando por: <span className="font-bold text-teal-700 dark:text-teal-400">
                     {activeFilter !== 'all' ? (
                       activeFilter === 'visitas_atrasadas' || activeFilter === 'visitas-atraso' ? '⚠️ Visitas Pendentes (Geral)' :
-                      activeFilter === 'criancas_visitas_pendentes' || activeFilter === 'bebes-pendentes' ? '👶 Crianças: Visitas Pendentes' :
+                      activeFilter === 'criancas_visitas_pendentes' || activeFilter === 'bebes-pendentes' ? '👶 Crianças ≤ 6m: Visitas Pendentes' :
                       activeFilter === 'vacinas_atrasadas' || activeFilter === 'vacinas_pendentes' ? '💉 Crianças: Vacinas Pendentes' :
                       activeFilter === 'sem_domicilio' || activeFilter === 'sem-domicilio' ? '🏠 Sem Domicílio Cadastrado' :
                       `Categoria: ${activeFilter}`

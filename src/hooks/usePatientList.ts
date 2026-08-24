@@ -302,12 +302,18 @@ export function usePatientList(user: AppUser | null | undefined) {
     ) {
       const isChild = isPatientChild(p);
       if (!isChild) return false;
+      const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
+      if (ageInMonths > 6) return false;
+
+      const clinical = p.clinical_data?.crianca || {};
+      if (clinical.visita6meses || clinical.visita6mesesNaoRealizada) {
+        return false;
+      }
+
       const realLastVisitStr = getPatientLastVisitAt(p);
       const isLate = isVisitLate(realLastVisitStr, p);
-      const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
-      const missing6m = ageInMonths >= 6 && !p.clinical_data?.crianca?.visita6meses;
-      const missing30d = ageInMonths >= 1 && !p.clinical_data?.crianca?.visita30dias;
-      return matchesSearch && (isLate || missing6m || missing30d);
+      const missing30d = ageInMonths >= 1 && !clinical.visita30dias && !clinical.visita30diasNaoRealizada;
+      return matchesSearch && (isLate || missing30d);
     }
 
     if (activeFilter === 'vacinas_atrasadas' || activeFilter === 'vacinas_pendentes') {
