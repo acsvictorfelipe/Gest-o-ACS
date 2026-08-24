@@ -25,7 +25,7 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getAgeInMonths, VACCINE_SCHEDULE, formatDate, calculateAge, getAgeNumber, getPatientLastVisitAt } from '../lib/dateUtils';
+import { formatDate, calculateAge } from '../lib/dateUtils';
 import { Badge } from './Badge';
 import { PendingCalendar } from './PendingCalendar';
 import { motion } from 'motion/react';

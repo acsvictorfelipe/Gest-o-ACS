@@ -42,7 +42,7 @@ import { safeStorage } from '../lib/safeStorage';
 import { AppUser, Patient } from '../types';
 
 import { format, isSameDay } from 'date-fns';
-import { calculateAge, getAgeInMonths, getAgeNumber, VACCINE_SCHEDULE, formatDate, parseDate, getPatientLastVisitAt, isVisitLate } from '../lib/dateUtils';
+import { calculateAge, getAgeInMonths, getAgeNumber, formatDate, getPatientLastVisitAt, isVisitLate } from '../lib/dateUtils';
 
 import { usePatientList } from '../hooks/usePatientList';
 
