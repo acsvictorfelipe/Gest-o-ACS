@@ -229,6 +229,9 @@ export function usePatientList(user: AppUser | null | undefined) {
       }
     }
 
+    return status;
+  };
+
   const getAgentInfo = (p: any) => {
     if (!p) return null;
     const agent = p.agent_id ? agentsMap[p.agent_id] : null;
