@@ -92,6 +92,10 @@ export interface CriancaData {
   visitasAcs: string[];
   visita30dias: string;
   visita6meses: string;
+  visita30diasNaoRealizada?: boolean;
+  visita6mesesNaoRealizada?: boolean;
+  visita30diasJustificativa?: string;
+  visita6mesesJustificativa?: string;
   proximaVisitaSugerida: string;
   vacinas: Record<string, string>;
   notes: string;

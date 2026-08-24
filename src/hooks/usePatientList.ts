@@ -31,9 +31,9 @@ export function usePatientList(user: AppUser | null | undefined) {
   const { data: queryData, isLoading: loading } = useQuery({
     queryKey: ['patientList', user?.id, user?.role, user?.color, user?.microarea],
     queryFn: async () => {
-      if (!user) return { patients: [], householdsMap: {} };
+      if (!user) return { patients: [] as Patient[], householdsMap: {} as Record<string, { address: string; number: string; complement: string }>, agentsMap: {} as Record<string, { name: string; microarea: string; color: string; email?: string }> };
       if (!user.microarea && !isAdminRole(user.role) && !isGestorRole(user.role)) {
-        return { patients: [], householdsMap: {} };
+        return { patients: [] as Patient[], householdsMap: {} as Record<string, { address: string; number: string; complement: string }>, agentsMap: {} as Record<string, { name: string; microarea: string; color: string; email?: string }> };
       }
 
       // Fetch Households first for address mapping
@@ -138,9 +138,9 @@ export function usePatientList(user: AppUser | null | undefined) {
     enabled: !!user && (!!user.microarea || user.role === 'Administrador' || user.role === 'Gestor'),
   });
 
-  const patients = queryData?.patients || [];
-  const householdsMap = queryData?.householdsMap || {};
-  const agentsMap = queryData?.agentsMap || {};
+  const patients: Patient[] = queryData?.patients || [];
+  const householdsMap: Record<string, { address: string; number: string; complement: string }> = queryData?.householdsMap || {};
+  const agentsMap: Record<string, { name: string; microarea: string; color: string; email?: string }> = queryData?.agentsMap || {};
 
 
 
@@ -305,7 +305,7 @@ export function usePatientList(user: AppUser | null | undefined) {
       const ageInMonths = p.birth_date ? getAgeInMonths(p.birth_date) : 0;
       if (ageInMonths > 6) return false;
 
-      const clinical = p.clinical_data?.crianca || {};
+      const clinical = (p.clinical_data?.crianca || {}) as any;
       if (clinical.visita6meses || clinical.visita6mesesNaoRealizada) {
         return false;
       }
