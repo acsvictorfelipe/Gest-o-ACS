@@ -347,7 +347,8 @@ export const patientFormSchema = z.object({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       },
       hipertensao: 'Não',
       hipertensaoData: {
@@ -367,7 +368,8 @@ export const patientFormSchema = z.object({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       },
       visitasAcsDiabetes: [],
       hipertensao: 'Não',
@@ -398,7 +400,8 @@ export const patientFormSchema = z.object({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       },
       hipertensao: 'Não',
       hipertensaoData: {
@@ -425,7 +428,8 @@ export const patientFormSchema = z.object({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       },
       visitasAcsDiabetes: [],
       hipertensao: 'Não',
@@ -442,7 +446,8 @@ export const patientFormSchema = z.object({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       },
       visitasAcsDiabetes: [],
       hipertensao: 'Não',
