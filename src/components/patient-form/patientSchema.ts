@@ -35,12 +35,14 @@ export const patientFormSchema = z.object({
         avaliacaoPes: z.string().default('Não'),
         hemoglobinaGlicada: z.string().default('Não'),
         visitaAcs1: z.string().default(''),
-        visitaAcs2: z.string().default('')
+        visitaAcs2: z.string().default(''),
+        usoInsulina: z.boolean().default(false)
       }).default({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       }),
       hipertensao: z.string().default('Não'),
       hipertensaoData: z.object({
@@ -58,7 +60,8 @@ export const patientFormSchema = z.object({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       },
       hipertensao: 'Não',
       hipertensaoData: {
@@ -78,12 +81,14 @@ export const patientFormSchema = z.object({
         avaliacaoPes: z.string().default('Não'),
         hemoglobinaGlicada: z.string().default('Não'),
         visitaAcs1: z.string().default(''),
-        visitaAcs2: z.string().default('')
+        visitaAcs2: z.string().default(''),
+        usoInsulina: z.boolean().default(false)
       }).default({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       }),
       visitasAcsDiabetes: z.array(z.string()).default([]),
       hipertensao: z.string().default('Não'),
@@ -108,7 +113,8 @@ export const patientFormSchema = z.object({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       },
       visitasAcsDiabetes: [],
       hipertensao: 'Não',
@@ -139,12 +145,14 @@ export const patientFormSchema = z.object({
         avaliacaoPes: z.string().default('Não'),
         hemoglobinaGlicada: z.string().default('Não'),
         visitaAcs1: z.string().default(''),
-        visitaAcs2: z.string().default('')
+        visitaAcs2: z.string().default(''),
+        usoInsulina: z.boolean().default(false)
       }).default({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       }),
       hipertensao: z.string().default('Não'),
       hipertensaoData: z.object({
@@ -177,7 +185,8 @@ export const patientFormSchema = z.object({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       },
       hipertensao: 'Não',
       hipertensaoData: {
@@ -214,12 +223,14 @@ export const patientFormSchema = z.object({
         avaliacaoPes: z.string().default('Não'),
         hemoglobinaGlicada: z.string().default('Não'),
         visitaAcs1: z.string().default(''),
-        visitaAcs2: z.string().default('')
+        visitaAcs2: z.string().default(''),
+        usoInsulina: z.boolean().default(false)
       }).default({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       }),
       visitasAcsDiabetes: z.array(z.string()).default([]),
       hipertensao: z.string().default('Não'),
@@ -239,7 +250,8 @@ export const patientFormSchema = z.object({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       },
       visitasAcsDiabetes: [],
       hipertensao: 'Não',
@@ -256,12 +268,14 @@ export const patientFormSchema = z.object({
         avaliacaoPes: z.string().default('Não'),
         hemoglobinaGlicada: z.string().default('Não'),
         visitaAcs1: z.string().default(''),
-        visitaAcs2: z.string().default('')
+        visitaAcs2: z.string().default(''),
+        usoInsulina: z.boolean().default(false)
       }).default({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       }),
       visitasAcsDiabetes: z.array(z.string()).default([]),
       hipertensao: z.string().default('Não'),
@@ -284,7 +298,8 @@ export const patientFormSchema = z.object({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       },
       visitasAcsDiabetes: [],
       hipertensao: 'Não',
@@ -492,7 +507,8 @@ export const initialDefaultValues: PatientFormValues = {
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       },
       hipertensao: 'Não',
       hipertensaoData: {
@@ -512,7 +528,8 @@ export const initialDefaultValues: PatientFormValues = {
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       },
       visitasAcsDiabetes: [],
       hipertensao: 'Não',
@@ -543,7 +560,8 @@ export const initialDefaultValues: PatientFormValues = {
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       },
       hipertensao: 'Não',
       hipertensaoData: {
@@ -570,7 +588,8 @@ export const initialDefaultValues: PatientFormValues = {
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       },
       visitasAcsDiabetes: [],
       hipertensao: 'Não',
@@ -587,7 +606,8 @@ export const initialDefaultValues: PatientFormValues = {
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
-        visitaAcs2: ''
+        visitaAcs2: '',
+        usoInsulina: false
       },
       visitasAcsDiabetes: [],
       hipertensao: 'Não',

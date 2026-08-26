@@ -154,6 +154,41 @@ export function ChronicSection({ formData, setFormData, isReadOnly }: ChronicSec
             <option>Sim</option>
           </select>
         </div>
+        <div className="col-span-full">
+          <label className="flex items-center gap-3 p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-blue-200 dark:border-blue-700/50 cursor-pointer hover:border-blue-400 transition-all shadow-xs">
+            <input 
+              type="checkbox"
+              checked={Boolean(data.diabetesData?.usoInsulina || data.usoInsulina || data.toma_insulina)}
+              onChange={e => {
+                const checked = e.target.checked;
+                setFormData((prev: any) => ({
+                  ...prev, 
+                  clinicalData: { 
+                    ...prev.clinicalData, 
+                    chronic: { 
+                      ...(prev.clinicalData?.chronic || {}), 
+                      usoInsulina: checked,
+                      toma_insulina: checked,
+                      diabetesData: { 
+                        ...(prev.clinicalData?.chronic?.diabetesData || {}), 
+                        usoInsulina: checked 
+                      } 
+                    } 
+                  }
+                }));
+              }}
+              className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+            />
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold uppercase text-blue-900 dark:text-blue-200">
+                💉 Faz uso de Insulina (Toma Insulina)
+              </span>
+              <span className="text-[10px] text-blue-600/80 dark:text-blue-400 font-medium">
+                — Marque se o paciente faz uso contínuo de insulina
+              </span>
+            </div>
+          </label>
+        </div>
         {renderAcsVisits('diabetesData')}
       </div>
     );

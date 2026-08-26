@@ -7,7 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useToast } from '../components/Toast';
 import { safeStorage } from '../lib/safeStorage';
 import { isSameDay } from 'date-fns';
-import { getAgeInMonths, getAgeNumber, isChildAge, isPatientChild, VACCINE_SCHEDULE, getPatientLastVisitAt, isVisitLate, getPatientVisitInterval } from '../lib/dateUtils';
+import { getAgeInMonths, getAgeNumber, isChildAge, isPatientChild, isPatientDiabetic, isPatientInsulinUser, VACCINE_SCHEDULE, getPatientLastVisitAt, isVisitLate, getPatientVisitInterval } from '../lib/dateUtils';
 import { AppUser, Patient, Household } from '../types';
 import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 
@@ -368,15 +368,12 @@ export function usePatientList(user: AppUser | null | undefined) {
       );
     }
 
+    if (activeFilter === 'diabeticos_insulina' || activeFilter === 'insulina' || activeFilter === 'uso_insulina') {
+      return matchesSearch && isPatientInsulinUser(p);
+    }
+
     if (activeFilter === 'diabeticos' || activeFilter === 'diabéticos') {
-      const clinical = p.clinical_data || {};
-      return matchesSearch && (
-        clinical.chronic?.diabetes === 'Sim' ||
-        clinical.gestante?.diabetes === 'Sim' || 
-        clinical.acamadodomiciliado?.diabetes === 'Sim' || 
-        clinical.adulto?.diabetes === 'Sim' || 
-        clinical.idoso?.diabetes === 'Sim'
-      );
+      return matchesSearch && isPatientDiabetic(p);
     }
 
     if (activeFilter === 'receitas_vencendo') {
@@ -535,6 +532,8 @@ export function usePatientList(user: AppUser | null | undefined) {
     handleWhatsApp,
     getPrescriptionStatus,
     agentsMap,
-    getAgentInfo
+    getAgentInfo,
+    isPatientDiabetic,
+    isPatientInsulinUser
   };
 }

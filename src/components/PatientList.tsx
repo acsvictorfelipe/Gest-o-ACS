@@ -42,7 +42,7 @@ import { safeStorage } from '../lib/safeStorage';
 import { AppUser, Patient } from '../types';
 
 import { format, isSameDay } from 'date-fns';
-import { calculateAge, getAgeInMonths, getAgeNumber, formatDate, getPatientLastVisitAt, isVisitLate } from '../lib/dateUtils';
+import { calculateAge, getAgeInMonths, getAgeNumber, formatDate, getPatientLastVisitAt, isVisitLate, isPatientDiabetic, isPatientInsulinUser } from '../lib/dateUtils';
 import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 
 import { usePatientList } from '../hooks/usePatientList';
@@ -102,6 +102,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
              activeFilter === 'acamados' ? 'Acamados / Domiciliados' :
              activeFilter === 'hipertensos' ? 'Hipertensos' :
              activeFilter === 'diabeticos' || activeFilter === 'diabéticos' ? 'Diabéticos' :
+             activeFilter === 'diabeticos_insulina' || activeFilter === 'insulina' ? 'Diabéticos em Uso de Insulina' :
              activeFilter === 'adultos' ? 'Adultos' :
              activeFilter === 'saudemental' || activeFilter === 'saude-mental' ? 'Saúde Mental' :
              activeFilter === 'criancas_visitas_pendentes' || activeFilter === 'bebes-pendentes' ? 'Crianças ≤ 6 Meses com Visitas Pendentes' :
@@ -140,37 +141,38 @@ export function PatientList({ user }: { user: AppUser | null }) {
               />
             </div>
 
-            {/* 2. Filtro Discreto de Pendências (Visitas, Vacinas e Domicílio) */}
+            {/* 2. Filtro Discreto de Pendências (Visitas, Vacinas, Domicílio e Insulina) */}
             <div className="relative min-w-[215px]">
               <AlertCircle className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 shrink-0 transition-colors ${
-                ['visitas_atrasadas', 'visitas-atraso', 'criancas_visitas_pendentes', 'bebes-pendentes', 'vacinas_atrasadas', 'vacinas_pendentes', 'sem_domicilio', 'sem-domicilio'].includes(activeFilter)
+                ['visitas_atrasadas', 'visitas-atraso', 'criancas_visitas_pendentes', 'bebes-pendentes', 'vacinas_atrasadas', 'vacinas_pendentes', 'sem_domicilio', 'sem-domicilio', 'diabeticos_insulina', 'insulina'].includes(activeFilter)
                   ? 'text-amber-500'
                   : 'text-teal-600'
               }`} />
               <select
                 value={
-                  ['visitas_atrasadas', 'visitas-atraso', 'criancas_visitas_pendentes', 'bebes-pendentes', 'vacinas_atrasadas', 'vacinas_pendentes', 'sem_domicilio', 'sem-domicilio'].includes(activeFilter)
-                    ? (activeFilter === 'visitas-atraso' ? 'visitas_atrasadas' : activeFilter === 'bebes-pendentes' ? 'criancas_visitas_pendentes' : activeFilter === 'vacinas_pendentes' ? 'vacinas_atrasadas' : activeFilter === 'sem-domicilio' ? 'sem_domicilio' : activeFilter)
+                  ['visitas_atrasadas', 'visitas-atraso', 'criancas_visitas_pendentes', 'bebes-pendentes', 'vacinas_atrasadas', 'vacinas_pendentes', 'sem_domicilio', 'sem-domicilio', 'diabeticos_insulina', 'insulina'].includes(activeFilter)
+                    ? (activeFilter === 'visitas-atraso' ? 'visitas_atrasadas' : activeFilter === 'bebes-pendentes' ? 'criancas_visitas_pendentes' : activeFilter === 'vacinas_pendentes' ? 'vacinas_atrasadas' : activeFilter === 'sem-domicilio' ? 'sem_domicilio' : activeFilter === 'insulina' ? 'diabeticos_insulina' : activeFilter)
                     : ''
                 }
                 onChange={(e) => {
                   const val = e.target.value;
                   if (val) {
                     setActiveFilter(val);
-                  } else if (['visitas_atrasadas', 'visitas-atraso', 'criancas_visitas_pendentes', 'bebes-pendentes', 'vacinas_atrasadas', 'vacinas_pendentes', 'sem_domicilio', 'sem-domicilio'].includes(activeFilter)) {
+                  } else if (['visitas_atrasadas', 'visitas-atraso', 'criancas_visitas_pendentes', 'bebes-pendentes', 'vacinas_atrasadas', 'vacinas_pendentes', 'sem_domicilio', 'sem-domicilio', 'diabeticos_insulina', 'insulina'].includes(activeFilter)) {
                     setActiveFilter('all');
                   }
                 }}
                 className={`w-full bg-bg-secondary border rounded-xl py-3 pl-11 pr-10 shadow-sm focus:ring-2 focus:ring-teal-600/10 focus:border-teal-600/30 transition-all text-[13px] font-bold appearance-none cursor-pointer ${
-                  ['visitas_atrasadas', 'visitas-atraso', 'criancas_visitas_pendentes', 'bebes-pendentes', 'vacinas_atrasadas', 'vacinas_pendentes', 'sem_domicilio', 'sem-domicilio'].includes(activeFilter)
+                  ['visitas_atrasadas', 'visitas-atraso', 'criancas_visitas_pendentes', 'bebes-pendentes', 'vacinas_atrasadas', 'vacinas_pendentes', 'sem_domicilio', 'sem-domicilio', 'diabeticos_insulina', 'insulina'].includes(activeFilter)
                     ? 'border-amber-500/60 text-amber-700 dark:text-amber-300 bg-amber-500/10 ring-1 ring-amber-500/20'
                     : 'border-border text-slate-800 dark:text-white'
                 }`}
               >
-                <option value="">⚡ Pendências: Todas</option>
+                <option value="">⚡ Pendências / Alertas: Todas</option>
                 <option value="visitas_atrasadas">⚠️ Visitas Pendentes (Geral)</option>
                 <option value="criancas_visitas_pendentes">👶 Crianças ≤ 6m: Visitas Pendentes</option>
                 <option value="vacinas_atrasadas">💉 Crianças: Vacinas Pendentes</option>
+                <option value="diabeticos_insulina">💉 Diabéticos em Uso de Insulina</option>
                 <option value="sem_domicilio">🏠 Sem Domicílio Cadastrado</option>
               </select>
               <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -210,7 +212,8 @@ export function PatientList({ user }: { user: AppUser | null }) {
                   { id: 'criancas', label: 'Crianças' },
                   { id: 'idosos', label: 'Idosos' },
                   { id: 'hipertensos', label: 'Hipertensos' },
-                  { id: 'diabéticos', label: 'Diabéticos' },
+                  { id: 'diabéticos', label: 'Diabéticos (Geral)' },
+                  { id: 'diabeticos_insulina', label: '💉 Diabéticos em Uso de Insulina' },
                   { id: 'acamados', label: 'Acamados' },
                   { id: 'adultos', label: 'Adultos' },
                   { id: 'saudemental', label: 'Saúde Mental' },
@@ -248,6 +251,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
                       activeFilter === 'visitas_atrasadas' || activeFilter === 'visitas-atraso' ? '⚠️ Visitas Pendentes (Geral)' :
                       activeFilter === 'criancas_visitas_pendentes' || activeFilter === 'bebes-pendentes' ? '👶 Crianças ≤ 6m: Visitas Pendentes' :
                       activeFilter === 'vacinas_atrasadas' || activeFilter === 'vacinas_pendentes' ? '💉 Crianças: Vacinas Pendentes' :
+                      activeFilter === 'diabeticos_insulina' || activeFilter === 'insulina' ? '💉 Diabéticos em Uso de Insulina' :
                       activeFilter === 'sem_domicilio' || activeFilter === 'sem-domicilio' ? '🏠 Sem Domicílio Cadastrado' :
                       `Categoria: ${activeFilter}`
                     ) : ''}
@@ -485,12 +489,20 @@ export function PatientList({ user }: { user: AppUser | null }) {
                                 Hipertenso
                               </span>
                             )}
-                            {(p.clinical_data?.chronic?.diabetes === 'Sim' || p.clinical_data?.adulto?.diabetes === 'Sim' || p.clinical_data?.idoso?.diabetes === 'Sim') && (
+                            {isPatientDiabetic(p) && (
                               <span 
                                 className="px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-tight text-white" 
                                 style={{ backgroundColor: '#8B5CF6' }}
                               >
                                 Diabético
+                              </span>
+                            )}
+                            {isPatientInsulinUser(p) && (
+                              <span 
+                                className="px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-tight text-white bg-sky-600 dark:bg-sky-500 shadow-xs flex items-center gap-1 shrink-0"
+                                title="Paciente em uso de Insulina"
+                              >
+                                💉 Insulina
                               </span>
                             )}
                             {p.categories?.includes('SaudeMental') && (
@@ -759,12 +771,20 @@ export function PatientList({ user }: { user: AppUser | null }) {
                         Hipertenso
                       </span>
                     )}
-                    {(p.clinical_data?.chronic?.diabetes === 'Sim' || p.clinical_data?.adulto?.diabetes === 'Sim' || p.clinical_data?.idoso?.diabetes === 'Sim') && (
+                    {isPatientDiabetic(p) && (
                       <span 
-                        className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase whitespace-nowrap text-white"
+                        className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase whitespace-nowrap text-white" 
                         style={{ backgroundColor: '#8B5CF6' }}
                       >
                         Diabético
+                      </span>
+                    )}
+                    {isPatientInsulinUser(p) && (
+                      <span 
+                        className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase whitespace-nowrap text-white bg-sky-600 dark:bg-sky-500 shadow-xs flex items-center gap-1 shrink-0"
+                        title="Paciente em uso de Insulina"
+                      >
+                        💉 Insulina
                       </span>
                     )}
                     {p.categories?.includes('SaudeMental') && (

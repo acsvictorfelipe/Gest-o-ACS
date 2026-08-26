@@ -29,6 +29,7 @@ export interface DiabetesData {
   hemoglobinaGlicada: string;
   visitaAcs1: string;
   visitaAcs2: string;
+  usoInsulina?: boolean | string;
 }
 
 export interface HipertensaoData {
@@ -42,6 +43,8 @@ export interface ChronicData {
   diabetesData: DiabetesData;
   hipertensao: string;
   hipertensaoData: HipertensaoData;
+  usoInsulina?: boolean | string;
+  toma_insulina?: boolean | string;
   pressao_aferida_semestre?: string;
   afericao_recente?: string;
   hba1c_semestre?: string;

@@ -102,6 +102,45 @@ export function isPatientChild(patient: { birth_date?: string | null; categories
   return cats.some(c => c === 'Criança' || c === 'crianca' || c === 'Crianças');
 }
 
+/**
+ * Verifica se um paciente é diagnosticado com Diabetes.
+ */
+export function isPatientDiabetic(patient: any): boolean {
+  if (!patient) return false;
+  const clinical = patient.clinical_data || {};
+  const categories = Array.isArray(patient.categories) ? patient.categories : [];
+  return (
+    clinical.chronic?.diabetes === 'Sim' ||
+    clinical.gestante?.diabetes === 'Sim' ||
+    clinical.acamadodomiciliado?.diabetes === 'Sim' ||
+    clinical.adulto?.diabetes === 'Sim' ||
+    clinical.idoso?.diabetes === 'Sim' ||
+    categories.some((c: string) => c === 'Diabético' || c === 'Diabéticos' || c === 'diabeticos' || c === 'diabéticos')
+  );
+}
+
+/**
+ * Verifica se um paciente diabético faz uso de Insulina.
+ */
+export function isPatientInsulinUser(patient: any): boolean {
+  if (!patient || !isPatientDiabetic(patient)) return false;
+  const clinical = patient.clinical_data || {};
+  const isTrue = (val: any) => val === true || val === 'Sim' || val === 'sim' || val === 'true' || val === 1;
+
+  return (
+    isTrue(clinical.chronic?.diabetesData?.usoInsulina) ||
+    isTrue(clinical.chronic?.usoInsulina) ||
+    isTrue(clinical.chronic?.toma_insulina) ||
+    isTrue(clinical.gestante?.diabetesData?.usoInsulina) ||
+    isTrue(clinical.acamadodomiciliado?.diabetesData?.usoInsulina) ||
+    isTrue(clinical.adulto?.diabetesData?.usoInsulina) ||
+    isTrue(clinical.idoso?.diabetesData?.usoInsulina) ||
+    isTrue(clinical.uso_insulina) ||
+    isTrue(clinical.toma_insulina) ||
+    isTrue(clinical.insulina)
+  );
+}
+
 export const parseBirthDate = (birthDate: any): Date | null => {
   if (!birthDate) return null;
   if (birthDate instanceof Date) return isNaN(birthDate.getTime()) ? null : birthDate;
