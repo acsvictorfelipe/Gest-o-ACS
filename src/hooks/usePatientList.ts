@@ -7,7 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useToast } from '../components/Toast';
 import { safeStorage } from '../lib/safeStorage';
 import { isSameDay } from 'date-fns';
-import { getAgeInMonths, getAgeNumber, isChildAge, isPatientChild, isPatientDiabetic, isPatientInsulinUser, VACCINE_SCHEDULE, getPatientLastVisitAt, isVisitLate, getPatientVisitInterval } from '../lib/dateUtils';
+import { getAgeInMonths, getAgeNumber, isChildAge, isPatientChild, isPatientDiabetic, isPatientInsulinUser, isPatientBolsaFamilia, isPatientHipertenso, VACCINE_SCHEDULE, getPatientLastVisitAt, isVisitLate, getPatientVisitInterval } from '../lib/dateUtils';
 import { AppUser, Patient, Household } from '../types';
 import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 
@@ -376,6 +376,10 @@ export function usePatientList(user: AppUser | null | undefined) {
       return matchesSearch && isPatientDiabetic(p);
     }
 
+    if (activeFilter === 'bolsa_familia' || activeFilter === 'bolsa-familia' || activeFilter === 'bolsafamilia' || activeFilter === 'bolsa_família' || activeFilter === 'beneficiarios' || activeFilter === 'beneficiários') {
+      return matchesSearch && isPatientBolsaFamilia(p);
+    }
+
     if (activeFilter === 'receitas_vencendo') {
       const status = getPrescriptionStatus(p);
       return matchesSearch && (status === 'vencida' || status === 'vencendo');
@@ -534,6 +538,8 @@ export function usePatientList(user: AppUser | null | undefined) {
     agentsMap,
     getAgentInfo,
     isPatientDiabetic,
-    isPatientInsulinUser
+    isPatientInsulinUser,
+    isPatientBolsaFamilia,
+    isPatientHipertenso
   };
 }

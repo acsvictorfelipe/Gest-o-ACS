@@ -141,6 +141,54 @@ export function isPatientInsulinUser(patient: any): boolean {
   );
 }
 
+/**
+ * Verifica se um paciente é diagnosticado com Hipertensão Arterial.
+ */
+export function isPatientHipertenso(patient: any): boolean {
+  if (!patient) return false;
+  const clinical = patient.clinical_data || {};
+  const categories = Array.isArray(patient.categories) ? patient.categories : [];
+  return (
+    clinical.chronic?.hipertensao === 'Sim' ||
+    clinical.gestante?.hipertensao === 'Sim' ||
+    clinical.gestante?.pressaoAlta === 'Sim' ||
+    clinical.acamadodomiciliado?.hipertensao === 'Sim' ||
+    clinical.acamadodomiciliado?.pressaoAlta === 'Sim' ||
+    clinical.idoso?.hipertensao === 'Sim' ||
+    clinical.idoso?.pressaoAlta === 'Sim' ||
+    clinical.adulto?.hipertensao === 'Sim' ||
+    clinical.adulto?.pressaoAlta === 'Sim' ||
+    categories.some((c: string) => c === 'Hipertenso' || c === 'Hipertensos' || c === 'hipertensos' || c === 'hipertenso')
+  );
+}
+
+/**
+ * Verifica se um paciente recebe Bolsa Família.
+ */
+export function isPatientBolsaFamilia(patient: any): boolean {
+  if (!patient) return false;
+  const clinical = patient.clinical_data || {};
+  const benefits = Array.isArray(clinical.socialBenefits) ? clinical.socialBenefits : [];
+  const categories = Array.isArray(patient.categories) ? patient.categories : [];
+
+  const matchesBolsa = (s: string) => {
+    if (!s || typeof s !== 'string') return false;
+    const norm = s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return norm.includes('bolsa familia') || norm.includes('bolsa_familia') || norm === 'bf';
+  };
+
+  return (
+    benefits.some(matchesBolsa) ||
+    categories.some(matchesBolsa) ||
+    clinical.bolsa_familia === true ||
+    clinical.bolsa_familia === 'Sim' ||
+    clinical.bolsa_familia === 'sim' ||
+    clinical.bolsaFamilia === true ||
+    clinical.bolsaFamilia === 'Sim' ||
+    clinical.bolsaFamilia === 'sim'
+  );
+}
+
 export const parseBirthDate = (birthDate: any): Date | null => {
   if (!birthDate) return null;
   if (birthDate instanceof Date) return isNaN(birthDate.getTime()) ? null : birthDate;
