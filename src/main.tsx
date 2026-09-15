@@ -101,7 +101,7 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: any; resetErrorBo
       downloadAnchor.click();
       downloadAnchor.remove();
     } catch (e) {
-      alert('Não foi possível gerar o backup dos dados offline: ' + (e as any).message);
+      console.warn('Não foi possível gerar o backup dos dados offline:', e);
     }
   };
 

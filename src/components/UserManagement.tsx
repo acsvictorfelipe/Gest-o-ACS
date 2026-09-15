@@ -355,14 +355,22 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
     let targetPatientIds: string[] = [];
 
     if (transferScope === 'patients') {
-      if (selectedPatients.length === 0) {
-        warning("Selecione pelo menos um paciente para transferir.");
+      if (transferType === 'all') {
+        targetPatientIds = patients.filter(p => p.agent_id === fromAgentId).map(p => p.id);
+      } else if (transferType === 'microarea') {
+        targetPatientIds = patients.filter(p => p.agent_id === fromAgentId && p.microarea === selectedMicroarea).map(p => p.id);
+      } else {
+        targetPatientIds = selectedPatients;
+      }
+
+      if (targetPatientIds.length === 0) {
+        warning("Nenhum paciente encontrado para os critérios de transferência selecionados.");
         return;
       }
-      targetPatientIds = selectedPatients;
+
       if (transferHouseholdsWithPatients) {
         const linkedHIds = patients
-          .filter(p => selectedPatients.includes(p.id) && p.household_id)
+          .filter(p => targetPatientIds.includes(p.id) && p.household_id)
           .map(p => p.household_id as string);
         targetHouseholdIds = Array.from(new Set(linkedHIds));
       }
@@ -825,9 +833,11 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
   // Microareas list of source agent (Tab 4)
   const sourceAgentMicroareas = useMemo(() => {
     if (!fromAgentId) return [];
-    const sourceHouseholds = households.filter(h => h.agent_id === fromAgentId);
-    return Array.from(new Set(sourceHouseholds.map(h => h.microarea))).sort();
-  }, [fromAgentId, households]);
+    const maSet = new Set<string>();
+    households.filter(h => h.agent_id === fromAgentId).forEach(h => { if (h.microarea) maSet.add(h.microarea); });
+    patients.filter(p => p.agent_id === fromAgentId).forEach(p => { if (p.microarea) maSet.add(p.microarea); });
+    return Array.from(maSet).sort();
+  }, [fromAgentId, households, patients]);
 
   const sourceAgentHouseholds = useMemo(() => {
     if (!fromAgentId) return [];

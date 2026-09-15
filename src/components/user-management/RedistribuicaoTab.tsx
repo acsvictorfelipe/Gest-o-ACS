@@ -138,10 +138,17 @@ export function RedistribuicaoTab({
   // Dynamic button label calculation
   const getTransferButtonLabel = () => {
     if (transferScope === 'patients') {
+      if (transferType === 'all') {
+        return `Transferir Todos os Pacientes (${sourceAgentPatients.length} Cidadãos)`;
+      }
+      if (transferType === 'microarea') {
+        const pCount = sourceAgentPatients.filter(p => p.microarea === selectedMicroarea).length;
+        return `Transferir Microárea ${selectedMicroarea} (${pCount} Paciente${pCount === 1 ? '' : 's'})`;
+      }
       return `Transferir ${selectedPatients.length} Paciente${selectedPatients.length === 1 ? '' : 's'}`;
     }
     if (transferType === 'all') {
-      return `Transferir Todos (${sourceAgentHouseholds.length} Domicílios, ${sourceAgentPatients.length} Pacientes)`;
+      return `Transferir Todos os Domicílios (${sourceAgentHouseholds.length} Domicílios, ${sourceAgentPatients.length} Pacientes)`;
     }
     if (transferType === 'microarea') {
       const hCount = sourceAgentHouseholds.filter(h => h.microarea === selectedMicroarea).length;
@@ -154,6 +161,10 @@ export function RedistribuicaoTab({
   const isTransferButtonDisabled = () => {
     if (transferring || !toAgentId || !fromAgentId) return true;
     if (transferScope === 'patients') {
+      if (transferType === 'all') return sourceAgentPatients.length === 0;
+      if (transferType === 'microarea') {
+        return !selectedMicroarea || sourceAgentPatients.filter(p => p.microarea === selectedMicroarea).length === 0;
+      }
       return selectedPatients.length === 0;
     }
     if (transferType === 'selected') {
@@ -221,41 +232,67 @@ export function RedistribuicaoTab({
 
         {fromAgentId && (
           <div className="space-y-5 animate-in fade-in duration-300">
-            {/* STATS & SCOPE TOGGLE */}
-            <div className="bg-bg-primary/20 p-4 border border-border/60 rounded-2xl flex flex-col md:flex-row gap-4 items-center justify-between text-[11px] font-bold text-text-secondary">
-              <div>
-                Estatísticas do Agente de Origem:
-                <span className="text-text-primary font-black ml-1.5">{sourceAgentHouseholds.length} Domicílios</span> • 
-                <span className="text-text-primary font-black ml-1.5">{sourceAgentPatients.length} Pacientes</span>
-              </div>
+            {/* SCOPE SELECTOR: PATIENT TRANSFER (PRIMARY) & HOUSEHOLD TRANSFER */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setTransferScope('patients');
+                  setTransferType('all');
+                }}
+                className={`flex items-center gap-3.5 p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                  transferScope === 'patients'
+                    ? 'bg-teal-50/80 dark:bg-teal-950/40 border-teal-500 shadow-sm ring-2 ring-teal-500/20'
+                    : 'bg-bg-primary/60 border-border hover:border-teal-500/40'
+                }`}
+              >
+                <div className={`p-2.5 rounded-xl ${transferScope === 'patients' ? 'bg-teal-600 text-white' : 'bg-bg-secondary text-text-muted'}`}>
+                  <Users className="w-5 h-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-black uppercase tracking-tight text-text-primary">
+                      Enviar Pacientes (Cidadãos)
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-900/50 text-teal-800 dark:text-teal-300">
+                      {sourceAgentPatients.length} Pacientes
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-text-muted mt-0.5 font-medium">
+                    Transfira pacientes (todos, por microárea ou seleção individual).
+                  </p>
+                </div>
+              </button>
 
-              {/* SCOPE SELECTOR: HOUSEHOLDS VS PATIENTS */}
-              <div className="flex bg-bg-primary dark:bg-slate-800/80 p-1 rounded-xl border border-border">
-                <button
-                  type="button"
-                  onClick={() => setTransferScope('households')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg uppercase text-[9px] font-black transition-all ${
-                    transferScope === 'households'
-                      ? 'bg-teal-600 text-white shadow-sm'
-                      : 'text-text-secondary hover:text-text-primary'
-                  }`}
-                >
-                  <Home className="w-3.5 h-3.5" />
-                  Por Domicílios (Famílias)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTransferScope('patients')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg uppercase text-[9px] font-black transition-all ${
-                    transferScope === 'patients'
-                      ? 'bg-teal-600 text-white shadow-sm'
-                      : 'text-text-secondary hover:text-text-primary'
-                  }`}
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  Por Pacientes (Individual)
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setTransferScope('households');
+                  setTransferType('all');
+                }}
+                className={`flex items-center gap-3.5 p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                  transferScope === 'households'
+                    ? 'bg-teal-50/80 dark:bg-teal-950/40 border-teal-500 shadow-sm ring-2 ring-teal-500/20'
+                    : 'bg-bg-primary/60 border-border hover:border-teal-500/40'
+                }`}
+              >
+                <div className={`p-2.5 rounded-xl ${transferScope === 'households' ? 'bg-teal-600 text-white' : 'bg-bg-secondary text-text-muted'}`}>
+                  <Home className="w-5 h-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-black uppercase tracking-tight text-text-primary">
+                      Enviar Domicílios (Famílias)
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-text-secondary">
+                      {sourceAgentHouseholds.length} Domicílios
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-text-muted mt-0.5 font-medium">
+                    Transfira residências cadastradas e famílias completas.
+                  </p>
+                </div>
+              </button>
             </div>
 
             {/* IF TRANSFER SCOPE IS HOUSEHOLDS */}
@@ -419,128 +456,211 @@ export function RedistribuicaoTab({
             {/* IF TRANSFER SCOPE IS PATIENTS / CIDADÃOS */}
             {transferScope === 'patients' && (
               <div className="space-y-4 animate-in fade-in duration-200">
-                <div className="bg-bg-secondary border border-border rounded-2xl overflow-hidden flex flex-col">
-                  {/* Header with count and selection buttons */}
-                  <div className="p-3 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-bg-primary/10">
-                    <span className="text-[9px] font-black uppercase tracking-wider text-text-muted">
-                      Selecione os Pacientes para Transferência ({selectedPatients.length} selecionados de {sourceAgentPatients.length})
-                    </span>
-                    <div className="flex gap-2">
-                      <button
+                {/* MODO DE ENVIO DE PACIENTES */}
+                <div className="flex flex-wrap gap-2 items-center justify-between bg-bg-secondary p-3 border border-border rounded-2xl">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-text-muted">Modo de envio de Pacientes:</span>
+                  <div className="flex gap-2">
+                    <button 
+                      type="button"
+                      onClick={() => setTransferType('all')} 
+                      className={`px-3 py-1.5 rounded-xl uppercase text-[9px] font-black border transition-all cursor-pointer ${
+                        transferType === 'all' ? 'bg-teal-600 text-white border-teal-600' : 'bg-bg-secondary border-border hover:bg-bg-primary'
+                      }`}
+                    >
+                      Todos os Pacientes
+                    </button>
+                    {sourceAgentMicroareas.length > 0 && (
+                      <button 
                         type="button"
                         onClick={() => {
-                          const filteredIds = filteredPatients.map(p => p.id);
-                          setSelectedPatients(prev => {
-                            const newSelection = new Set([...prev, ...filteredIds]);
-                            return Array.from(newSelection);
-                          });
-                        }}
-                        className="px-2.5 py-1 bg-bg-secondary border border-border hover:bg-bg-primary text-[9px] font-black uppercase rounded-lg text-text-secondary hover:text-text-primary transition-all cursor-pointer"
+                          setTransferType('microarea');
+                          if (!selectedMicroarea) setSelectedMicroarea(sourceAgentMicroareas[0]);
+                        }} 
+                        className={`px-3 py-1.5 rounded-xl uppercase text-[9px] font-black border transition-all cursor-pointer ${
+                          transferType === 'microarea' ? 'bg-teal-600 text-white border-teal-600' : 'bg-bg-secondary border-border hover:bg-bg-primary'
+                        }`}
                       >
-                        Selecionar Todos ({filteredPatients.length})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedPatients([])}
-                        className="px-2.5 py-1 bg-bg-secondary border border-border hover:bg-red-50 dark:hover:bg-red-950/20 text-[9px] font-black uppercase rounded-lg text-text-muted hover:text-red-500 transition-all cursor-pointer"
-                      >
-                        Limpar Seleção
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Campo de Pesquisa Rápida de Pacientes */}
-                  <div className="p-3 border-b border-border bg-bg-primary/5 flex items-center gap-2">
-                    <Search className="w-4 h-4 text-text-muted shrink-0" />
-                    <input
-                      type="text"
-                      placeholder="Pesquisar por nome do paciente, CNS, data de nascimento, endereço, microárea..."
-                      value={patientSearch}
-                      onChange={e => setPatientSearch(e.target.value)}
-                      className="w-full bg-transparent border-none p-0 text-xs font-semibold placeholder:text-text-muted/65 focus:ring-0"
-                    />
-                    {patientSearch && (
-                      <button
-                        type="button"
-                        onClick={() => setPatientSearch('')}
-                        className="text-[10px] text-text-muted hover:text-text-primary font-bold px-1.5 py-0.5 rounded hover:bg-bg-primary"
-                      >
-                        Limpar
+                        Por Microárea
                       </button>
                     )}
-                  </div>
-
-                  {/* Patient list */}
-                  <div className="max-h-[340px] overflow-y-auto divide-y divide-border/60 custom-scrollbar">
-                    {filteredPatients.map(p => {
-                      const isChecked = selectedPatients.includes(p.id);
-                      const linkedHousehold = p.household_id ? householdMap.get(p.household_id) : null;
-                      const addressStr = linkedHousehold 
-                        ? `${linkedHousehold.address}, ${linkedHousehold.number}` 
-                        : (p.clinical_data?.address ? `${p.clinical_data.address}${p.clinical_data.address_number ? `, ${p.clinical_data.address_number}` : ''}` : 'Sem endereço vinculado');
-                      const age = formatPatientAge(p.birth_date);
-                      const bDate = formatBirthDate(p.birth_date);
-
-                      return (
-                        <div 
-                          key={p.id} 
-                          onClick={() => {
-                            setSelectedPatients(prev => 
-                              prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id]
-                            );
-                          }}
-                          className={`flex items-start justify-between gap-3 p-3 text-[12px] font-semibold text-text-secondary hover:bg-bg-primary/20 transition-colors cursor-pointer select-none ${
-                            isChecked ? 'bg-teal-50/30 dark:bg-teal-950/20' : ''
-                          }`}
-                        >
-                          <div className="flex items-start gap-3 min-w-0 flex-1">
-                            <input 
-                              type="checkbox" 
-                              checked={isChecked}
-                              onChange={() => {}} 
-                              className="w-4 h-4 rounded text-teal-600 border-slate-300 dark:border-slate-700 focus:ring-teal-500 shrink-0 mt-0.5 pointer-events-none" 
-                            />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="text-text-primary font-black uppercase text-[12px]">{p.name}</span>
-                                {p.is_family_responsible && (
-                                  <span className="text-[9px] font-bold px-1.5 py-0.2 bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300 rounded">
-                                    Resp. Familiar
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-text-muted text-[11px] mt-1 font-medium">
-                                {bDate && <span>Nasc: {bDate} {age ? `(${age})` : ''}</span>}
-                                {p.cns && <span>CNS: {p.cns}</span>}
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="w-3 h-3 text-teal-600 shrink-0" />
-                                  {addressStr} (Microárea {p.microarea || 'S/N'})
-                                </span>
-                              </div>
-
-                              {/* Categories badges */}
-                              {p.categories && p.categories.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1.5">
-                                  {p.categories.map((cat, idx) => (
-                                    <span key={idx} className="text-[9px] font-bold px-1.5 py-0.5 bg-bg-primary border border-border/80 text-text-secondary rounded-md">
-                                      {cat}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {filteredPatients.length === 0 && (
-                      <div className="p-8 text-center text-text-muted text-xs font-semibold uppercase">
-                        Nenhum paciente encontrado para a pesquisa.
-                      </div>
-                    )}
+                    <button 
+                      type="button"
+                      onClick={() => setTransferType('selected')} 
+                      className={`px-3 py-1.5 rounded-xl uppercase text-[9px] font-black border transition-all cursor-pointer ${
+                        transferType === 'selected' ? 'bg-teal-600 text-white border-teal-600' : 'bg-bg-secondary border-border hover:bg-bg-primary'
+                      }`}
+                    >
+                      Selecionar Pacientes
+                    </button>
                   </div>
                 </div>
+
+                {/* PATIENTS: ALL */}
+                {transferType === 'all' && (
+                  <div className="bg-bg-secondary p-4 border border-border rounded-2xl flex items-center gap-3.5">
+                    <div className="p-3 bg-teal-50 dark:bg-teal-950/40 text-teal-600 rounded-xl">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-bold text-text-primary">
+                        Transferir Todos os Pacientes do ACS de Origem
+                      </span>
+                      <p className="text-[10px] text-text-muted font-medium">
+                        Serão transferidos todos os <strong>{sourceAgentPatients.length}</strong> cidadãos cadastrados sob o ACS de origem para o ACS de destino.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* PATIENTS: BY MICROAREA */}
+                {transferType === 'microarea' && (
+                  <div className="bg-bg-secondary p-4 border border-border rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <label className="text-[10px] font-black uppercase text-text-muted">Selecione a Microárea de Origem:</label>
+                      <p className="text-[10px] text-text-secondary font-medium">
+                        Todos os cidadãos da microárea {selectedMicroarea} ({sourceAgentPatients.filter(p => p.microarea === selectedMicroarea).length} pacientes) serão transferidos.
+                      </p>
+                    </div>
+                    <select 
+                      value={selectedMicroarea} 
+                      onChange={e => setSelectedMicroarea(e.target.value)}
+                      className="bg-bg-primary dark:bg-slate-800 border-none rounded-xl py-2 px-3 text-xs font-bold focus:ring-2 focus:ring-teal-600/20 shrink-0 min-w-[170px]"
+                    >
+                      {sourceAgentMicroareas.map((m: any) => {
+                        const count = sourceAgentPatients.filter(p => p.microarea === m).length;
+                        return (
+                          <option key={m} value={m}>Microárea {m} ({count} pacientes)</option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                )}
+
+                {/* PATIENTS: INDIVIDUAL SELECTION */}
+                {transferType === 'selected' && (
+                  <div className="bg-bg-secondary border border-border rounded-2xl overflow-hidden flex flex-col">
+                    {/* Header with count and selection buttons */}
+                    <div className="p-3 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-bg-primary/10">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-text-muted">
+                        Selecione os Pacientes para Transferência ({selectedPatients.length} selecionados de {sourceAgentPatients.length})
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const filteredIds = filteredPatients.map(p => p.id);
+                            setSelectedPatients(prev => {
+                              const newSelection = new Set([...prev, ...filteredIds]);
+                              return Array.from(newSelection);
+                            });
+                          }}
+                          className="px-2.5 py-1 bg-bg-secondary border border-border hover:bg-bg-primary text-[9px] font-black uppercase rounded-lg text-text-secondary hover:text-text-primary transition-all cursor-pointer"
+                        >
+                          Selecionar Todos ({filteredPatients.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPatients([])}
+                          className="px-2.5 py-1 bg-bg-secondary border border-border hover:bg-red-50 dark:hover:bg-red-950/20 text-[9px] font-black uppercase rounded-lg text-text-muted hover:text-red-500 transition-all cursor-pointer"
+                        >
+                          Limpar Seleção
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Campo de Pesquisa Rápida de Pacientes */}
+                    <div className="p-3 border-b border-border bg-bg-primary/5 flex items-center gap-2">
+                      <Search className="w-4 h-4 text-text-muted shrink-0" />
+                      <input
+                        type="text"
+                        placeholder="Pesquisar por nome do paciente, CNS, data de nascimento, endereço, microárea..."
+                        value={patientSearch}
+                        onChange={e => setPatientSearch(e.target.value)}
+                        className="w-full bg-transparent border-none p-0 text-xs font-semibold placeholder:text-text-muted/65 focus:ring-0"
+                      />
+                      {patientSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setPatientSearch('')}
+                          className="text-[10px] text-text-muted hover:text-text-primary font-bold px-1.5 py-0.5 rounded hover:bg-bg-primary"
+                        >
+                          Limpar
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Patient list */}
+                    <div className="max-h-[340px] overflow-y-auto divide-y divide-border/60 custom-scrollbar">
+                      {filteredPatients.map(p => {
+                        const isChecked = selectedPatients.includes(p.id);
+                        const linkedHousehold = p.household_id ? householdMap.get(p.household_id) : null;
+                        const addressStr = linkedHousehold 
+                          ? `${linkedHousehold.address}, ${linkedHousehold.number}` 
+                          : (p.clinical_data?.address ? `${p.clinical_data.address}${p.clinical_data.address_number ? `, ${p.clinical_data.address_number}` : ''}` : 'Sem endereço vinculado');
+                        const age = formatPatientAge(p.birth_date);
+                        const bDate = formatBirthDate(p.birth_date);
+
+                        return (
+                          <div 
+                            key={p.id} 
+                            onClick={() => {
+                              setSelectedPatients(prev => 
+                                prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id]
+                              );
+                            }}
+                            className={`flex items-start justify-between gap-3 p-3 text-[12px] font-semibold text-text-secondary hover:bg-bg-primary/20 transition-colors cursor-pointer select-none ${
+                              isChecked ? 'bg-teal-50/30 dark:bg-teal-950/20' : ''
+                            }`}
+                          >
+                            <div className="flex items-start gap-3 min-w-0 flex-1">
+                              <input 
+                                type="checkbox" 
+                                checked={isChecked}
+                                onChange={() => {}} 
+                                className="w-4 h-4 rounded text-teal-600 border-slate-300 dark:border-slate-700 focus:ring-teal-500 shrink-0 mt-0.5 pointer-events-none" 
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="text-text-primary font-black uppercase text-[12px]">{p.name}</span>
+                                  {p.is_family_responsible && (
+                                    <span className="text-[9px] font-bold px-1.5 py-0.2 bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300 rounded">
+                                      Resp. Familiar
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-text-muted text-[11px] mt-1 font-medium">
+                                  {bDate && <span>Nasc: {bDate} {age ? `(${age})` : ''}</span>}
+                                  {p.cns && <span>CNS: {p.cns}</span>}
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="w-3 h-3 text-teal-600 shrink-0" />
+                                    {addressStr} (Microárea {p.microarea || 'S/N'})
+                                  </span>
+                                </div>
+
+                                {/* Categories badges */}
+                                {p.categories && p.categories.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1.5">
+                                    {p.categories.map((cat, idx) => (
+                                      <span key={idx} className="text-[9px] font-bold px-1.5 py-0.5 bg-bg-primary border border-border/80 text-text-secondary rounded-md">
+                                        {cat}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {filteredPatients.length === 0 && (
+                        <div className="p-8 text-center text-text-muted text-xs font-semibold uppercase">
+                          Nenhum paciente encontrado para a pesquisa.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* OPTION: Also transfer linked household */}
                 <div 

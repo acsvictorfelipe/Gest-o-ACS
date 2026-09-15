@@ -16,9 +16,11 @@ async function startServer() {
   // Set explicit JSON body limit to protect against oversized payload attacks
   app.use(express.json({ limit: '2mb' }));
 
-  // Request logging middleware - sanitized (no request body, PII, or tokens logged)
+  // Request logging middleware - only log API requests to avoid noisy asset logs
   app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    if (req.path.startsWith('/api')) {
+      console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    }
     next();
   });
 
@@ -88,6 +90,48 @@ async function startServer() {
       next();
     } catch (err: any) {
       console.error('Authentication middleware error:', err);
+      return res.status(500).json({ error: 'Erro interno ao validar autenticação' });
+    }
+  }
+
+  // Middleware to authorize transfers:
+  // - Administrador and Gestor can transfer any patients/households
+  // - Agente can transfer patients/households under their own responsibility (fromAgentId === user.id)
+  async function requireAuthForTransfer(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Acesso negado: Token de autenticação ausente ou inválido' });
+    }
+
+    const token = authHeader.substring(7);
+
+    try {
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      if (error || !user) {
+        return res.status(401).json({ error: 'Acesso negado: Sessão inválida ou expirada' });
+      }
+
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const role = profile?.role || 'Agente';
+      const fromAgentId = req.body?.fromAgentId || user.id;
+
+      if (role !== 'Administrador' && role !== 'Gestor') {
+        if (fromAgentId !== user.id) {
+          return res.status(403).json({ error: 'Acesso negado: Você só pode transferir pacientes vinculados ao seu perfil.' });
+        }
+      }
+
+      req.body.fromAgentId = fromAgentId;
+      (req as any).user = user;
+      (req as any).userRole = role;
+      next();
+    } catch (err: any) {
+      console.error('Authentication middleware error in transfer:', err);
       return res.status(500).json({ error: 'Erro interno ao validar autenticação' });
     }
   }
@@ -186,8 +230,8 @@ async function startServer() {
     }
   });
 
-  // API Route for transferring patients and households
-  app.post('/api/admin/transfer-patients', requireAdminOrGestor, async (req, res) => {
+  // API Routes for transferring patients and households
+  const handleTransferEndpoint = async (req: express.Request, res: express.Response) => {
     const { 
       fromAgentId, 
       toAgentId, 
@@ -317,7 +361,10 @@ async function startServer() {
       console.error('Error in transfer-patients route:', error);
       return res.status(500).json({ error: error.message || 'Erro ao realizar transferência' });
     }
-  });
+  };
+
+  app.post('/api/admin/transfer-patients', requireAuthForTransfer, handleTransferEndpoint);
+  app.post('/api/transfer-patients', requireAuthForTransfer, handleTransferEndpoint);
 
   // API Route to ensure a profile exists for an authenticated user
   app.post('/api/profile/ensure', async (req, res) => {
