@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { syncService } from '../lib/syncService';
-import { formatDate } from '../lib/dateUtils';
+import { formatDate, isPatientBolsaFamilia } from '../lib/dateUtils';
 import { useToast } from './Toast';
 import { queryClient } from '../lib/queryClient';
 import { 
@@ -406,6 +406,11 @@ export function HouseholdView({ user }: { user: any }) {
                             {cat}
                           </span>
                         ))}
+                        {isPatientBolsaFamilia(r) && (
+                          <span className="text-[8px] px-1.5 py-0.5 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded font-bold uppercase border border-emerald-300 dark:border-emerald-800">
+                            🎁 Bolsa Família
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

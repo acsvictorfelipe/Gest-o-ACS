@@ -20,13 +20,18 @@ import {
   Calendar,
   MapPin,
   Phone,
-  Droplets
+  Droplets,
+  Printer,
+  FileText,
+  LayoutGrid,
+  ArrowUpDown
 } from 'lucide-react';
 import { UI_CONFIG } from '../constants';
 
 import { 
   calculateAge, 
   getAgeInMonths, 
+  getAgeNumber,
   VACCINE_SCHEDULE, 
   formatDate, 
   isPatientChild, 
@@ -43,6 +48,7 @@ export function Reports({ user }: { user: any }) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('Geral');
+  const [domiciliosViewMode, setDomiciliosViewMode] = useState<'esus' | 'cards'>('esus');
   const [streetFilter, setStreetFilter] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -65,7 +71,7 @@ export function Reports({ user }: { user: any }) {
 
         // Fetch Households using central helper
         const allHouseholds = await fetchTableWithFilters<any>('households', user, {
-          select: '*, patients(id)',
+          select: '*, patients(id, name, birth_date, cns, is_family_responsible, categories, clinical_data, contact)',
           orderBy: { column: 'address', ascending: true }
         });
 
@@ -133,6 +139,107 @@ export function Reports({ user }: { user: any }) {
     });
     return map;
   }, [households]);
+
+  const householdResidentsMap = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    households.forEach(h => {
+      if (h.id) map[h.id] = [];
+    });
+
+    // Populate from central patients list
+    patients.forEach(p => {
+      if (p.household_id && map[p.household_id]) {
+        map[p.household_id].push(p);
+      }
+    });
+
+    // Also include any relation patients in case some aren't in filtered patients
+    households.forEach(h => {
+      if (h.id && Array.isArray(h.patients)) {
+        h.patients.forEach((hp: any) => {
+          if (hp && hp.id && !map[h.id].some(existing => existing.id === hp.id)) {
+            map[h.id].push(hp);
+          }
+        });
+      }
+    });
+
+    return map;
+  }, [households, patients]);
+
+  const getHouseholdFamilyDetails = (h: any) => {
+    const residents: any[] = householdResidentsMap[h.id] || [];
+
+    // Identify family responsible
+    let responsible = residents.find(r => r.is_family_responsible);
+    if (!responsible && h.responsible_name) {
+      const cleanHResp = h.responsible_name.trim().toLowerCase();
+      responsible = residents.find(r => r.name?.trim().toLowerCase() === cleanHResp);
+    }
+    if (!responsible && h.responsible_cns) {
+      responsible = residents.find(r => r.cns?.trim() === h.responsible_cns?.trim());
+    }
+    if (!responsible && residents.length > 0 && !h.responsible_name) {
+      responsible = residents[0];
+    }
+
+    // All other residents are dependents
+    const dependents = residents.filter(r => r.id !== responsible?.id);
+
+    // Primary household contact
+    const contact = h.contact || 
+      responsible?.contact || 
+      responsible?.clinical_data?.contact || 
+      (dependents.find(d => d.contact || d.clinical_data?.contact)?.contact) || 
+      '-';
+
+    const respName = responsible?.name || h.responsible_name || 'Não informado';
+    const respBirth = responsible?.birth_date || h.responsible_birth_date || null;
+    const respCns = responsible?.cns || h.responsible_cns || '';
+
+    return {
+      responsible,
+      respName,
+      respBirth,
+      respCns,
+      dependents,
+      contact,
+      totalResidents: residents.length || (h.responsible_name ? 1 : 0)
+    };
+  };
+
+  const getResidentCategories = (resident: any): string[] => {
+    if (!resident) return [];
+    const set = new Set<string>();
+    const rawCats: string[] = Array.isArray(resident.categories) ? resident.categories : [];
+
+    rawCats.forEach(c => {
+      if (!c || c === 'Geral' || c === 'Todas') return;
+      if (c === 'Hipertensos' || c === 'Hipertenso') set.add('Hipertenso');
+      else if (c === 'Diabéticos' || c === 'Diabético' || c === 'Diabetico') set.add('Diabético');
+      else if (c === 'AcamadoDomiciliado' || c === 'Acamado' || c === 'Domiciliado') set.add('Acamado');
+      else if (c === 'SaudeMental' || c === 'Saúde Mental') set.add('Saúde Mental');
+      else if (c === 'Gestantes' || c === 'Gestante') set.add('Gestante');
+      else if (c === 'Crianças' || c === 'Criança' || c === 'Crianca') set.add('Criança');
+      else if (c === 'Idosos' || c === 'Idoso') set.add('Idoso');
+      else if (c === 'Adultos' || c === 'Adulto') set.add('Adulto');
+      else set.add(c);
+    });
+
+    if (isPatientHipertenso(resident)) set.add('Hipertenso');
+    if (isPatientDiabetic(resident)) set.add('Diabético');
+    if (isPatientChild(resident)) set.add('Criança');
+
+    const age = resident.birth_date ? getAgeNumber(resident.birth_date) : null;
+    if (age !== null) {
+      if (age >= 60) set.add('Idoso');
+      else if (age >= 18 && !set.has('Criança') && !set.has('Gestante') && !set.has('Idoso') && set.size === 0) {
+        set.add('Adulto');
+      }
+    }
+
+    return Array.from(set);
+  };
 
   const getPatientAddress = (p: any): string => {
     if (p.household_id && householdsMap[p.household_id]) {
@@ -225,21 +332,104 @@ export function Reports({ user }: { user: any }) {
     });
   }, [patients, searchTerm, categoryFilter, householdsMap]);
 
+  const extractHouseNumber = (numStr?: string | null): { num: number; suffix: string; isSN: boolean } => {
+    if (!numStr) return { num: Infinity, suffix: '', isSN: true };
+    const clean = String(numStr).trim();
+    if (!clean || /^s\/?n/i.test(clean) || /sem n/i.test(clean)) {
+      return { num: Infinity, suffix: clean, isSN: true };
+    }
+    
+    // Check if starts with digits, e.g. "14", "00014", "14 A", "14-B", "102"
+    const leadingMatch = clean.match(/^(\d+)(.*)$/);
+    if (leadingMatch) {
+      return {
+        num: parseInt(leadingMatch[1], 10),
+        suffix: leadingMatch[2].trim().toLowerCase(),
+        isSN: false
+      };
+    }
+    
+    // Check if any number exists inside, e.g. "Lote 12", "Km 5", "N 20"
+    const anyDigitMatch = clean.match(/(\d+)/);
+    if (anyDigitMatch) {
+      return {
+        num: parseInt(anyDigitMatch[1], 10),
+        suffix: clean.toLowerCase(),
+        isSN: false
+      };
+    }
+
+    return { num: Infinity, suffix: clean.toLowerCase(), isSN: true };
+  };
+
+  const availableStreets = useMemo(() => {
+    const set = new Set<string>();
+    households.forEach(h => {
+      if (h.address?.trim()) {
+        set.add(h.address.trim());
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+  }, [households]);
+
   const filteredHouseholds = useMemo(() => {
-    return households.filter(h => {
+    const list = households.filter(h => {
       const term = searchTerm.toLowerCase();
+      const residents = householdResidentsMap[h.id] || [];
+
+      // Check if any resident name or CNS matches search
+      const matchesResident = residents.some(r => 
+        r.name?.toLowerCase().includes(term) || 
+        r.cns?.includes(term)
+      );
+
       const matchesSearch = !searchTerm || 
                             h.responsible_name?.toLowerCase().includes(term) || 
-                            h.address?.toLowerCase().includes(term);
+                            h.address?.toLowerCase().includes(term) ||
+                            h.number?.toLowerCase().includes(term) ||
+                            h.complement?.toLowerCase().includes(term) ||
+                            h.contact?.includes(term) ||
+                            matchesResident;
+
       const matchesStreet = !streetFilter || h.address?.toLowerCase().includes(streetFilter.toLowerCase());
       
-      const isPlaceholder = h.responsible_name === 'Responsável Importado' || 
-                            h.responsible_name === 'Responsável não cadastrado' ||
-                            !h.responsible_name;
+      const isPlaceholder = (!h.responsible_name || 
+                             h.responsible_name === 'Responsável Importado' || 
+                             h.responsible_name === 'Responsável não cadastrado') && 
+                            residents.length === 0;
       
       return matchesSearch && matchesStreet && !isPlaceholder;
     });
-  }, [households, searchTerm, streetFilter]);
+
+    // Ordenar domicílios:
+    // Na busca por rua ou listagem de domicílios, agrupa pelo logradouro
+    // e ordena os números das casas estritamente do menor para o maior (1, 2, 14, 19, 102...)
+    return list.sort((a, b) => {
+      const streetA = (a.address || '').trim().toLowerCase();
+      const streetB = (b.address || '').trim().toLowerCase();
+      
+      const streetComp = streetA.localeCompare(streetB, 'pt-BR', { sensitivity: 'base', numeric: true });
+      if (streetComp !== 0) {
+        return streetComp;
+      }
+
+      // Mesma rua: ordenar números das casas do menor para o maior
+      const numA = extractHouseNumber(a.number);
+      const numB = extractHouseNumber(b.number);
+
+      if (numA.num !== numB.num) {
+        return numA.num - numB.num;
+      }
+
+      if (numA.suffix !== numB.suffix) {
+        return numA.suffix.localeCompare(numB.suffix, 'pt-BR', { numeric: true });
+      }
+
+      const compA = (a.complement || '').trim().toLowerCase();
+      const compB = (b.complement || '').trim().toLowerCase();
+      return compA.localeCompare(compB, 'pt-BR', { numeric: true });
+    });
+  }, [households, searchTerm, streetFilter, householdResidentsMap]);
 
   const getClinicalSummary = (p: any) => {
     const clinical = p.clinical_data || {};
@@ -500,7 +690,7 @@ export function Reports({ user }: { user: any }) {
           idx + 1,
           p.name || 'Sem nome',
           p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS',
-          p.birth_date ? `${formatDate(p.birth_date)} (${age}a)` : '-',
+          p.birth_date ? `${formatDate(p.birth_date)} (${age})` : '-',
           p.gender ? (p.gender === 'Feminino' || p.gender === 'F' ? 'F' : 'M') : '-',
           getPatientAddress(p),
           getPatientContact(p),
@@ -544,7 +734,7 @@ export function Reports({ user }: { user: any }) {
         if (p.categories?.includes('Gestante')) {
           grupo = '🤰 Gestante (Pré-Natal)';
         } else if (isPatientChild(p)) {
-          grupo = ageInM <= 84 ? `👶 Criança (${age}a - Puericultura/Vacina)` : `🧒 Criança/Adolescente (${age}a)`;
+          grupo = ageInM <= 84 ? `👶 Criança (${age} - Puericultura/Vacina)` : `🧒 Criança/Adolescente (${age})`;
         } else if (Number(age) >= 60) {
           grupo = '👵 Idoso';
         }
@@ -555,7 +745,7 @@ export function Reports({ user }: { user: any }) {
           idx + 1,
           p.name || 'Sem nome',
           p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS',
-          p.birth_date ? `${formatDate(p.birth_date)} (${age} anos)` : '-',
+          p.birth_date ? `${formatDate(p.birth_date)} (${age})` : '-',
           getPatientAddress(p),
           getPatientHouseholdResponsible(p),
           getPatientContact(p),
@@ -597,7 +787,7 @@ export function Reports({ user }: { user: any }) {
           idx + 1,
           p.name,
           p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS',
-          p.birth_date ? `${formatDate(p.birth_date)} (${age}a)` : '-',
+          p.birth_date ? `${formatDate(p.birth_date)} (${age})` : '-',
           getPatientAddress(p),
           getPatientContact(p),
           stats.dum,
@@ -642,7 +832,7 @@ export function Reports({ user }: { user: any }) {
           idx + 1,
           p.name,
           p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS',
-          p.birth_date ? `${formatDate(p.birth_date)} (${age}a / ${stats.ageInMonths}m)` : '-',
+          p.birth_date ? `${formatDate(p.birth_date)} (${age} / ${stats.ageInMonths}m)` : '-',
           getPatientAddress(p),
           getPatientHouseholdResponsible(p),
           getPatientContact(p),
@@ -689,7 +879,7 @@ export function Reports({ user }: { user: any }) {
           idx + 1,
           p.name,
           p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS',
-          p.birth_date ? `${formatDate(p.birth_date)} (${age}a)` : '-',
+          p.birth_date ? `${formatDate(p.birth_date)} (${age})` : '-',
           getPatientAddress(p),
           getPatientContact(p),
           tomaInsulina,
@@ -734,7 +924,7 @@ export function Reports({ user }: { user: any }) {
           idx + 1,
           p.name,
           p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS',
-          p.birth_date ? `${formatDate(p.birth_date)} (${age}a)` : '-',
+          p.birth_date ? `${formatDate(p.birth_date)} (${age})` : '-',
           getPatientAddress(p),
           getPatientContact(p),
           consultas6m,
@@ -756,37 +946,154 @@ export function Reports({ user }: { user: any }) {
       return;
     }
 
-    // 8. RELATÓRIO DE DOMICÍLIOS
+    // 8. RELATÓRIO DE DOMICÍLIOS (FORMATO OFICIAL FICHA DE IMPRESSÃO E-SUS)
     if (categoryFilter === 'Domicílios') {
-      const doc = new jsPDFModule({ orientation: 'portrait' });
+      const doc = new jsPDFModule({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-      doc.setFontSize(16);
-      doc.setTextColor(0, 72, 141);
-      doc.text('RELATÓRIO TERRITORIAL DE DOMICÍLIOS E FAMÍLIAS', 14, 16);
+      const microNum = user?.microarea || households[0]?.microarea || '';
+      const subheaderText = `MICRO ÁREA: ${microNum}`;
 
-      doc.setFontSize(9);
-      doc.setTextColor(80);
-      doc.text(`Agente: ${user.name} | Microárea: ${user.microarea || '-'} | Total de Domicílios: ${filteredHouseholds.length} | Emitido em: ${emitDateStr}`, 14, 22);
+      const tableBody: any[] = [];
 
-      const tableData = filteredHouseholds.map((h, idx) => [
-        idx + 1,
-        h.address || 'Sem logradouro',
-        h.number || 'S/N',
-        h.complement || '-',
-        h.responsible_name || 'Não informado',
-        `${h.patients?.length || 0} moradores`
+      // Subheader row
+      tableBody.push([
+        {
+          content: subheaderText,
+          colSpan: 2,
+          styles: {
+            fontStyle: 'bold',
+            fontSize: 8.5,
+            fillColor: [255, 255, 255],
+            textColor: [0, 0, 0],
+            cellPadding: { top: 2, bottom: 2, left: 3, right: 3 }
+          }
+        }
       ]);
 
-      autoTable(doc, {
-        startY: 27,
-        head: [['Nº', 'Logradouro / Endereço', 'Número', 'Complemento', 'Responsável Familiar', 'Moradores']],
-        body: tableData,
-        headStyles: { fillColor: [0, 72, 141], fontSize: 8 },
-        styles: { fontSize: 7.5, cellPadding: 2.5 },
-        alternateRowStyles: { fillColor: [245, 247, 250] }
+      filteredHouseholds.forEach(h => {
+        const family = getHouseholdFamilyDetails(h);
+        const residents: any[] = [];
+        if (family.responsible) residents.push(family.responsible);
+        (family.dependents || []).forEach((d: any) => {
+          if (!residents.some(r => r.id === d.id)) residents.push(d);
+        });
+
+        if (residents.length === 0) {
+          residents.push({
+            name: family.respName,
+            birth_date: family.respBirth,
+            cns: family.respCns,
+            is_family_responsible: true
+          });
+        }
+
+        const formattedNumber = /^\d+$/.test(String(h.number || '').trim())
+          ? String(h.number).trim().padStart(5, '0')
+          : (h.number || 'S/N');
+        const compStr = h.complement ? ` ${h.complement.toUpperCase()}` : '';
+        const enderecoLinha = `${(h.address || 'LOGRADOURO NÃO INFORMADO').toUpperCase()}, ${formattedNumber} -${compStr}`;
+
+        // Address Header Row
+        tableBody.push([
+          {
+            content: enderecoLinha,
+            styles: {
+              fontStyle: 'bold',
+              fontSize: 8,
+              fillColor: [248, 250, 252],
+              textColor: [0, 0, 0],
+              cellPadding: { top: 2, bottom: 2, left: 3, right: 3 }
+            }
+          },
+          {
+            content: String(residents.length),
+            styles: {
+              fontStyle: 'bold',
+              halign: 'center',
+              valign: 'middle',
+              fontSize: 8.5,
+              fillColor: [248, 250, 252],
+              textColor: [0, 0, 0]
+            }
+          }
+        ]);
+
+        // Residents content lines
+        const residentLines: string[] = [];
+        residents.forEach((r, rIdx) => {
+          const isResp = r.id === family.responsible?.id || r.is_family_responsible || rIdx === 0;
+          const hasBF = isPatientBolsaFamilia(r);
+          const cats = getResidentCategories(r);
+          const respTag = isResp ? ' (RESPONSÁVEL)' : '';
+          const bfTag = hasBF ? '  [★ BOLSA FAMÍLIA]' : '';
+          const nomeLinha = `  ${(r.name || 'NÃO INFORMADO').toUpperCase()}${respTag}${bfTag}`;
+
+          const dNascStr = r.birth_date ? formatDate(r.birth_date) : 'N/I';
+
+          const situacao = cats.length > 0 ? cats.map(c => c.toUpperCase()).join(', ') : '-';
+
+          const mother = r.mother_name || 
+            r.clinical_data?.mother_name || 
+            r.clinical_data?.mae || 
+            r.clinical_data?.nome_mae || 
+            (r.cns ? `CNS: ${r.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4')}` : '');
+
+          const infoLinha = `      ${dNascStr}   •   ${situacao}${mother ? `   •   ${mother}` : ''}`;
+
+          residentLines.push(nomeLinha);
+          residentLines.push(infoLinha);
+        });
+
+        tableBody.push([
+          {
+            content: residentLines.join('\n'),
+            styles: {
+              fontSize: 7.5,
+              textColor: [15, 23, 42],
+              cellPadding: { top: 2.5, bottom: 3, left: 2, right: 2 }
+            }
+          },
+          {
+            content: '',
+            styles: {
+              fillColor: [255, 255, 255]
+            }
+          }
+        ]);
       });
 
-      doc.save(`Relatorio_Domicilios_MA_${user.microarea || 'Geral'}.pdf`);
+      autoTable(doc, {
+        startY: 10,
+        margin: { top: 8, left: 8, right: 8, bottom: 8 },
+        head: [
+          [
+            { content: 'DOMICÍLIO', styles: { halign: 'center', fontStyle: 'bold', fontSize: 9.5, textColor: [0, 0, 0] } },
+            { content: 'Nº USUARIOS', styles: { halign: 'center', fontStyle: 'bold', fontSize: 8, textColor: [0, 0, 0] } }
+          ]
+        ],
+        body: tableBody,
+        theme: 'plain',
+        tableLineColor: [0, 0, 0],
+        tableLineWidth: 0.35,
+        styles: {
+          lineColor: [0, 0, 0],
+          lineWidth: 0.25,
+          font: 'helvetica',
+          textColor: [0, 0, 0]
+        },
+        headStyles: {
+          fillColor: [240, 240, 240],
+          lineColor: [0, 0, 0],
+          lineWidth: 0.35
+        },
+        columnStyles: {
+          0: { cellWidth: 168 },
+          1: { cellWidth: 26 }
+        },
+        pageBreak: 'auto'
+      });
+
+      doc.save(`Ficha_Domicilios_eSUS_MA_${microNum}.pdf`);
       return;
     }
 
@@ -807,7 +1114,7 @@ export function Reports({ user }: { user: any }) {
         idx + 1,
         p.name,
         p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS',
-        p.birth_date ? `${formatDate(p.birth_date)} (${age}a)` : '-',
+        p.birth_date ? `${formatDate(p.birth_date)} (${age})` : '-',
         getPatientAddress(p),
         getPatientContact(p),
         p.categories?.join(', ') || 'Geral',
@@ -825,6 +1132,62 @@ export function Reports({ user }: { user: any }) {
     });
 
     doc.save(`Relatorio_${categoryFilter}_MA_${user.microarea || 'Geral'}.pdf`);
+  };
+
+  const renderBolsaFamiliaBadge = (resident: any) => {
+    if (!resident || !isPatientBolsaFamilia(resident)) return null;
+    return (
+      <span 
+        className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider text-emerald-800 bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 shadow-2xs shrink-0"
+        title="Beneficiário do Programa Bolsa Família"
+      >
+        🎁 Bolsa Família
+      </span>
+    );
+  };
+
+  const renderResidentBadges = (resident: any) => {
+    if (!resident) return null;
+    const cats = getResidentCategories(resident);
+    const hasBF = isPatientBolsaFamilia(resident);
+
+    if (cats.length === 0 && !hasBF) return null;
+
+    const catStyleMap: Record<string, { bg: string; label: string }> = {
+      'Gestante':     { bg: 'bg-pink-100 text-pink-700 dark:bg-pink-950/60 dark:text-pink-300 border-pink-200 dark:border-pink-800', label: '🤰 Gestante' },
+      'Criança':      { bg: 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800', label: '👶 Criança' },
+      'Idoso':        { bg: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800', label: '👵 Idoso' },
+      'Hipertenso':   { bg: 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 border-red-200 dark:border-red-800', label: '❤️ Hipertenso' },
+      'Diabético':    { bg: 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200 dark:border-purple-800', label: '🩸 Diabético' },
+      'Adulto':       { bg: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800', label: '🧑 Adulto' },
+      'Acamado':      { bg: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700', label: '🛏️ Acamado' },
+      'Saúde Mental': { bg: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800', label: '🧠 Saúde Mental' },
+    };
+
+    return (
+      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+        {cats.map((cat: string) => {
+          const m = catStyleMap[cat] || {
+            bg: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+            label: cat
+          };
+          return (
+            <span 
+              key={cat}
+              className={`text-[9px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${m.bg}`}
+            >
+              {m.label}
+            </span>
+          );
+        })}
+
+        {hasBF && (
+          <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider text-emerald-700 bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800">
+            🎁 Bolsa Família
+          </span>
+        )}
+      </div>
+    );
   };
 
   const categories = [
@@ -955,11 +1318,27 @@ export function Reports({ user }: { user: any }) {
               <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-600 transition-colors" />
               <input 
                 type="text" 
-                placeholder="Filtrar por rua específica..."
+                list="street-filter-options"
+                placeholder="Filtrar por rua (números ordenados menor ao maior)..."
                 value={streetFilter}
                 onChange={(e) => setStreetFilter(e.target.value)}
-                className="w-full bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-xs font-medium focus:ring-2 focus:ring-teal-600/20 transition-all text-text-primary dark:text-white"
+                className="w-full bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-xl py-2.5 pl-10 pr-8 text-xs font-medium focus:ring-2 focus:ring-teal-600/20 transition-all text-text-primary dark:text-white"
               />
+              {streetFilter && (
+                <button
+                  type="button"
+                  onClick={() => setStreetFilter('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold p-1 cursor-pointer"
+                  title="Limpar filtro de rua"
+                >
+                  ✕
+                </button>
+              )}
+              <datalist id="street-filter-options">
+                {availableStreets.map(s => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
             </div>
           )}
         </div>
@@ -1075,176 +1454,588 @@ export function Reports({ user }: { user: any }) {
         )
       ) : (
         <div className="bg-bg-secondary dark:bg-slate-900 rounded-2xl border border-border dark:border-slate-800 overflow-hidden shadow-sm">
-          <div className="px-6 py-4 border-b border-border dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/20">
+          <div className="px-6 py-4 border-b border-border dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-950/20">
             <div className="flex items-center gap-2">
               <Activity className="w-4 h-4 text-teal-600" />
               <h3 className="text-sm font-bold text-text-primary dark:text-white uppercase tracking-wider">
                 {categoryFilter === 'Geral' ? '📋 Relatório Geral Completo de Cidadãos' :
                  categoryFilter === 'Bolsa Família' ? '🎁 Relação de Beneficiários do Bolsa Família' :
-                 categoryFilter === 'Domicílios' ? '🏠 Cadastro de Domicílios e Famílias' :
+                 categoryFilter === 'Gestante' ? '🤰 Relatório de Acompanhamento - Gestantes' :
+                 categoryFilter === 'Domicílios' ? '🏠 Cadastro e Ficha Territorial de Domicílios' :
                  `👥 Relatório de Pacientes - ${categoryFilter}`}
               </h3>
             </div>
-            <span className="text-xs font-bold text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/50 px-3 py-1 rounded-full border border-teal-100 dark:border-teal-900/30">
-              {categoryFilter === 'Domicílios' ? `${filteredHouseholds.length} Domicílios` : `${filteredPatients.length} Pacientes`}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {categoryFilter === 'Domicílios' && (
+                <>
+                  <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs no-print">
+                    <button
+                      onClick={() => setDomiciliosViewMode('esus')}
+                      className={`px-2.5 py-1 rounded-md font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        domiciliosViewMode === 'esus'
+                          ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                      title="Visualização idêntica à ficha de impressão do e-SUS"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      Ficha e-SUS (Impressão)
+                    </button>
+                    <button
+                      onClick={() => setDomiciliosViewMode('cards')}
+                      className={`px-2.5 py-1 rounded-md font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        domiciliosViewMode === 'cards'
+                          ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                      title="Visualização em cartões detalhados"
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5" />
+                      Cartões
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => window.print()}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer no-print"
+                    title="Imprimir folha A4 oficial"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    Imprimir Folha
+                  </button>
+                </>
+              )}
+              {categoryFilter === 'Domicílios' && (
+                <span 
+                  className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700"
+                  title="Domicílios ordenados por rua e número da casa em ordem crescente"
+                >
+                  <ArrowUpDown className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+                  Nºs: menor ao maior
+                </span>
+              )}
+              <span className="text-xs font-bold text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/50 px-3 py-1 rounded-full border border-teal-100 dark:border-teal-900/30">
+                {categoryFilter === 'Domicílios' ? `${filteredHouseholds.length} Domicílios` : `${filteredPatients.length} Pacientes`}
+              </span>
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[900px]">
-              <thead>
-                <tr className="bg-bg-primary dark:bg-slate-800/40 border-b border-border dark:border-slate-800">
-                  <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted w-10">Nº</th>
-                  <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Cidadão / CNS</th>
-                  <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Nascimento / Idade</th>
-                  <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Endereço & Contato</th>
-                  {categoryFilter === 'Bolsa Família' ? (
-                    <>
-                      <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Responsável Familiar</th>
-                      <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Benefício / Programa</th>
-                      <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Acompanhamento de Saúde</th>
-                    </>
-                  ) : categoryFilter === 'Domicílios' ? (
-                    <>
-                      <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Responsável do Domicílio</th>
-                      <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted text-right">Total Moradores</th>
-                    </>
-                  ) : (
-                    <>
-                      <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Categorias</th>
-                      <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Informações Clínicas / Agravos</th>
-                    </>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                {categoryFilter === 'Domicílios' ? (
-                  filteredHouseholds.map((h, idx) => (
-                    <tr key={h.id} className="hover:bg-bg-primary/50 transition-colors">
-                      <td className="px-4 py-3.5 font-bold text-slate-400 text-xs">{idx + 1}</td>
-                      <td className="px-4 py-3.5 font-bold text-text-primary dark:text-white">{h.address}</td>
-                      <td className="px-4 py-3.5 text-text-secondary font-medium">{h.number} {h.complement ? `- ${h.complement}` : ''}</td>
-                      <td className="px-4 py-3.5 text-xs text-slate-500">{h.responsible_name || 'Titular não cadastrado'}</td>
-                      <td className="px-4 py-3.5 text-right">
-                        <span className="px-2.5 py-1 bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 text-[10px] font-bold rounded-lg border border-teal-100 dark:border-teal-900/30">
-                          {h.patients?.length || 0} Moradores
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                ) : categoryFilter === 'Bolsa Família' ? (
-                  filteredPatients.map((p, idx) => {
-                    const age = p.birth_date ? calculateAge(p.birth_date) : '-';
+          {categoryFilter === 'Domicílios' ? (
+            domiciliosViewMode === 'esus' ? (
+              <div className="p-2 sm:p-6 bg-slate-100/60 dark:bg-slate-950/40 overflow-x-auto">
+                {filteredHouseholds.length > 0 ? (
+                  <div className="bg-white text-slate-950 border-2 border-slate-900 rounded-sm overflow-hidden shadow-sm font-sans min-w-[700px] max-w-5xl mx-auto print-sheet">
+                    {/* Table Header Row */}
+                    <div className="grid grid-cols-12 border-b-2 border-slate-900 bg-slate-100/90 text-slate-900 font-bold text-xs uppercase tracking-wider">
+                      <div className="col-span-10 sm:col-span-11 p-2 text-center border-r-2 border-slate-900">
+                        DOMICÍLIO
+                      </div>
+                      <div className="col-span-2 sm:col-span-1 p-2 text-center text-[10px] sm:text-xs flex items-center justify-center">
+                        Nº USUARIOS
+                      </div>
+                    </div>
+
+                    {/* Subheader Row */}
+                    <div className="px-3 py-2 border-b-2 border-slate-900 bg-white font-bold text-xs uppercase text-slate-900">
+                      <span>MICRO ÁREA: {user.microarea || households[0]?.microarea || '-'}</span>
+                    </div>
+
+                    {/* Domicile blocks */}
+                    <div className="divide-y-2 divide-slate-900">
+                      {filteredHouseholds.map((h, idx) => {
+                        const family = getHouseholdFamilyDetails(h);
+                        const residents: any[] = [];
+                        if (family.responsible) residents.push(family.responsible);
+                        (family.dependents || []).forEach((d: any) => {
+                          if (!residents.some(r => r.id === d.id)) residents.push(d);
+                        });
+
+                        if (residents.length === 0) {
+                          residents.push({
+                            name: family.respName,
+                            birth_date: family.respBirth,
+                            cns: family.respCns,
+                            is_family_responsible: true
+                          });
+                        }
+
+                        const formattedNumber = /^\d+$/.test(String(h.number || '').trim())
+                          ? String(h.number).trim().padStart(5, '0')
+                          : (h.number || 'S/N');
+                        const compStr = h.complement ? ` ${h.complement.toUpperCase()}` : '';
+                        const enderecoLinha = `${(h.address || 'LOGRADOURO NÃO INFORMADO').toUpperCase()}, ${formattedNumber} -${compStr}`;
+
+                        return (
+                          <div key={h.id || idx} className="break-inside-avoid">
+                            {/* Domicile Address Bar */}
+                            <div className="grid grid-cols-12 border-b border-slate-900 bg-slate-100/70 font-bold text-xs text-slate-900">
+                              <div className="col-span-10 sm:col-span-11 px-3 py-1.5 border-r-2 border-slate-900 flex items-center gap-2">
+                                <span className="tracking-wide">{enderecoLinha}</span>
+                              </div>
+                              <div className="col-span-2 sm:col-span-1 px-1 py-1.5 text-center text-xs sm:text-sm font-bold flex items-center justify-center bg-slate-100">
+                                {residents.length}
+                              </div>
+                            </div>
+
+                            {/* Residents Container */}
+                            <div className="grid grid-cols-12 bg-white">
+                              <div className="col-span-10 sm:col-span-11 p-2 sm:p-2.5 space-y-1.5 border-r-2 border-slate-900">
+                                {residents.map((r, rIdx) => {
+                                  const isResp = r.id === family.responsible?.id || r.is_family_responsible || rIdx === 0;
+                                  const hasBF = isPatientBolsaFamilia(r);
+                                  const cats = getResidentCategories(r);
+                                  const dNasc = r.birth_date ? formatDate(r.birth_date) : 'N/I';
+                                  const motherOrCns = r.mother_name || 
+                                    r.clinical_data?.mother_name || 
+                                    r.clinical_data?.mae || 
+                                    r.clinical_data?.nome_mae || 
+                                    (r.cns ? `CNS: ${r.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4')}` : '');
+
+                                  return (
+                                    <div key={r.id || rIdx} className="space-y-0.5 text-slate-900">
+                                      {/* Line 1: Name, Tags */}
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="font-bold text-xs sm:text-[13px] uppercase tracking-wide text-black">
+                                          {r.name || 'NÃO INFORMADO'}
+                                        </span>
+                                        {isResp && (
+                                          <span className="text-[9px] font-bold text-teal-800 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-300 uppercase print:border-black print:text-black">
+                                            Responsável
+                                          </span>
+                                        )}
+                                        {hasBF && (
+                                          <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-300 uppercase print:border-black print:text-black">
+                                            ★ Bolsa Família
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      {/* Line 2: Birth date, Categories, Mother's name / CNS with tight, natural spacing */}
+                                      <div className="flex flex-wrap items-center gap-x-4 sm:gap-x-6 gap-y-0.5 text-[11px] text-slate-800 font-medium pl-1 sm:pl-2">
+                                        <span className="font-semibold text-slate-900 shrink-0">{dNasc}</span>
+                                        {cats.length > 0 ? (
+                                          <span className="text-xs text-slate-900 font-semibold uppercase shrink-0">{cats.join(', ')}</span>
+                                        ) : (
+                                          <span className="text-slate-400 font-normal shrink-0">-</span>
+                                        )}
+                                        {motherOrCns && (
+                                          <span className="uppercase text-slate-700 truncate font-medium" title={motherOrCns}>
+                                            {motherOrCns}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div className="col-span-2 sm:col-span-1 bg-white"></div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-20 text-center text-text-muted">
+                    <Home className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <p className="text-sm font-semibold">Nenhum domicílio encontrado com os filtros selecionados.</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-4 sm:p-6 space-y-4">
+                {filteredHouseholds.length > 0 ? (
+                  filteredHouseholds.map((h, idx) => {
+                    const family = getHouseholdFamilyDetails(h);
                     return (
-                      <tr key={p.id} className="hover:bg-bg-primary/50 transition-colors">
-                        <td className="px-4 py-3.5 font-bold text-slate-400 text-xs">{idx + 1}</td>
-                        <td className="px-4 py-3.5">
-                          <p className="font-bold text-teal-800 dark:text-teal-300">{p.name}</p>
-                          <p className="text-[11px] text-slate-500 font-medium">{p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}</p>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <p className="font-semibold text-text-primary dark:text-white text-xs">{p.birth_date ? formatDate(p.birth_date) : '-'}</p>
-                          <p className="text-[11px] text-slate-500 font-medium">{age} anos</p>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <p className="text-xs text-text-primary dark:text-white font-medium flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                            {getPatientAddress(p)}
-                          </p>
-                          <p className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1">
-                            <Phone className="w-3 h-3 text-slate-400 shrink-0" />
-                            {getPatientContact(p)}
-                          </p>
-                        </td>
-                        <td className="px-4 py-3.5 text-xs text-slate-700 dark:text-slate-300 font-medium">
-                          {getPatientHouseholdResponsible(p)}
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800">
-                            <Gift className="w-3 h-3" />
-                            Bolsa Família
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
-                          {getClinicalSummary(p)}
-                        </td>
-                      </tr>
+                      <div 
+                        key={h.id}
+                        className="bg-bg-primary dark:bg-slate-800/40 border border-border dark:border-slate-800 rounded-xl p-4 sm:p-5 shadow-xs hover:border-teal-500/30 transition-all"
+                      >
+                        {/* 1. Logradouro - nº - complemento - contato */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3.5 border-b border-border dark:border-slate-800">
+                          <div className="flex items-start gap-2.5">
+                            <span className="w-6 h-6 rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-400 font-bold text-xs flex items-center justify-center shrink-0 border border-teal-200 dark:border-teal-800/40 mt-0.5">
+                              {idx + 1}
+                            </span>
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h4 className="text-sm font-bold text-text-primary dark:text-white flex items-center gap-1.5">
+                                  <Home className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
+                                  <span>{h.address || 'Sem logradouro'}</span>
+                                  <span className="text-slate-400 dark:text-slate-500 font-normal">,</span>
+                                  <span>nº {h.number || 'S/N'}</span>
+                                  {h.complement && (
+                                    <span className="text-xs font-semibold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded">
+                                      {h.complement}
+                                    </span>
+                                  )}
+                                </h4>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-text-secondary">
+                                <span className="flex items-center gap-1">
+                                  <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <strong className="font-semibold text-text-primary dark:text-slate-200">Contato:</strong> {family.contact}
+                                </span>
+                                {h.neighborhood && (
+                                  <span className="text-slate-400">• Bairro: {h.neighborhood}</span>
+                                )}
+                                <span className="text-slate-400">• Microárea: {h.microarea || user?.microarea || '-'}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                            <span className="px-3 py-1 bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 text-xs font-bold rounded-lg border border-teal-200 dark:border-teal-800/40 flex items-center gap-1.5">
+                              <Users className="w-3.5 h-3.5" />
+                              {family.dependents.length === 0 ? '1 Morador (Responsável)' : `${family.totalResidents} Moradores`}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Residents: Responsável familiar & Dependentes */}
+                        {family.dependents.length > 0 ? (
+                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 pt-3.5">
+                            {/* 2. Responsável familiar - nome - data de nascimento */}
+                            <div className="lg:col-span-5 bg-teal-50/40 dark:bg-teal-950/20 border border-teal-100 dark:border-teal-900/30 rounded-xl p-3.5 flex flex-col justify-between">
+                              <div>
+                                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-teal-800 dark:text-teal-300 bg-teal-100 dark:bg-teal-900/50 px-2 py-0.5 rounded">
+                                      👑 Responsável Familiar
+                                    </span>
+                                    {renderBolsaFamiliaBadge(family.responsible)}
+                                  </div>
+                                  {family.responsible && (
+                                    <span className="text-[10px] text-teal-600 dark:text-teal-400 font-bold">
+                                      Cadastrado ✓
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="font-bold text-sm text-text-primary dark:text-white">
+                                  {family.respName}
+                                </p>
+                                <p className="text-xs text-text-secondary mt-1 flex items-center gap-1.5 font-medium">
+                                  <Calendar className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+                                  <span>Data de Nascimento:</span>
+                                  <strong className="text-text-primary dark:text-slate-200">
+                                    {family.respBirth ? formatDate(family.respBirth) : 'Não informada'}
+                                  </strong>
+                                </p>
+                                {renderResidentBadges(family.responsible)}
+                              </div>
+                              {family.respCns && (
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-2 pt-2 border-t border-teal-100/80 dark:border-teal-900/30">
+                                  CNS: {family.respCns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4')}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* 3. Dependentes - nome - data de nascimento */}
+                            <div className="lg:col-span-7 bg-bg-secondary dark:bg-slate-900/50 border border-border dark:border-slate-800 rounded-xl p-3.5">
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                                  <Users className="w-3 h-3" />
+                                  Dependentes ({family.dependents.length})
+                                </span>
+                              </div>
+
+                              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                                {family.dependents.map((dep: any, dIdx: number) => (
+                                  <div 
+                                    key={dep.id || dIdx}
+                                    className="bg-bg-primary dark:bg-slate-800/60 border border-border dark:border-slate-800 rounded-lg p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                                  >
+                                    <div className="space-y-1 flex-1">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <p className="font-bold text-text-primary dark:text-white flex items-center gap-1.5">
+                                          <span className="text-slate-400 font-normal text-[11px]">{dIdx + 1}.</span>
+                                          {dep.name}
+                                        </p>
+                                        {renderBolsaFamiliaBadge(dep)}
+                                      </div>
+                                      <p className="text-[11px] text-text-secondary flex items-center gap-1 font-medium">
+                                        <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+                                        <span>Nascimento:</span>
+                                        <strong className="text-text-primary dark:text-slate-300">
+                                          {dep.birth_date ? formatDate(dep.birth_date) : 'Não informada'}
+                                        </strong>
+                                      </p>
+                                      {renderResidentBadges(dep)}
+                                    </div>
+                                    {dep.cns && (
+                                      <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 self-start sm:self-auto shrink-0 bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded">
+                                        CNS: {dep.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4')}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="pt-3.5">
+                            {/* Apenas Responsável Familiar quando não há dependentes */}
+                            <div className="bg-teal-50/40 dark:bg-teal-950/20 border border-teal-100 dark:border-teal-900/30 rounded-xl p-4">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-teal-800 dark:text-teal-300 bg-teal-100 dark:bg-teal-900/50 px-2.5 py-0.5 rounded w-fit">
+                                    👑 Responsável Familiar
+                                  </span>
+                                  {renderBolsaFamiliaBadge(family.responsible)}
+                                </div>
+                                {family.respCns && (
+                                  <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono bg-white/80 dark:bg-slate-900 px-2 py-0.5 rounded border border-teal-100 dark:border-teal-900/30">
+                                    CNS: {family.respCns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4')}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-bold text-base text-text-primary dark:text-white">
+                                  {family.respName}
+                                </p>
+                                {family.responsible && (
+                                  <span className="text-[10px] text-teal-600 dark:text-teal-400 font-bold">
+                                    Cadastrado ✓
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-text-secondary mt-1 flex items-center gap-1.5 font-medium">
+                                <Calendar className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+                                <span>Data de Nascimento:</span>
+                                <strong className="text-text-primary dark:text-slate-200">
+                                  {family.respBirth ? formatDate(family.respBirth) : 'Não informada'}
+                                </strong>
+                              </p>
+                              {renderResidentBadges(family.responsible)}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     );
                   })
                 ) : (
-                  filteredPatients.map((p, idx) => {
-                    const age = p.birth_date ? calculateAge(p.birth_date) : '-';
-                    return (
-                      <tr key={p.id} className="hover:bg-bg-primary/50 transition-colors">
-                        <td className="px-4 py-3.5 font-bold text-slate-400 text-xs">{idx + 1}</td>
-                        <td className="px-4 py-3.5">
-                          <p className="font-bold text-teal-800 dark:text-teal-300">{p.name}</p>
-                          <p className="text-[11px] text-slate-500 font-medium">{p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}</p>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <p className="font-semibold text-text-primary dark:text-white text-xs">{p.birth_date ? formatDate(p.birth_date) : '-'}</p>
-                          <p className="text-[11px] text-slate-500 font-medium">{age} anos</p>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <p className="text-xs text-text-primary dark:text-white font-medium flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                            {getPatientAddress(p)}
-                          </p>
-                          <p className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1">
-                            <Phone className="w-3 h-3 text-slate-400 shrink-0" />
-                            {getPatientContact(p)}
-                          </p>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex flex-wrap gap-1">
-                            {p.categories?.map((cat: string) => {
-                              const catMap: Record<string, { primary: string; label: string }> = {
-                                'Gestante':           { primary: '#EC4899', label: 'Gestante' },
-                                'Criança':            { primary: '#3B82F6', label: 'Criança' },
-                                'Idoso':              { primary: '#F97316', label: 'Idoso' },
-                                'Adulto':             { primary: '#10B981', label: 'Adulto' },
-                                'AcamadoDomiciliado': { primary: '#64748B', label: 'Acamado' },
-                                'SaudeMental':        { primary: '#6366F1', label: 'S. Mental' },
-                              };
-                              const matched = catMap[cat];
-                              if (!matched) return null;
-                              return (
-                                <span key={cat}
-                                  className="text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-tight text-white"
-                                  style={{ backgroundColor: matched.primary }}
-                                >
-                                  {matched.label}
-                                </span>
-                              );
-                            })}
-                            {isPatientBolsaFamilia(p) && (
-                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-tight text-emerald-700 bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                                🎁 Bolsa Família
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5 text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed max-w-xs">
-                          {getClinicalSummary(p)}
-                        </td>
-                      </tr>
-                    );
-                  })
+                  <div className="py-20 text-center text-text-muted">
+                    <Home className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <p className="text-sm font-semibold">Nenhum domicílio encontrado com os filtros selecionados.</p>
+                  </div>
                 )}
-
-                {(categoryFilter === 'Domicílios' ? filteredHouseholds.length : filteredPatients.length) === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-8 py-20 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <BarChart3 className="w-8 h-8 text-slate-300" />
-                        <p className="text-sm font-semibold text-text-muted">Nenhum registro encontrado para este relatório com os filtros atuais.</p>
-                      </div>
-                    </td>
+              </div>
+            )
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[900px]">
+                <thead>
+                  <tr className="bg-bg-primary dark:bg-slate-800/40 border-b border-border dark:border-slate-800">
+                    <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted w-10">Nº</th>
+                    <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Cidadão / CNS</th>
+                    <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Nascimento / Idade</th>
+                    <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Endereço & Contato</th>
+                    {categoryFilter === 'Bolsa Família' ? (
+                      <>
+                        <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Responsável Familiar</th>
+                        <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Benefício / Programa</th>
+                        <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Acompanhamento de Saúde</th>
+                      </>
+                    ) : categoryFilter === 'Gestante' ? (
+                      <>
+                        <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">DUM / DPP</th>
+                        <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Pré-Natal & Visitas</th>
+                        <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Testes Rápidos</th>
+                        <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">dTpa & Saúde Bucal</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Categorias</th>
+                        <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Informações Clínicas / Agravos</th>
+                      </>
+                    )}
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+                  {categoryFilter === 'Bolsa Família' ? (
+                    filteredPatients.map((p, idx) => {
+                      const age = p.birth_date ? calculateAge(p.birth_date) : '-';
+                      return (
+                        <tr key={p.id} className="hover:bg-bg-primary/50 transition-colors">
+                          <td className="px-4 py-3.5 font-bold text-slate-400 text-xs">{idx + 1}</td>
+                          <td className="px-4 py-3.5">
+                            <p className="font-bold text-teal-800 dark:text-teal-300">{p.name}</p>
+                            <p className="text-[11px] text-slate-500 font-medium">{p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}</p>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <p className="font-semibold text-text-primary dark:text-white text-xs">{p.birth_date ? formatDate(p.birth_date) : '-'}</p>
+                            <p className="text-[11px] text-slate-500 font-medium">{age}</p>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <p className="text-xs text-text-primary dark:text-white font-medium flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                              {getPatientAddress(p)}
+                            </p>
+                            <p className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1">
+                              <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                              {getPatientContact(p)}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3.5 text-xs text-slate-700 dark:text-slate-300 font-medium">
+                            {getPatientHouseholdResponsible(p)}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800">
+                              <Gift className="w-3 h-3" />
+                              Bolsa Família
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
+                            {getClinicalSummary(p)}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : categoryFilter === 'Gestante' ? (
+                    filteredPatients.map((p, idx) => {
+                      const age = p.birth_date ? calculateAge(p.birth_date) : '-';
+                      const stats = getGestanteStats(p);
+                      return (
+                        <tr key={p.id} className="hover:bg-bg-primary/50 transition-colors">
+                          <td className="px-4 py-3.5 font-bold text-slate-400 text-xs">{idx + 1}</td>
+                          <td className="px-4 py-3.5">
+                            <p className="font-bold text-pink-700 dark:text-pink-300">{p.name}</p>
+                            <p className="text-[11px] text-slate-500 font-medium">
+                              {p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <p className="font-semibold text-text-primary dark:text-white text-xs">
+                              {p.birth_date ? formatDate(p.birth_date) : '-'}
+                            </p>
+                            <p className="text-[11px] text-slate-500 font-medium">{age}</p>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <p className="text-xs text-text-primary dark:text-white font-medium flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                              {getPatientAddress(p)}
+                            </p>
+                            <p className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1">
+                              <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                              {getPatientContact(p)}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3.5 text-xs">
+                            <p className="font-semibold text-text-primary dark:text-white">
+                              <span className="text-slate-400">DUM:</span> {stats.dum}
+                            </p>
+                            <p className="font-semibold text-pink-600 dark:text-pink-400 mt-0.5">
+                              <span className="text-slate-400">DPP:</span> {stats.dpp}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3.5 text-xs">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                              stats.consultas >= 6 
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' 
+                                : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                            }`}>
+                              {stats.consultas} consultas PN
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-xs">
+                            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                              ✓ {stats.realizados.length > 0 ? stats.realizados.join(', ') : 'Nenhum'}
+                            </p>
+                            {stats.pendentes.length > 0 && (
+                              <p className="text-[11px] text-red-500 dark:text-red-400 font-medium mt-0.5">
+                                ⚠ Pendente: {stats.pendentes.join(', ')}
+                              </p>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5 text-xs">
+                            <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                              dTpa: <span className={stats.vacinasTomadas.length > 0 ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>
+                                {stats.vacinasTomadas.length > 0 ? 'Em dia' : 'Pendente'}
+                              </span>
+                            </p>
+                            <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+                              Bucal: {stats.saudeBucal}
+                            </p>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    filteredPatients.map((p, idx) => {
+                      const age = p.birth_date ? calculateAge(p.birth_date) : '-';
+                      return (
+                        <tr key={p.id} className="hover:bg-bg-primary/50 transition-colors">
+                          <td className="px-4 py-3.5 font-bold text-slate-400 text-xs">{idx + 1}</td>
+                          <td className="px-4 py-3.5">
+                            <p className="font-bold text-teal-800 dark:text-teal-300">{p.name}</p>
+                            <p className="text-[11px] text-slate-500 font-medium">{p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}</p>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <p className="font-semibold text-text-primary dark:text-white text-xs">{p.birth_date ? formatDate(p.birth_date) : '-'}</p>
+                            <p className="text-[11px] text-slate-500 font-medium">{age}</p>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <p className="text-xs text-text-primary dark:text-white font-medium flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                              {getPatientAddress(p)}
+                            </p>
+                            <p className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1">
+                              <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                              {getPatientContact(p)}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <div className="flex flex-wrap gap-1">
+                              {p.categories?.map((cat: string) => {
+                                const catMap: Record<string, { primary: string; label: string }> = {
+                                  'Gestante':           { primary: '#EC4899', label: 'Gestante' },
+                                  'Criança':            { primary: '#3B82F6', label: 'Criança' },
+                                  'Idoso':              { primary: '#F97316', label: 'Idoso' },
+                                  'Adulto':             { primary: '#10B981', label: 'Adulto' },
+                                  'AcamadoDomiciliado': { primary: '#64748B', label: 'Acamado' },
+                                  'SaudeMental':        { primary: '#6366F1', label: 'S. Mental' },
+                                };
+                                const matched = catMap[cat];
+                                if (!matched) return null;
+                                return (
+                                  <span key={cat}
+                                    className="text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-tight text-white"
+                                    style={{ backgroundColor: matched.primary }}
+                                  >
+                                    {matched.label}
+                                  </span>
+                                );
+                              })}
+                              {isPatientBolsaFamilia(p) && (
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-tight text-emerald-700 bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                                  🎁 Bolsa Família
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5 text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed max-w-xs">
+                            {getClinicalSummary(p)}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+
+                  {filteredPatients.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-8 py-20 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <BarChart3 className="w-8 h-8 text-slate-300" />
+                          <p className="text-sm font-semibold text-text-muted">Nenhum registro encontrado para este relatório com os filtros atuais.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

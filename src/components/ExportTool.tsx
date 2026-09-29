@@ -22,6 +22,7 @@ import {
 import { 
   calculateAge, 
   getAgeInMonths, 
+  getAgeNumber,
   formatDate, 
   isPatientChild, 
   isPatientDiabetic, 
@@ -146,7 +147,7 @@ export function ExportTool({ user }: { user: any }) {
 
       if (selectedType === 'domicilios') {
         const households = await fetchTableWithFilters<any>('households', user, {
-          select: '*, patients(id, name, cns)',
+          select: '*, patients(id, name, birth_date, cns, is_family_responsible, categories, contact, clinical_data)',
           orderBy: { column: 'address', ascending: true }
         });
 
@@ -155,30 +156,131 @@ export function ExportTool({ user }: { user: any }) {
           return;
         }
 
+        const getResidentCategories = (p: any): string[] => {
+          if (!p) return [];
+          const set = new Set<string>();
+          const rawCats: string[] = Array.isArray(p.categories) ? p.categories : [];
+
+          rawCats.forEach(c => {
+            if (!c || c === 'Geral' || c === 'Todas') return;
+            if (c === 'Hipertensos' || c === 'Hipertenso') set.add('Hipertenso');
+            else if (c === 'Diabéticos' || c === 'Diabético' || c === 'Diabetico') set.add('Diabético');
+            else if (c === 'AcamadoDomiciliado' || c === 'Acamado' || c === 'Domiciliado') set.add('Acamado');
+            else if (c === 'SaudeMental' || c === 'Saúde Mental') set.add('Saúde Mental');
+            else if (c === 'Gestantes' || c === 'Gestante') set.add('Gestante');
+            else if (c === 'Crianças' || c === 'Criança' || c === 'Crianca') set.add('Criança');
+            else if (c === 'Idosos' || c === 'Idoso') set.add('Idoso');
+            else if (c === 'Adultos' || c === 'Adulto') set.add('Adulto');
+            else set.add(c);
+          });
+
+          if (isPatientHipertenso(p)) set.add('Hipertenso');
+          if (isPatientDiabetic(p)) set.add('Diabético');
+          if (isPatientChild(p)) set.add('Criança');
+
+          const age = p.birth_date ? getAgeNumber(p.birth_date) : null;
+          if (age !== null) {
+            if (age >= 60) set.add('Idoso');
+            else if (age >= 18 && !set.has('Criança') && !set.has('Gestante') && !set.has('Idoso') && set.size === 0) {
+              set.add('Adulto');
+            }
+          }
+
+          return Array.from(set);
+        };
+
         headers = [
           'Logradouro / Endereço',
           'Número',
           'Complemento',
           'Bairro',
           'Microárea',
-          'Responsável Familiar',
           'Telefone de Contato',
-          'Total de Moradores Cadastrados',
-          'Nomes dos Moradores'
+          'Responsável Familiar - Nome',
+          'Responsável Familiar - Data de Nascimento',
+          'Responsável Familiar - Idade',
+          'Responsável Familiar - Categorias',
+          'Responsável Familiar - Bolsa Família',
+          'Dependentes (Nome - Nasc - Idade - Categorias - Bolsa Família)',
+          'Total de Moradores Cadastrados'
         ];
+        const extractHouseNumber = (numStr?: string | null): { num: number; suffix: string } => {
+          if (!numStr) return { num: Infinity, suffix: '' };
+          const clean = String(numStr).trim();
+          if (!clean || /^s\/?n/i.test(clean) || /sem n/i.test(clean)) {
+            return { num: Infinity, suffix: clean };
+          }
+          const leadingMatch = clean.match(/^(\d+)(.*)$/);
+          if (leadingMatch) {
+            return { num: parseInt(leadingMatch[1], 10), suffix: leadingMatch[2].trim().toLowerCase() };
+          }
+          const anyDigitMatch = clean.match(/(\d+)/);
+          if (anyDigitMatch) {
+            return { num: parseInt(anyDigitMatch[1], 10), suffix: clean.toLowerCase() };
+          }
+          return { num: Infinity, suffix: clean.toLowerCase() };
+        };
 
-        households.forEach((h: any) => {
-          const residentsNames = (h.patients || []).map((m: any) => m.name).filter(Boolean).join(' | ');
+        const sortedHouseholds = [...households].sort((a: any, b: any) => {
+          const streetA = (a.address || '').trim().toLowerCase();
+          const streetB = (b.address || '').trim().toLowerCase();
+          const streetComp = streetA.localeCompare(streetB, 'pt-BR', { sensitivity: 'base', numeric: true });
+          if (streetComp !== 0) return streetComp;
+
+          const numA = extractHouseNumber(a.number);
+          const numB = extractHouseNumber(b.number);
+          if (numA.num !== numB.num) return numA.num - numB.num;
+          return numA.suffix.localeCompare(numB.suffix, 'pt-BR', { numeric: true });
+        });
+
+        sortedHouseholds.forEach((h: any) => {
+          const residents: any[] = h.patients || [];
+          
+          let responsible = residents.find((r: any) => r.is_family_responsible);
+          if (!responsible && h.responsible_name) {
+            const cleanHResp = h.responsible_name.trim().toLowerCase();
+            responsible = residents.find((r: any) => r.name?.trim().toLowerCase() === cleanHResp);
+          }
+          if (!responsible && h.responsible_cns) {
+            responsible = residents.find((r: any) => r.cns?.trim() === h.responsible_cns?.trim());
+          }
+          if (!responsible && residents.length > 0 && !h.responsible_name) {
+            responsible = residents[0];
+          }
+
+          const dependents = residents.filter((r: any) => r.id !== responsible?.id);
+          const contact = h.contact || responsible?.contact || responsible?.clinical_data?.contact || (dependents.find((d: any) => d.contact || d.clinical_data?.contact)?.contact) || '';
+          const respName = responsible?.name || h.responsible_name || 'Não informado';
+          const respBirth = responsible?.birth_date ? formatDate(responsible.birth_date) : '';
+          const respAge = responsible?.birth_date ? calculateAge(responsible.birth_date) : '';
+          const respCats = getResidentCategories(responsible).join(', ');
+          const respBF = responsible && isPatientBolsaFamilia(responsible) ? 'Sim (Bolsa Família)' : 'Não';
+
+          const dependentsFormatted = dependents.length > 0
+            ? dependents.map((d: any) => {
+                const dAge = d.birth_date ? calculateAge(d.birth_date) : '';
+                const dNasc = d.birth_date ? formatDate(d.birth_date) : 'N/I';
+                const dCats = getResidentCategories(d).join(', ');
+                const dBF = isPatientBolsaFamilia(d) ? 'Bolsa Família' : '';
+                const tagInfo = [dCats ? `Cat: ${dCats}` : '', dBF].filter(Boolean).join(' | ');
+                return `${d.name} (${dNasc}${dAge ? ` - ${dAge}` : ''}${tagInfo ? ` [${tagInfo}]` : ''})`;
+              }).join(' ; ')
+            : '-';
+
           csvRows.push([
             safeString(h.address),
             safeString(h.number || 'S/N'),
             safeString(h.complement || ''),
             safeString(h.neighborhood || ''),
             safeString(h.microarea || user?.microarea || ''),
-            safeString(h.responsible_name || 'Não informado'),
-            safeString(h.contact || ''),
-            safeString(h.patients?.length || 0),
-            safeString(residentsNames)
+            safeString(contact),
+            safeString(respName),
+            safeString(respBirth),
+            safeString(respAge),
+            safeString(respCats || 'Não informada'),
+            safeString(respBF),
+            safeString(dependentsFormatted),
+            safeString(residents.length || (h.responsible_name ? 1 : 0))
           ]);
         });
 
@@ -391,7 +493,7 @@ export function ExportTool({ user }: { user: any }) {
             if (p.categories?.includes('Gestante')) {
               grupo = 'Gestante (Pré-Natal)';
             } else if (isPatientChild(p)) {
-              grupo = ageInM <= 84 ? `Criança (${age} anos - Puericultura/Vacina)` : `Criança/Adolescente (${age} anos)`;
+              grupo = ageInM <= 84 ? `Criança (${age} - Puericultura/Vacina)` : `Criança/Adolescente (${age})`;
             } else if (Number(age) >= 60) {
               grupo = 'Idoso';
             }
@@ -945,7 +1047,7 @@ export function ExportTool({ user }: { user: any }) {
     {
       id: 'domicilios',
       title: 'Cadastro de Domicílios & Famílias',
-      description: 'Relação de domicílios com logradouro, número, complemento, responsável familiar e contagem de moradores.',
+      description: 'Logradouro, número, complemento, telefone, responsável familiar (nasc/idade) e relação detalhada de dependentes.',
       icon: Home,
       badgeColor: 'bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300',
       color: 'bg-teal-50 text-teal-600 dark:bg-teal-950/30 dark:text-teal-400 border-teal-100 dark:border-teal-900/30',
