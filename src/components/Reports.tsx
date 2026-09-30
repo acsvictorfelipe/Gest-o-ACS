@@ -946,40 +946,61 @@ export function Reports({ user }: { user: any }) {
       return;
     }
 
-    // 8. RELATÓRIO DE DOMICÍLIOS (FORMATO OFICIAL FICHA DE IMPRESSÃO SIAB)
+    // 8. RELATÓRIO DE DOMICÍLIOS (LAYOUT ESPELHO COM BADGES E CADASTRO)
     if (categoryFilter === 'Domicílios') {
       const doc = new jsPDFModule({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
       const microNum = user?.microarea || households[0]?.microarea || '';
-      const colorLabel = user?.color ? (colorNames[user.color.toLowerCase()] || user.color).toUpperCase() : '';
-      const areaTeamName = colorLabel ? `ÁREA ${colorLabel}` : '';
-      const subheaderText = `MICRO ÁREA: ${microNum}${areaTeamName ? `        ${areaTeamName}` : ''}`;
-
-      // Official SUS / SIAB Header
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      doc.text('PREFEITURA MUNICIPAL', 105, 11, { align: 'center' });
-      doc.setFontSize(9);
-      doc.text('SECRETARIA DA SAÚDE', 105, 16, { align: 'center' });
-      doc.text('RELATÓRIO ESPELHO DO CADASTRO DE DOMICÍLIOS SIAB', 105, 21, { align: 'center' });
-
       const tableBody: any[] = [];
 
       // Subheader row (Micro Área...)
       tableBody.push([
         {
-          content: subheaderText,
-          colSpan: 2,
+          content: `MICRO ÁREA: ${microNum}`,
           styles: {
             fontStyle: 'bold',
-            fontSize: 8.5,
+            fontSize: 8,
             fillColor: [255, 255, 255],
             textColor: [0, 0, 0],
-            cellPadding: { top: 2, bottom: 2, left: 3, right: 3 }
+            cellPadding: { top: 2.2, bottom: 2.2, left: 3, right: 3 },
+            lineWidth: { top: 0.35, bottom: 0.35, left: 0.35, right: 0.35 }
+          }
+        },
+        {
+          content: '',
+          styles: {
+            fillColor: [255, 255, 255],
+            lineWidth: { top: 0.35, bottom: 0.35, left: 0.35, right: 0.35 }
           }
         }
       ]);
+
+      // Star helper for Bolsa Família badge
+      const drawStar = (cx: number, cy: number, spikes = 5, outerRadius = 0.8, innerRadius = 0.35) => {
+        let rot = (Math.PI / 2) * 3;
+        let x = cx;
+        let y = cy;
+        const step = Math.PI / spikes;
+        const points: [number, number][] = [];
+        for (let i = 0; i < spikes; i++) {
+          x = cx + Math.cos(rot) * outerRadius;
+          y = cy + Math.sin(rot) * outerRadius;
+          points.push([x, y]);
+          rot += step;
+          x = cx + Math.cos(rot) * innerRadius;
+          y = cy + Math.sin(rot) * innerRadius;
+          points.push([x, y]);
+          rot += step;
+        }
+        doc.lines(
+          points.slice(1).map((p, idx) => [p[0] - points[idx][0], p[1] - points[idx][1]]),
+          points[0][0],
+          points[0][1],
+          [1, 1],
+          'F',
+          true
+        );
+      };
 
       filteredHouseholds.forEach(h => {
         const family = getHouseholdFamilyDetails(h);
@@ -1001,8 +1022,8 @@ export function Reports({ user }: { user: any }) {
         const formattedNumber = /^\d+$/.test(String(h.number || '').trim())
           ? String(h.number).trim().padStart(5, '0')
           : (h.number || 'S/N');
-        const compStr = h.complement ? ` ${h.complement.toUpperCase()}` : '';
-        const enderecoLinha = `${(h.address || 'LOGRADOURO NÃO INFORMADO').toUpperCase()}, ${formattedNumber} -${compStr}`;
+        const compStr = h.complement ? ` - ${h.complement.toUpperCase()}` : '';
+        const enderecoLinha = `${(h.address || 'LOGRADOURO NÃO INFORMADO').toUpperCase()}, ${formattedNumber}${compStr}`;
 
         // Address Header Row
         tableBody.push([
@@ -1011,9 +1032,10 @@ export function Reports({ user }: { user: any }) {
             styles: {
               fontStyle: 'bold',
               fontSize: 8,
-              fillColor: [240, 240, 240],
+              fillColor: [255, 255, 255],
               textColor: [0, 0, 0],
-              cellPadding: { top: 2, bottom: 2, left: 3, right: 3 }
+              cellPadding: { top: 2.2, bottom: 2.2, left: 3, right: 3 },
+              lineWidth: { top: 0.35, bottom: 0.35, left: 0.35, right: 0.35 }
             }
           },
           {
@@ -1023,53 +1045,92 @@ export function Reports({ user }: { user: any }) {
               halign: 'center',
               valign: 'middle',
               fontSize: 8.5,
-              fillColor: [240, 240, 240],
-              textColor: [0, 0, 0]
-            }
-          }
-        ]);
-
-        // Residents content lines (formatted exactly like SIAB mirror)
-        const residentLines: string[] = [];
-        residents.forEach((r) => {
-          const nome = (r.name || 'NÃO INFORMADO').toUpperCase();
-          const dNascStr = r.birth_date ? formatDate(r.birth_date) : 'N/I';
-          const mother = (
-            r.mother_name || 
-            r.clinical_data?.mother_name || 
-            r.clinical_data?.mae || 
-            r.clinical_data?.nome_mae || 
-            (r.cns ? `CNS: ${r.cns}` : '') || 
-            '-'
-          ).toUpperCase();
-
-          residentLines.push(`  ${nome}`);
-          residentLines.push(`    ${dNascStr}        DEFINITIVO        ${mother}`);
-        });
-
-        tableBody.push([
-          {
-            content: residentLines.join('\n'),
-            colSpan: 2,
-            styles: {
-              fontSize: 7.5,
+              fillColor: [255, 255, 255],
               textColor: [0, 0, 0],
-              halign: 'left',
-              cellPadding: { top: 2, bottom: 2.5, left: 3, right: 3 },
-              lineColor: [0, 0, 0],
-              lineWidth: 0.25
+              lineWidth: { top: 0.35, bottom: 0.35, left: 0.35, right: 0.35 }
             }
           }
         ]);
+
+        // Individual Resident Rows
+        residents.forEach((r, rIdx) => {
+          const isResp = r.id === family.responsible?.id || r.is_family_responsible || rIdx === 0;
+          const hasBF = isPatientBolsaFamilia(r);
+          const cats = getResidentCategories(r);
+          const catStr = cats.length > 0 ? cats.map(c => c.toUpperCase()).join(', ') : 'ADULTO';
+          const dNascStr = r.birth_date ? formatDate(r.birth_date) : 'N/I';
+          const cnsFormatted = r.cns ? `CNS: ${r.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4')}` : '';
+
+          const line2Parts = [dNascStr, catStr];
+          if (cnsFormatted) line2Parts.push(cnsFormatted);
+          const line2 = line2Parts.join('    ');
+
+          const isLast = rIdx === residents.length - 1;
+
+          tableBody.push([
+            {
+              content: '',
+              rawResident: {
+                name: (r.name || 'NÃO INFORMADO').toUpperCase(),
+                isResp,
+                hasBF,
+                line2
+              },
+              styles: {
+                minCellHeight: 11,
+                cellPadding: { top: 1.5, bottom: 1.5, left: 3, right: 3 },
+                lineWidth: {
+                  top: 0,
+                  bottom: isLast ? 0.35 : 0,
+                  left: 0.35,
+                  right: 0.35
+                }
+              }
+            },
+            {
+              content: '',
+              styles: {
+                lineWidth: {
+                  top: 0,
+                  bottom: isLast ? 0.35 : 0,
+                  left: 0.35,
+                  right: 0.35
+                }
+              }
+            }
+          ]);
+        });
       });
 
       autoTable(doc, {
-        startY: 25,
-        margin: { top: 12, left: 8, right: 8, bottom: 12 },
+        startY: 8,
+        margin: { top: 8, left: 8, right: 8, bottom: 8 },
         head: [
           [
-            { content: 'DOMICÍLIO', styles: { halign: 'center', fontStyle: 'bold', fontSize: 8.5, textColor: [0, 0, 0] } },
-            { content: 'Nº USUÁRIOS', styles: { halign: 'center', fontStyle: 'bold', fontSize: 8, textColor: [0, 0, 0] } }
+            {
+              content: 'DOMICÍLIO',
+              styles: {
+                halign: 'center',
+                valign: 'middle',
+                fontStyle: 'bold',
+                fontSize: 8.5,
+                textColor: [0, 0, 0],
+                fillColor: [255, 255, 255],
+                lineWidth: 0.35
+              }
+            },
+            {
+              content: 'Nº\nUSUARIOS',
+              styles: {
+                halign: 'center',
+                valign: 'middle',
+                fontStyle: 'bold',
+                fontSize: 7.5,
+                textColor: [0, 0, 0],
+                fillColor: [255, 255, 255],
+                lineWidth: 0.35
+              }
+            }
           ]
         ],
         body: tableBody,
@@ -1078,47 +1139,90 @@ export function Reports({ user }: { user: any }) {
         tableLineWidth: 0.35,
         styles: {
           lineColor: [0, 0, 0],
-          lineWidth: 0.25,
+          lineWidth: 0.35,
           font: 'helvetica',
           textColor: [0, 0, 0],
-          overflow: 'linebreak',
-          halign: 'left'
-        },
-        headStyles: {
-          fillColor: [240, 240, 240],
-          lineColor: [0, 0, 0],
-          lineWidth: 0.35
+          overflow: 'linebreak'
         },
         columnStyles: {
-          0: { cellWidth: 172 },
-          1: { cellWidth: 22 }
+          0: { cellWidth: 174 },
+          1: { cellWidth: 20 }
         },
-        pageBreak: 'auto'
+        pageBreak: 'auto',
+        didDrawCell: (data) => {
+          if (
+            data.section === 'body' &&
+            data.column.index === 0 &&
+            data.cell.raw &&
+            typeof data.cell.raw === 'object' &&
+            (data.cell.raw as any).rawResident
+          ) {
+            const res = (data.cell.raw as any).rawResident;
+            const startX = data.cell.x + 3;
+            const startY = data.cell.y + 4.2;
+
+            // 1. Citizen Name (Bold)
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8);
+            doc.setTextColor(0, 0, 0);
+            doc.text(res.name, startX, startY);
+
+            let badgeX = startX + doc.getTextWidth(res.name) + 3;
+
+            // 2. Responsável Badge (Cyan pill)
+            if (res.isResp) {
+              const bText = 'RESPONSÁVEL';
+              doc.setFont('helvetica', 'bold');
+              doc.setFontSize(6);
+              const bTextW = doc.getTextWidth(bText);
+              const bW = bTextW + 3;
+              const bH = 3.5;
+              const bY = startY - 2.6;
+
+              doc.setDrawColor(6, 182, 212); // cyan-500
+              doc.setFillColor(236, 254, 255); // cyan-50
+              doc.setLineWidth(0.2);
+              doc.roundedRect(badgeX, bY, bW, bH, 0.7, 0.7, 'FD');
+
+              doc.setTextColor(8, 145, 178); // cyan-600
+              doc.text(bText, badgeX + 1.5, startY - 0.2);
+
+              badgeX += bW + 2.5;
+            }
+
+            // 3. Bolsa Família Badge (Emerald pill + star)
+            if (res.hasBF) {
+              const bText = 'BOLSA FAMÍLIA';
+              doc.setFont('helvetica', 'bold');
+              doc.setFontSize(6);
+              const bTextW = doc.getTextWidth(bText);
+              const bW = bTextW + 5.2;
+              const bH = 3.5;
+              const bY = startY - 2.6;
+
+              doc.setDrawColor(16, 185, 129); // emerald-500
+              doc.setFillColor(236, 253, 245); // emerald-50
+              doc.setLineWidth(0.2);
+              doc.roundedRect(badgeX, bY, bW, bH, 0.7, 0.7, 'FD');
+
+              // Draw star icon
+              doc.setFillColor(5, 150, 105);
+              drawStar(badgeX + 2.2, startY - 0.9, 5, 0.8, 0.35);
+
+              doc.setTextColor(5, 150, 105); // emerald-600
+              doc.text(bText, badgeX + 3.8, startY - 0.2);
+            }
+
+            // 4. Line 2: Birth date, categories, CNS
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(15, 23, 42);
+            doc.text(res.line2, startX, startY + 4.4);
+          }
+        }
       });
 
-      // Add page numbering & footer to all generated pages
-      const totalPages = (doc as any).internal.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        const pageSize = doc.internal.pageSize;
-        const pageHeight = pageSize.height || pageSize.getHeight();
-        const pageWidth = pageSize.width || pageSize.getWidth();
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
-        doc.setTextColor(80);
-
-        const footerLeft = `Impresso por: ${user?.name || 'ACS'} | Microárea: ${microNum || '-'}`;
-        const footerCenter = `Página ${i} de ${totalPages}`;
-        const nowStr = new Date().toLocaleString('pt-BR');
-        const footerRight = `Data/Hora: ${nowStr}`;
-
-        doc.text(footerLeft, 8, pageHeight - 6);
-        doc.text(footerCenter, pageWidth / 2, pageHeight - 6, { align: 'center' });
-        doc.text(footerRight, pageWidth - 8, pageHeight - 6, { align: 'right' });
-      }
-
-      doc.save(`Relatorio_Espelho_Domicilios_SIAB_MA_${microNum || 'Geral'}.pdf`);
+      doc.save(`Ficha_Domicilios_MA_${microNum || 'Geral'}.pdf`);
       return;
     }
 
