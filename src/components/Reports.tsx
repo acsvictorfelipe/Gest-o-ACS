@@ -946,16 +946,27 @@ export function Reports({ user }: { user: any }) {
       return;
     }
 
-    // 8. RELATÓRIO DE DOMICÍLIOS (FORMATO OFICIAL FICHA DE IMPRESSÃO E-SUS)
+    // 8. RELATÓRIO DE DOMICÍLIOS (FORMATO OFICIAL FICHA DE IMPRESSÃO SIAB)
     if (categoryFilter === 'Domicílios') {
       const doc = new jsPDFModule({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
       const microNum = user?.microarea || households[0]?.microarea || '';
-      const subheaderText = `MICRO ÁREA: ${microNum}`;
+      const colorLabel = user?.color ? (colorNames[user.color.toLowerCase()] || user.color).toUpperCase() : '';
+      const areaTeamName = colorLabel ? `ÁREA ${colorLabel}` : '';
+      const subheaderText = `MICRO ÁREA: ${microNum}${areaTeamName ? `        ${areaTeamName}` : ''}`;
+
+      // Official SUS / SIAB Header
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text('PREFEITURA MUNICIPAL', 105, 11, { align: 'center' });
+      doc.setFontSize(9);
+      doc.text('SECRETARIA DA SAÚDE', 105, 16, { align: 'center' });
+      doc.text('RELATÓRIO ESPELHO DO CADASTRO DE DOMICÍLIOS SIAB', 105, 21, { align: 'center' });
 
       const tableBody: any[] = [];
 
-      // Subheader row
+      // Subheader row (Micro Área...)
       tableBody.push([
         {
           content: subheaderText,
@@ -1000,7 +1011,7 @@ export function Reports({ user }: { user: any }) {
             styles: {
               fontStyle: 'bold',
               fontSize: 8,
-              fillColor: [248, 250, 252],
+              fillColor: [240, 240, 240],
               textColor: [0, 0, 0],
               cellPadding: { top: 2, bottom: 2, left: 3, right: 3 }
             }
@@ -1012,63 +1023,53 @@ export function Reports({ user }: { user: any }) {
               halign: 'center',
               valign: 'middle',
               fontSize: 8.5,
-              fillColor: [248, 250, 252],
+              fillColor: [240, 240, 240],
               textColor: [0, 0, 0]
             }
           }
         ]);
 
-        // Residents content lines
+        // Residents content lines (formatted exactly like SIAB mirror)
         const residentLines: string[] = [];
-        residents.forEach((r, rIdx) => {
-          const isResp = r.id === family.responsible?.id || r.is_family_responsible || rIdx === 0;
-          const hasBF = isPatientBolsaFamilia(r);
-          const cats = getResidentCategories(r);
-          const respTag = isResp ? ' (RESPONSÁVEL)' : '';
-          const bfTag = hasBF ? '  [★ BOLSA FAMÍLIA]' : '';
-          const nomeLinha = `  ${(r.name || 'NÃO INFORMADO').toUpperCase()}${respTag}${bfTag}`;
-
+        residents.forEach((r) => {
+          const nome = (r.name || 'NÃO INFORMADO').toUpperCase();
           const dNascStr = r.birth_date ? formatDate(r.birth_date) : 'N/I';
-
-          const situacao = cats.length > 0 ? cats.map(c => c.toUpperCase()).join(', ') : '-';
-
-          const mother = r.mother_name || 
+          const mother = (
+            r.mother_name || 
             r.clinical_data?.mother_name || 
             r.clinical_data?.mae || 
             r.clinical_data?.nome_mae || 
-            (r.cns ? `CNS: ${r.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4')}` : '');
+            (r.cns ? `CNS: ${r.cns}` : '') || 
+            '-'
+          ).toUpperCase();
 
-          const infoLinha = `      ${dNascStr}   •   ${situacao}${mother ? `   •   ${mother}` : ''}`;
-
-          residentLines.push(nomeLinha);
-          residentLines.push(infoLinha);
+          residentLines.push(`  ${nome}`);
+          residentLines.push(`    ${dNascStr}        DEFINITIVO        ${mother}`);
         });
 
         tableBody.push([
           {
             content: residentLines.join('\n'),
+            colSpan: 2,
             styles: {
               fontSize: 7.5,
-              textColor: [15, 23, 42],
-              cellPadding: { top: 2.5, bottom: 3, left: 2, right: 2 }
-            }
-          },
-          {
-            content: '',
-            styles: {
-              fillColor: [255, 255, 255]
+              textColor: [0, 0, 0],
+              halign: 'left',
+              cellPadding: { top: 2, bottom: 2.5, left: 3, right: 3 },
+              lineColor: [0, 0, 0],
+              lineWidth: 0.25
             }
           }
         ]);
       });
 
       autoTable(doc, {
-        startY: 10,
-        margin: { top: 8, left: 8, right: 8, bottom: 8 },
+        startY: 25,
+        margin: { top: 12, left: 8, right: 8, bottom: 12 },
         head: [
           [
-            { content: 'DOMICÍLIO', styles: { halign: 'center', fontStyle: 'bold', fontSize: 9.5, textColor: [0, 0, 0] } },
-            { content: 'Nº USUARIOS', styles: { halign: 'center', fontStyle: 'bold', fontSize: 8, textColor: [0, 0, 0] } }
+            { content: 'DOMICÍLIO', styles: { halign: 'center', fontStyle: 'bold', fontSize: 8.5, textColor: [0, 0, 0] } },
+            { content: 'Nº USUÁRIOS', styles: { halign: 'center', fontStyle: 'bold', fontSize: 8, textColor: [0, 0, 0] } }
           ]
         ],
         body: tableBody,
@@ -1079,7 +1080,9 @@ export function Reports({ user }: { user: any }) {
           lineColor: [0, 0, 0],
           lineWidth: 0.25,
           font: 'helvetica',
-          textColor: [0, 0, 0]
+          textColor: [0, 0, 0],
+          overflow: 'linebreak',
+          halign: 'left'
         },
         headStyles: {
           fillColor: [240, 240, 240],
@@ -1087,13 +1090,35 @@ export function Reports({ user }: { user: any }) {
           lineWidth: 0.35
         },
         columnStyles: {
-          0: { cellWidth: 168 },
-          1: { cellWidth: 26 }
+          0: { cellWidth: 172 },
+          1: { cellWidth: 22 }
         },
         pageBreak: 'auto'
       });
 
-      doc.save(`Ficha_Domicilios_eSUS_MA_${microNum}.pdf`);
+      // Add page numbering & footer to all generated pages
+      const totalPages = (doc as any).internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        const pageSize = doc.internal.pageSize;
+        const pageHeight = pageSize.height || pageSize.getHeight();
+        const pageWidth = pageSize.width || pageSize.getWidth();
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(80);
+
+        const footerLeft = `Impresso por: ${user?.name || 'ACS'} | Microárea: ${microNum || '-'}`;
+        const footerCenter = `Página ${i} de ${totalPages}`;
+        const nowStr = new Date().toLocaleString('pt-BR');
+        const footerRight = `Data/Hora: ${nowStr}`;
+
+        doc.text(footerLeft, 8, pageHeight - 6);
+        doc.text(footerCenter, pageWidth / 2, pageHeight - 6, { align: 'center' });
+        doc.text(footerRight, pageWidth - 8, pageHeight - 6, { align: 'right' });
+      }
+
+      doc.save(`Relatorio_Espelho_Domicilios_SIAB_MA_${microNum || 'Geral'}.pdf`);
       return;
     }
 
