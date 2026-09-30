@@ -975,33 +975,6 @@ export function Reports({ user }: { user: any }) {
         }
       ]);
 
-      // Star helper for Bolsa Família badge
-      const drawStar = (cx: number, cy: number, spikes = 5, outerRadius = 0.8, innerRadius = 0.35) => {
-        let rot = (Math.PI / 2) * 3;
-        let x = cx;
-        let y = cy;
-        const step = Math.PI / spikes;
-        const points: [number, number][] = [];
-        for (let i = 0; i < spikes; i++) {
-          x = cx + Math.cos(rot) * outerRadius;
-          y = cy + Math.sin(rot) * outerRadius;
-          points.push([x, y]);
-          rot += step;
-          x = cx + Math.cos(rot) * innerRadius;
-          y = cy + Math.sin(rot) * innerRadius;
-          points.push([x, y]);
-          rot += step;
-        }
-        doc.lines(
-          points.slice(1).map((p, idx) => [p[0] - points[idx][0], p[1] - points[idx][1]]),
-          points[0][0],
-          points[0][1],
-          [1, 1],
-          'F',
-          true
-        );
-      };
-
       filteredHouseholds.forEach(h => {
         const family = getHouseholdFamilyDetails(h);
         const residents: any[] = [];
@@ -1150,6 +1123,7 @@ export function Reports({ user }: { user: any }) {
           1: { cellWidth: 20 }
         },
         pageBreak: 'auto',
+        rowPageBreak: 'avoid',
         didDrawCell: (data) => {
           if (
             data.section === 'body' &&
@@ -1191,13 +1165,13 @@ export function Reports({ user }: { user: any }) {
               badgeX += bW + 2.5;
             }
 
-            // 3. Bolsa Família Badge (Emerald pill + star)
+            // 3. Bolsa Família Badge (Sigla BF)
             if (res.hasBF) {
-              const bText = 'BOLSA FAMÍLIA';
+              const bText = 'BF';
               doc.setFont('helvetica', 'bold');
               doc.setFontSize(6);
               const bTextW = doc.getTextWidth(bText);
-              const bW = bTextW + 5.2;
+              const bW = bTextW + 3;
               const bH = 3.5;
               const bY = data.cell.y + 1.4;
 
@@ -1206,12 +1180,8 @@ export function Reports({ user }: { user: any }) {
               doc.setLineWidth(0.2);
               doc.roundedRect(badgeX, bY, bW, bH, 0.7, 0.7, 'FD');
 
-              // Draw star icon
-              doc.setFillColor(5, 150, 105);
-              drawStar(badgeX + 2.2, data.cell.y + 3.0, 5, 0.8, 0.35);
-
               doc.setTextColor(5, 150, 105); // emerald-600
-              doc.text(bText, badgeX + 3.8, nameY - 0.3);
+              doc.text(bText, badgeX + 1.5, nameY - 0.3);
             }
 
             // 4. Line 2: Birth date, categories, CNS (comfortably above bottom border)
@@ -1734,8 +1704,8 @@ export function Reports({ user }: { user: any }) {
                                           </span>
                                         )}
                                         {hasBF && (
-                                          <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-300 uppercase print:border-black print:text-black">
-                                            ★ Bolsa Família
+                                          <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-300 uppercase print:border-black print:text-black" title="Beneficiário do Bolsa Família">
+                                            BF
                                           </span>
                                         )}
                                       </div>
