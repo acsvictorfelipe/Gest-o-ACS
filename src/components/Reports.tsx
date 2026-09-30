@@ -1077,8 +1077,8 @@ export function Reports({ user }: { user: any }) {
                 line2
               },
               styles: {
-                minCellHeight: 11,
-                cellPadding: { top: 1.5, bottom: 1.5, left: 3, right: 3 },
+                minCellHeight: 12.5,
+                cellPadding: { top: 2, bottom: 2, left: 3, right: 3 },
                 lineWidth: {
                   top: 0,
                   bottom: isLast ? 0.35 : 0,
@@ -1090,6 +1090,7 @@ export function Reports({ user }: { user: any }) {
             {
               content: '',
               styles: {
+                minCellHeight: 12.5,
                 lineWidth: {
                   top: 0,
                   bottom: isLast ? 0.35 : 0,
@@ -1104,7 +1105,7 @@ export function Reports({ user }: { user: any }) {
 
       autoTable(doc, {
         startY: 8,
-        margin: { top: 8, left: 8, right: 8, bottom: 8 },
+        margin: { top: 8, left: 8, right: 8, bottom: 10 },
         head: [
           [
             {
@@ -1159,13 +1160,13 @@ export function Reports({ user }: { user: any }) {
           ) {
             const res = (data.cell.raw as any).rawResident;
             const startX = data.cell.x + 3;
-            const startY = data.cell.y + 4.2;
+            const nameY = data.cell.y + 4.2;
 
             // 1. Citizen Name (Bold)
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(8);
             doc.setTextColor(0, 0, 0);
-            doc.text(res.name, startX, startY);
+            doc.text(res.name, startX, nameY);
 
             let badgeX = startX + doc.getTextWidth(res.name) + 3;
 
@@ -1177,7 +1178,7 @@ export function Reports({ user }: { user: any }) {
               const bTextW = doc.getTextWidth(bText);
               const bW = bTextW + 3;
               const bH = 3.5;
-              const bY = startY - 2.6;
+              const bY = data.cell.y + 1.4;
 
               doc.setDrawColor(6, 182, 212); // cyan-500
               doc.setFillColor(236, 254, 255); // cyan-50
@@ -1185,7 +1186,7 @@ export function Reports({ user }: { user: any }) {
               doc.roundedRect(badgeX, bY, bW, bH, 0.7, 0.7, 'FD');
 
               doc.setTextColor(8, 145, 178); // cyan-600
-              doc.text(bText, badgeX + 1.5, startY - 0.2);
+              doc.text(bText, badgeX + 1.5, nameY - 0.3);
 
               badgeX += bW + 2.5;
             }
@@ -1198,7 +1199,7 @@ export function Reports({ user }: { user: any }) {
               const bTextW = doc.getTextWidth(bText);
               const bW = bTextW + 5.2;
               const bH = 3.5;
-              const bY = startY - 2.6;
+              const bY = data.cell.y + 1.4;
 
               doc.setDrawColor(16, 185, 129); // emerald-500
               doc.setFillColor(236, 253, 245); // emerald-50
@@ -1207,17 +1208,17 @@ export function Reports({ user }: { user: any }) {
 
               // Draw star icon
               doc.setFillColor(5, 150, 105);
-              drawStar(badgeX + 2.2, startY - 0.9, 5, 0.8, 0.35);
+              drawStar(badgeX + 2.2, data.cell.y + 3.0, 5, 0.8, 0.35);
 
               doc.setTextColor(5, 150, 105); // emerald-600
-              doc.text(bText, badgeX + 3.8, startY - 0.2);
+              doc.text(bText, badgeX + 3.8, nameY - 0.3);
             }
 
-            // 4. Line 2: Birth date, categories, CNS
+            // 4. Line 2: Birth date, categories, CNS (comfortably above bottom border)
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(7.5);
             doc.setTextColor(15, 23, 42);
-            doc.text(res.line2, startX, startY + 4.4);
+            doc.text(res.line2, startX, data.cell.y + 8.8);
           }
         }
       });
