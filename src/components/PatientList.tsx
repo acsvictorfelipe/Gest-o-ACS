@@ -42,7 +42,7 @@ import { safeStorage } from '../lib/safeStorage';
 import { AppUser, Patient } from '../types';
 
 import { format, isSameDay } from 'date-fns';
-import { calculateAge, getAgeInMonths, getAgeNumber, formatDate, getPatientLastVisitAt, isVisitLate, isPatientDiabetic, isPatientInsulinUser, isPatientBolsaFamilia } from '../lib/dateUtils';
+import { calculateAge, getAgeInMonths, getAgeNumber, formatDate, getPatientLastVisitAt, isVisitLate, isPatientDiabetic, isPatientInsulinUser, isPatientBolsaFamilia, calculateGestationalAge } from '../lib/dateUtils';
 import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 
 import { usePatientList } from '../hooks/usePatientList';
@@ -532,10 +532,16 @@ export function PatientList({ user }: { user: AppUser | null }) {
                               const g = p.clinical_data?.gestante;
                               const validConsultas = g?.consultas?.filter((c: string) => c && c.trim() !== '').length || 0;
                               const validVisitas = g?.visitasAcs?.filter((v: string) => v && v.trim() !== '').length || 0;
+                              const gestAge = calculateGestationalAge(g?.dum);
                               const pctCol = validConsultas >= 9 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-pink-50 text-pink-600 border-pink-100 dark:bg-pink-950/20 dark:text-pink-400 dark:border-pink-900/35';
                               const pctVis = validVisitas >= 3 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/35';
                               return (
                                 <>
+                                  {gestAge && (
+                                    <span className="px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-tight border bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800" title={`Idade Gestacional: ${gestAge.text}`}>
+                                      🤰 {gestAge.shortText}
+                                    </span>
+                                  )}
                                   <span className={`px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-tight border ${pctCol}`}>
                                     Pré-Natal: {validConsultas}/9
                                   </span>
@@ -830,10 +836,16 @@ export function PatientList({ user }: { user: AppUser | null }) {
                       const g = p.clinical_data?.gestante;
                       const validConsultas = g?.consultas?.filter((c: string) => c && c.trim() !== '').length || 0;
                       const validVisitas = g?.visitasAcs?.filter((v: string) => v && v.trim() !== '').length || 0;
+                      const gestAge = calculateGestationalAge(g?.dum);
                       const pctCol = validConsultas >= 9 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-pink-50 text-pink-600 border-pink-100 dark:bg-pink-950/20 dark:text-pink-400 dark:border-pink-900/35';
                       const pctVis = validVisitas >= 3 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/35';
                       return (
                         <>
+                          {gestAge && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase whitespace-nowrap border bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800" title={`Idade Gestacional: ${gestAge.text}`}>
+                              🤰 {gestAge.shortText}
+                            </span>
+                          )}
                           <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase whitespace-nowrap border ${pctCol}`}>
                             Pré-Natal: {validConsultas}/9
                           </span>

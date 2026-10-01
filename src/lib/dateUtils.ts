@@ -642,6 +642,44 @@ export async function healPatientVisitDate(
   }
 }
 
+/**
+ * Calcula a idade gestacional com base na DUM (Data da Última Menstruação).
+ * Retorna { weeks, days, text, shortText } ou null caso DUM seja inválida, futura ou superior a 44 semanas.
+ */
+export function calculateGestationalAge(dum?: string | null): { weeks: number; days: number; text: string; shortText: string } | null {
+  if (!dum) return null;
+  const parts = String(dum).split('-');
+  if (parts.length !== 3) return null;
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10) - 1;
+  const d = parseInt(parts[2], 10);
+  const dumDate = new Date(y, m, d);
+  if (isNaN(dumDate.getTime())) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  dumDate.setHours(0, 0, 0, 0);
+
+  const diffMs = today.getTime() - dumDate.getTime();
+  if (diffMs < 0) return null;
+
+  const totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const weeks = Math.floor(totalDays / 7);
+  const days = totalDays % 7;
+
+  if (weeks > 44) return null;
+
+  const text = days === 0 
+    ? `${weeks} ${weeks === 1 ? 'semana' : 'semanas'}`
+    : `${weeks} ${weeks === 1 ? 'semana' : 'semanas'} e ${days} ${days === 1 ? 'dia' : 'dias'}`;
+
+  const shortText = days === 0
+    ? `${weeks} sem`
+    : `${weeks}s ${days}d`;
+
+  return { weeks, days, text, shortText };
+}
+
 
 
 

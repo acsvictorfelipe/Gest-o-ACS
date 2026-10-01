@@ -1,5 +1,6 @@
 import React from 'react';
 import { Baby, Plus, Trash2 } from 'lucide-react';
+import { calculateGestationalAge } from '../../../lib/dateUtils';
 
 interface GestanteSectionProps {
   formData: any;
@@ -21,6 +22,7 @@ export function GestanteSection({
   if (!formData.categories.includes('Gestante')) return null;
 
   const data = formData.clinicalData?.gestante || {};
+  const gestationalAge = calculateGestationalAge(data.dum);
 
   const validConsultas = data.consultas?.filter((c: string) => c && c.trim() !== '').length || 0;
   const targetConsultas = 9;
@@ -38,7 +40,16 @@ export function GestanteSection({
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-[10px] font-semibold uppercase text-text-muted mb-2">DUM (Última Menstruação)</label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-[10px] font-semibold uppercase text-text-muted">
+              DUM (Última Menstruação)
+            </label>
+            {gestationalAge && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/40 px-2 py-0.5 rounded-md border border-pink-200/80 dark:border-pink-900/60 shadow-2xs">
+                🤰 {gestationalAge.text}
+              </span>
+            )}
+          </div>
           <input 
             type="date" 
             value={data.dum || ''}
