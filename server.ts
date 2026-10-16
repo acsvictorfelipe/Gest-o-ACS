@@ -192,9 +192,13 @@ async function startServer() {
   });
 
   // API Route for deleting users transactionally
-  app.delete('/api/admin/delete-user/:id', requireAdminOrGestor, async (req, res) => {
-    const { id } = req.params;
+  const handleDeleteUserEndpoint = async (req: express.Request, res: express.Response) => {
+    const id = req.params?.id || (req.query?.id as string) || req.body?.id;
     
+    if (!id) {
+      return res.status(400).json({ error: 'ID do usuário ausente' });
+    }
+
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return res.status(500).json({ 
         error: 'Configuração ausente: SUPABASE_SERVICE_ROLE_KEY não encontrada. Por favor, adicione-a em Settings > Secrets.' 
@@ -228,7 +232,11 @@ async function startServer() {
       console.error('Error in delete-user endpoint:', error);
       res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
-  });
+  };
+
+  app.delete('/api/admin/delete-user/:id', requireAdminOrGestor, handleDeleteUserEndpoint);
+  app.delete('/api/admin/delete-user', requireAdminOrGestor, handleDeleteUserEndpoint);
+  app.post('/api/admin/delete-user', requireAdminOrGestor, handleDeleteUserEndpoint);
 
   // API Routes for transferring patients and households
   const handleTransferEndpoint = async (req: express.Request, res: express.Response) => {

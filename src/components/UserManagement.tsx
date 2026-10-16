@@ -300,34 +300,73 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`/api/admin/delete-user/${userId}`, { 
-        method: 'DELETE',
-        headers
-      });
-      const contentType = response.headers.get('content-type') || '';
-      let data: any = {};
-      if (contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        const text = await response.text();
-        if (!response.ok) {
-          throw new Error(
-            response.status === 404
+      let deletedViaApi = false;
+      let apiErrorMessage = '';
+
+      // 1. Tentar deletar via API do servidor (compatível com Express, Vercel e rotas dinâmicas)
+      try {
+        const response = await fetch(`/api/admin/delete-user?id=${encodeURIComponent(userId)}`, { 
+          method: 'DELETE',
+          headers,
+          body: JSON.stringify({ id: userId })
+        });
+
+        const contentType = response.headers.get('content-type') || '';
+        let data: any = {};
+        if (contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const text = await response.text();
+          if (!response.ok) {
+            apiErrorMessage = response.status === 404
               ? 'Rota do servidor não encontrada (404).'
-              : `Erro no servidor (${response.status}): ${text.slice(0, 120)}`
-          );
+              : `Erro no servidor (${response.status}): ${text.slice(0, 120)}`;
+          }
+        }
+
+        if (response.ok) {
+          deletedViaApi = true;
+        } else if (response.status !== 404) {
+          throw new Error(data.error || apiErrorMessage || 'Erro ao excluir usuário no servidor');
+        }
+      } catch (err: any) {
+        if (!err.message?.includes('404')) {
+          throw err;
+        }
+        apiErrorMessage = err.message;
+      }
+
+      // 2. Fallback de resiliência: se a API retornar 404 (hospedagem estática ou sem backend),
+      // executa a limpeza em cascata diretamente no banco de dados via RPC seguro ou deleção sequencial
+      if (!deletedViaApi) {
+        console.warn('API de exclusão retornou 404. Executando exclusão direta no banco de dados...');
+        const { error: rpcError } = await supabase.rpc('delete_user_cascade', { target_user_id: userId });
+
+        if (rpcError) {
+          console.warn('RPC delete_user_cascade indisponível, executando exclusão direta:', rpcError.message);
+          await supabase.from('visits').delete().eq('agent_id', userId);
+          await supabase.from('patients').delete().eq('agent_id', userId);
+          await supabase.from('households').delete().eq('agent_id', userId);
+          const { error: pErr } = await supabase.from('profiles').delete().eq('id', userId);
+          if (pErr) throw new Error(`Erro ao excluir perfil no banco de dados: ${pErr.message}`);
         }
       }
-      if (!response.ok) throw new Error(data.error || 'Erro ao excluir usuário');
 
       await logActivity(currentUser.id, 'Exclusão de Usuário', `Excluiu o usuário ${userName} do sistema.`);
 
-      setMessage({ type: 'success', text: 'Usuário excluído com sucesso.' });
+      setMessage({ 
+        type: 'success', 
+        text: deletedViaApi 
+          ? 'Usuário excluído com sucesso.' 
+          : 'Perfil e dados do usuário excluídos com sucesso do banco de dados.' 
+      });
       fetchData();
     } catch (error: any) {
       console.error("Error deleting user:", error);
