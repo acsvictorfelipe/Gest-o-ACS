@@ -143,8 +143,8 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
           text-decoration: none !important;
         }
         .react-calendar__tile {
-          min-height: 38px !important;
-          height: 38px !important;
+          min-height: 32px !important;
+          height: 32px !important;
           padding: 2px 1px !important;
           display: flex !important;
           flex-direction: column !important;
@@ -184,36 +184,10 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
           display: none !important;
         }
         @media (min-width: 1024px) {
-          .react-calendar {
-            height: 100% !important;
-            display: flex !important;
-            flex-direction: column !important;
-          }
-          .react-calendar__viewContainer {
-            flex: 1 !important;
-            display: flex !important;
-            flex-direction: column !important;
-          }
-          .react-calendar__month-view {
-            flex: 1 !important;
-            display: flex !important;
-            flex-direction: column !important;
-          }
-          .react-calendar__month-view > div {
-            flex: 1 !important;
-            display: flex !important;
-            flex-direction: column !important;
-          }
-          .react-calendar__month-view__days {
-            flex: 1 !important;
-            display: grid !important;
-            grid-template-columns: repeat(7, 1fr) !important;
-            grid-auto-rows: 1fr !important;
-          }
           .react-calendar__tile {
-            height: 100% !important;
-            min-height: 38px !important;
-            padding: 2px 1px !important;
+            min-height: 32px !important;
+            height: 32px !important;
+            padding: 1px 1px !important;
           }
         }
       `}</style>

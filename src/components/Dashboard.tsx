@@ -295,64 +295,77 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </div>
       )}
 
-      {/* 2. Categorias em Lista Compacta e Clicável */}
+      {/* 2. Categorias de Acompanhamento em Lista Compacta */}
       <div className="bg-bg-secondary rounded-[24px] p-4 sm:p-5 border border-border shadow-sm">
-        <div className="flex items-center justify-between mb-3 px-1">
-          <div>
-            <h3 className="text-sm font-extrabold text-text-primary tracking-tight">Categorias de Acompanhamento</h3>
-            <p className="text-[11px] text-text-muted">Clique em qualquer categoria para listar e filtrar os pacientes instantaneamente</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-border/60 gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+              <Users className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-extrabold text-text-primary tracking-tight">Categorias de Acompanhamento</h3>
+              <p className="text-[11px] text-text-muted">Lista com filtro rápido — clique na categoria para visualizar e editar os pacientes</p>
+            </div>
           </div>
-          <span className="text-[11px] font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40 px-2.5 py-1 rounded-lg border border-teal-200 dark:border-teal-900/40 hidden sm:inline">
-            Filtro Rápido
+          <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/50 px-2.5 py-1 rounded-full border border-teal-200 dark:border-teal-900/50 w-fit">
+            Filtrar ao Clicar
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
-          {statCards.map((stat, i) => {
+        {/* Linhas da Lista de Categorias */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          {statCards.map((stat) => {
             const Icon = stat.icon;
             return (
-              <motion.div
+              <button
                 key={stat.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
+                type="button"
                 onClick={() => navigate(stat.id === 'domicilios' ? '/domicilios' : `/pacientes?filter=${stat.filter}`)}
-                className="bg-bg-primary hover:bg-teal-50/40 dark:hover:bg-teal-950/20 rounded-2xl p-3 border border-border hover:border-teal-400/40 shadow-xs cursor-pointer group transition-all duration-200 flex flex-col justify-between"
+                className="flex items-center justify-between p-2.5 px-3 rounded-xl bg-bg-primary/60 hover:bg-teal-50/70 dark:hover:bg-teal-950/40 border border-border hover:border-teal-300 dark:hover:border-teal-700/60 transition-all text-left group cursor-pointer shadow-2xs"
               >
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <div 
-                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform" 
-                    style={{ background: `linear-gradient(135deg, ${stat.config.primary}dd, ${stat.config.primary})`, color: '#fff' }}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform"
+                    style={{ background: `${stat.config.primary}18`, color: stat.config.primary }}
                   >
                     <Icon className="w-3.5 h-3.5" />
                   </div>
-                  <ArrowUpRight className="w-3 h-3 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-text-primary group-hover:text-teal-700 dark:group-hover:text-teal-300 block truncate">
+                      {stat.label}
+                    </span>
+                    <span className="text-[10px] text-text-muted block truncate">
+                      {stat.sublabel || 'Ver pacientes'}
+                    </span>
+                  </div>
                 </div>
 
-                <div>
-                  <h4 className="text-xl font-black text-text-primary leading-tight tabular-nums">{stat.value}</h4>
-                  <p className="text-[10px] text-text-muted font-bold uppercase tracking-wide truncate mt-0.5">{stat.label}</p>
+                <div className="flex items-center gap-1.5 shrink-0 pl-2">
+                  <span className="px-2 py-0.5 rounded-md bg-bg-secondary dark:bg-slate-800 border border-border text-xs font-extrabold text-text-primary tabular-nums group-hover:border-teal-300 group-hover:text-teal-600 transition-colors">
+                    {stat.value}
+                  </span>
+                  <ChevronRight className="w-3.5 h-3.5 text-text-muted group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all" />
                 </div>
-              </motion.div>
+              </button>
             );
           })}
         </div>
       </div>
 
       {/* 3. Row 1: Planejamento e Acompanhamento (Calendário, Prioritários) */}
-      <div className="grid grid-cols-12 gap-6 items-stretch">
+      <div className="grid grid-cols-12 gap-6 items-start">
         {/* Calendário de Visitas Realizadas */}
-        <div className="col-span-12 lg:col-span-8 flex flex-col">
-          <div className="bg-bg-secondary rounded-[32px] p-4 sm:p-5 border border-border shadow-sm flex flex-col h-full">
-            <div className="flex-1 overflow-auto">
+        <div className="col-span-12 lg:col-span-7 flex flex-col">
+          <div className="bg-bg-secondary rounded-[32px] p-4 sm:p-5 border border-border shadow-sm flex flex-col">
+            <div className="overflow-auto">
               <PendingCalendar visits={visits} patients={allPatients} />
             </div>
           </div>
         </div>
 
         {/* Acompanhamento Prioritário */}
-        <div className="col-span-12 lg:col-span-4 flex flex-col">
-          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col h-full">
+        <div className="col-span-12 lg:col-span-5 flex flex-col">
+          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col">
             <div className="flex items-center justify-between mb-4 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white shadow-md shadow-red-500/25">
@@ -393,6 +406,35 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                   </div>
                   <Badge variant={stats.childVisitAlerts > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-lg shrink-0">
                     {stats.childVisitAlerts > 0 ? 'PENDENTE' : 'EM DIA'}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Alerta: Pacientes Sem Domicílio Cadastrado (Imediatamente Visível) */}
+              <div 
+                onClick={() => navigate('/pacientes?filter=sem_domicilio')} 
+                className={`p-3 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
+                  ((stats as any).semDomicilioAlerts || 0) > 0
+                    ? 'border-rose-100 dark:border-rose-950/30 bg-rose-50/10 hover:bg-rose-50/20'
+                    : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
+                }`}
+                title="Clique para filtrar cidadãos sem domicílio e vincular/criar endereço"
+              >
+                <div className={`absolute top-0 left-0 w-[4px] h-full ${((stats as any).semDomicilioAlerts || 0) > 0 ? 'bg-rose-600' : 'bg-emerald-500'}`} />
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${((stats as any).semDomicilioAlerts || 0) > 0 ? 'bg-rose-600' : 'bg-emerald-500'}`}>
+                  {((stats as any).semDomicilioAlerts || 0) > 0 ? <Home className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
+                </div>
+                <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                  <div className="min-w-0">
+                    <h5 className="text-[12px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
+                      {((stats as any).semDomicilioAlerts || 0) > 0 
+                        ? `${(stats as any).semDomicilioAlerts} sem domicílio` 
+                        : 'Domicílios Vinculados'}
+                    </h5>
+                    <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Gerar / Vincular Endereço</p>
+                  </div>
+                  <Badge variant={((stats as any).semDomicilioAlerts || 0) > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-lg shrink-0">
+                    {((stats as any).semDomicilioAlerts || 0) > 0 ? 'CADASTRAR' : 'REGULAR'}
                   </Badge>
                 </div>
               </div>
@@ -497,35 +539,6 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                   </div>
                   <Badge variant={(stats as any).gestantesPendentes > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-lg shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300' : ''}`}>
                     {(stats as any).gestantesPendentes > 0 ? 'ATENÇÃO' : 'COMPLETO'}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Alerta 6: Pacientes Sem Domicílio Cadastrado */}
-              <div 
-                onClick={() => navigate('/pacientes?filter=sem_domicilio')} 
-                className={`p-3 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
-                  ((stats as any).semDomicilioAlerts || 0) > 0
-                    ? 'border-rose-100 dark:border-rose-950/30 bg-rose-50/10 hover:bg-rose-50/20'
-                    : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
-                }`}
-                title="Clique para filtrar cidadãos sem domicílio e vincular/criar endereço"
-              >
-                <div className={`absolute top-0 left-0 w-[4px] h-full ${((stats as any).semDomicilioAlerts || 0) > 0 ? 'bg-rose-600' : 'bg-emerald-500'}`} />
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${((stats as any).semDomicilioAlerts || 0) > 0 ? 'bg-rose-600' : 'bg-emerald-500'}`}>
-                  {((stats as any).semDomicilioAlerts || 0) > 0 ? <Home className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
-                </div>
-                <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                  <div className="min-w-0">
-                    <h5 className="text-[12px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
-                      {((stats as any).semDomicilioAlerts || 0) > 0 
-                        ? `${(stats as any).semDomicilioAlerts} sem domicílio` 
-                        : 'Domicílios Vinculados'}
-                    </h5>
-                    <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Gerar / Vincular Endereço</p>
-                  </div>
-                  <Badge variant={((stats as any).semDomicilioAlerts || 0) > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-lg shrink-0">
-                    {((stats as any).semDomicilioAlerts || 0) > 0 ? 'CADASTRAR' : 'REGULAR'}
                   </Badge>
                 </div>
               </div>
