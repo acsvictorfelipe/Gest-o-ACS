@@ -46,9 +46,36 @@ import { calculateAge, getAgeInMonths, getAgeNumber, formatDate, getPatientLastV
 import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 
 import { usePatientList } from '../hooks/usePatientList';
+import { PatientForm } from './PatientForm';
 
 export function PatientList({ user }: { user: AppUser | null }) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(() => {
+    return searchParams.get('selected') || null;
+  });
+
+  const handleSelectPatient = (id: string) => {
+    if (selectedPatientId === id) {
+      // Toggle off if clicked again
+      setSelectedPatientId(null);
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('selected');
+      setSearchParams(newParams, { replace: true });
+    } else {
+      setSelectedPatientId(id);
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('selected', id);
+      setSearchParams(newParams, { replace: true });
+    }
+  };
+
+  const handleCloseDetail = () => {
+    setSelectedPatientId(null);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('selected');
+    setSearchParams(newParams, { replace: true });
+  };
   const {
     patients,
     loading,
@@ -342,33 +369,45 @@ export function PatientList({ user }: { user: AppUser | null }) {
             </div>
           )}
 
-          <div className="bg-bg-secondary rounded-3xl border border-border overflow-hidden shadow-sm shadow-slate-100">
-          {/* Desktop Table View */}
-          <div className="hidden lg:block overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-bg-primary/50">
-                  <th className="px-8 py-5 text-[10px] font-semibold uppercase tracking-wider text-text-muted">Paciente</th>
-                  <th className="px-8 py-5 text-[10px] font-semibold uppercase tracking-wider text-text-muted">Monitoramento</th>
-                  <th className="px-8 py-5 text-[10px] font-semibold uppercase tracking-wider text-text-muted">Idade</th>
-                  <th className="px-8 py-5 text-[10px] font-semibold uppercase tracking-wider text-text-muted text-center">Situação</th>
-                  <th className="px-8 py-5 text-[10px] font-semibold uppercase tracking-wider text-text-muted text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
+          {/* Split Screen Master-Detail Layout */}
+          <div className="flex flex-col lg:flex-row gap-5 items-start">
+            <div className={`w-full transition-all duration-300 ${selectedPatientId ? 'lg:w-[42%] shrink-0' : 'w-full'}`}>
+              <div className="bg-bg-secondary rounded-3xl border border-border overflow-hidden shadow-sm shadow-slate-100">
+                {/* Desktop Table View */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-bg-primary/50">
+                        <th className="px-5 py-4 text-[10px] font-semibold uppercase tracking-wider text-text-muted">Paciente</th>
+                        {!selectedPatientId && (
+                          <>
+                            <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-wider text-text-muted">Monitoramento</th>
+                            <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-wider text-text-muted">Idade</th>
+                            <th className="px-6 py-4 text-[10px] font-semibold uppercase tracking-wider text-text-muted text-center">Situação</th>
+                          </>
+                        )}
+                        <th className="px-5 py-4 text-[10px] font-semibold uppercase tracking-wider text-text-muted text-right">Ação</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
                 {filteredPatients.length > 0 ? (
                   [...filteredPatients]
                     .sort(sortPatientsByAddressNumber)
                     .map((p) => {
                       const realVisitAt = getPatientLastVisitAt(p);
                       const isAtraso = isVisitLate(realVisitAt, p);
+                      const isSelected = selectedPatientId === p.id;
                       return (
                         <tr 
                           key={p.id} 
-                          className="hover:bg-slate-50 transition-all cursor-pointer group"
-                          onClick={() => navigate(`/editar-paciente/${p.id}`)}
+                          className={`transition-all cursor-pointer group ${
+                            isSelected 
+                              ? 'bg-teal-50/80 dark:bg-teal-950/40 ring-2 ring-inset ring-teal-500' 
+                              : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                          }`}
+                          onClick={() => handleSelectPatient(p.id)}
                         >
-                          <td className={`px-8 py-5 border-l-[6px] ${isPatientSemDomicilio(p) ? 'border-l-red-500' : 'border-l-emerald-500'}`}>
+                          <td className={`px-4 sm:px-6 py-4 border-l-[6px] ${isSelected ? 'border-l-teal-600' : isPatientSemDomicilio(p) ? 'border-l-red-500' : 'border-l-emerald-500'}`}>
                             <div>
                               <div>
                                  <div className="flex items-center gap-2 flex-wrap">
@@ -572,37 +611,41 @@ export function PatientList({ user }: { user: AppUser | null }) {
                             })()}
                           </div>
                         </td>
-                        <td className="px-8 py-5">
-                           <span className="text-[12px] font-semibold text-slate-600">{p.birth_date ? `${calculateAge(p.birth_date)}` : 'N/A'}</span>
-                        </td>
-                        <td className="px-8 py-5 text-center">
-                          {isAtraso ? (
-                            <span 
-                              className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-50 dark:bg-red-950/20 text-red-500 border border-red-100 dark:border-red-900/30 text-[11px] font-extrabold shadow-sm mx-auto" 
-                              title="Visita em Atraso"
-                            >
-                              !
-                            </span>
-                          ) : (
-                            <span className="block w-5 h-5 mx-auto" aria-hidden="true" />
-                          )}
-                        </td>
-                        <td className="px-8 py-5 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {p.household_id && (
+                        {!selectedPatientId && (
+                          <>
+                            <td className="px-6 py-4">
+                              <span className="text-[12px] font-semibold text-slate-600 dark:text-slate-300">{p.birth_date ? `${calculateAge(p.birth_date)}` : 'N/A'}</span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              {isAtraso ? (
+                                <span 
+                                  className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-50 dark:bg-red-950/20 text-red-500 border border-red-100 dark:border-red-900/30 text-[11px] font-extrabold shadow-sm mx-auto" 
+                                  title="Visita em Atraso"
+                                >
+                                  !
+                                </span>
+                              ) : (
+                                <span className="block w-5 h-5 mx-auto" aria-hidden="true" />
+                              )}
+                            </td>
+                          </>
+                        )}
+                        <td className="px-4 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {p.household_id && !selectedPatientId && (
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   navigate(`/domicilio/${p.household_id}`);
                                 }}
-                                className="p-2 rounded-xl text-slate-400 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-all border border-transparent hover:border-teal-200 dark:hover:border-teal-900/40"
-                                title="Ver Domicílio na Tela"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-all border border-transparent hover:border-teal-200"
+                                title="Ver Domicílio"
                               >
                                 <Home className="w-4 h-4" />
                               </button>
                             )}
-                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 group-hover:text-teal-600 transition-colors">
-                              <ChevronRight className="w-5 h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${isSelected ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-300 group-hover:text-teal-600'}`}>
+                              <ChevronRight className="w-4 h-4" />
                             </div>
                           </div>
                         </td>
@@ -611,7 +654,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-8 py-24 text-center">
+                    <td colSpan={selectedPatientId ? 2 : 5} className="px-8 py-20 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <User className="w-10 h-10 text-slate-200" />
                         <p className="text-sm font-semibold text-text-muted">Nenhum cidadão encontrado.</p>
@@ -632,9 +675,11 @@ export function PatientList({ user }: { user: AppUser | null }) {
                 <div 
                   key={p.id} 
                   className={`p-4 space-y-3 border-l-[6px] active:bg-slate-50 transition-colors ${
-                    isPatientSemDomicilio(p) ? 'border-l-red-500' : 'border-l-emerald-500'
+                    selectedPatientId === p.id 
+                      ? 'bg-teal-50/80 dark:bg-teal-950/40 border-l-teal-600 ring-2 ring-inset ring-teal-500' 
+                      : isPatientSemDomicilio(p) ? 'border-l-red-500' : 'border-l-emerald-500'
                   }`}
-                  onClick={() => navigate(`/editar-paciente/${p.id}`)}
+                  onClick={() => handleSelectPatient(p.id)}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -884,49 +929,60 @@ export function PatientList({ user }: { user: AppUser | null }) {
             )}
           </div>
 
-          {/* Pagination Controls */}
-          {totalCount > 0 && (
-            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900/60 border-t border-border dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-text-muted">
-              <div className="flex items-center gap-2">
-                <span>Exibindo página <strong>{currentPage}</strong> de <strong>{totalPages}</strong> ({totalCount} cidadãos cadastrados)</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1">
-                  <span>Por página:</span>
-                  <select
-                    value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                    className="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-semibold text-slate-700 dark:text-slate-200 focus:outline-none"
-                  >
-                    <option value={15}>15</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
-                  >
-                    Anterior
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage >= totalPages}
-                    className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
-                  >
-                    Próxima
-                  </button>
-                </div>
-              </div>
+          {/* Right Column: Editable Patient Record Form (Detail Panel) */}
+          {selectedPatientId && (
+            <div className="w-full lg:w-[58%] bg-bg-secondary rounded-3xl border border-border p-4 sm:p-6 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+              <PatientForm 
+                user={user} 
+                patientId={selectedPatientId} 
+                onClose={handleCloseDetail}
+              />
             </div>
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {totalCount > 0 && (
+          <div className="px-6 py-4 bg-bg-secondary rounded-2xl border border-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-text-muted mt-4">
+            <div className="flex items-center gap-2">
+              <span>Exibindo página <strong>{currentPage}</strong> de <strong>{totalPages}</strong> ({totalCount} cidadãos cadastrados)</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <span>Por página:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-semibold text-slate-700 dark:text-slate-200 focus:outline-none"
+                >
+                  <option value={15}>15</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
+                >
+                  Anterior
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
+                >
+                  Próxima
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )}
 

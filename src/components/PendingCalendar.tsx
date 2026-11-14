@@ -212,8 +212,8 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
           }
           .react-calendar__tile {
             height: 100% !important;
-            min-height: 48px !important;
-            padding: 4px 2px !important;
+            min-height: 38px !important;
+            padding: 2px 1px !important;
           }
         }
       `}</style>

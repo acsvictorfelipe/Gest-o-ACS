@@ -180,6 +180,7 @@ export function useDashboard(user: any) {
       lateVaccines: 0,
       childVisitAlerts: 0,
       receitasAVencer: 0,
+      semDomicilioAlerts: 0,
       newCidadaos: 0,
       newHouseholds: queryData?.newHCount || 0,
       newGestantes: 0,
@@ -303,6 +304,12 @@ export function useDashboard(user: any) {
         if (isVencendoOuVencida) {
           newStats.receitasAVencer++;
         }
+      }
+
+      // Check if patient has no household registered
+      const addr = (p.address || clinical.address || '').trim().toLowerCase();
+      if (!p.household_id || addr === 'não informado' || addr === 'nao informado' || addr === 'sem endereço' || addr === '') {
+        newStats.semDomicilioAlerts++;
       }
     });
 

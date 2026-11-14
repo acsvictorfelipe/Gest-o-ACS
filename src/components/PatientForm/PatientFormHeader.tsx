@@ -17,6 +17,7 @@ interface PatientFormHeaderProps {
   errors: any;
   onQuickVisit?: (category: 'geral' | 'gestante' | 'cronicos') => void;
   onOpenHouseholdModal?: () => void;
+  onClose?: () => void;
 }
 
 export function PatientFormHeader({
@@ -32,9 +33,25 @@ export function PatientFormHeader({
   hasExpiredPrescription,
   errors,
   onQuickVisit,
-  onOpenHouseholdModal
+  onOpenHouseholdModal,
+  onClose
 }: PatientFormHeaderProps) {
   const navigate = useNavigate();
+
+  const handleClose = async () => {
+    if (isDirty) {
+      const ok = await confirm({
+        title: 'Descartar alterações?',
+        message: 'Você possui alterações não salvas no prontuário. Deseja realmente sair sem salvar?'
+      });
+      if (!ok) return;
+    }
+    if (onClose) {
+      onClose();
+    } else {
+      navigate('/pacientes');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -178,20 +195,9 @@ export function PatientFormHeader({
           )}
           <button 
             type="button"
-            onClick={async () => {
-              if (isDirty) {
-                const ok = await confirm({
-                  title: 'Alterações não salvas',
-                  message: 'Há alterações não salvas. Deseja sair sem salvar?',
-                  variant: 'warning',
-                  confirmLabel: 'Sair sem salvar',
-                  cancelLabel: 'Ficar'
-                });
-                if (!ok) return;
-              }
-              navigate('/');
-            }} 
-            className="p-2 text-slate-500 hover:text-red-500 transition-colors bg-slate-50 rounded-lg"
+            onClick={handleClose} 
+            className="p-2 text-slate-500 hover:text-red-500 transition-colors bg-slate-50 rounded-lg cursor-pointer"
+            title="Fechar"
           >
             <X className="w-5 h-5" />
           </button>

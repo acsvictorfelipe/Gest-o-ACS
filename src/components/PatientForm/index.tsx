@@ -77,11 +77,22 @@ const safeMergeClinicalData = (dbClinical: any, defaultClinical: any): any => {
   return result;
 };
 
-export function PatientForm({ user }: { user: any }) {
+export function PatientForm({ 
+  user, 
+  patientId: propPatientId, 
+  onClose, 
+  onSaveSuccess 
+}: { 
+  user: any; 
+  patientId?: string; 
+  onClose?: () => void; 
+  onSaveSuccess?: () => void; 
+}) {
   const navigate = useNavigate();
   const { success, error: toastError } = useToast();
   const confirm = useConfirm();
-  const { id } = useParams();
+  const { id: paramId } = useParams();
+  const id = propPatientId || paramId;
   const location = useLocation();
 
   const [loading, setLoading] = useState(false);
@@ -736,6 +747,7 @@ export function PatientForm({ user }: { user: any }) {
         errors={methods.formState.errors}
         onQuickVisit={handleQuickVisit}
         onOpenHouseholdModal={() => setShowHouseholdDrawer(true)}
+        onClose={onClose}
       />
 
       {parentHousehold && (
@@ -793,6 +805,7 @@ export function PatientForm({ user }: { user: any }) {
             setFormData={setFormData}
             streets={user.streets}
             isReadOnly={isReadOnly}
+            onOpenHouseholdModal={() => setShowHouseholdDrawer(true)}
           />
           <CategoriesSection
             formData={formData}

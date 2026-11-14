@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, MessageCircle, Phone, Gift } from 'lucide-react';
+import { Home, MessageCircle, Phone, Gift, Users } from 'lucide-react';
 import { useToast } from '../../Toast';
 
 interface EnderecoSectionProps {
@@ -7,9 +7,10 @@ interface EnderecoSectionProps {
   setFormData: (updater: any) => void;
   isReadOnly?: boolean;
   streets?: string[];
+  onOpenHouseholdModal?: () => void;
 }
 
-export function EnderecoSection({ formData, setFormData, isReadOnly, streets = [] }: EnderecoSectionProps) {
+export function EnderecoSection({ formData, setFormData, isReadOnly, streets = [], onOpenHouseholdModal }: EnderecoSectionProps) {
   const [showStreets, setShowStreets] = useState(false);
   const [filteredStreets, setFilteredStreets] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -50,9 +51,22 @@ export function EnderecoSection({ formData, setFormData, isReadOnly, streets = [
   return (
     <div className="space-y-6">
       <section className="bg-bg-secondary dark:bg-slate-900 rounded-xl p-3.5 sm:p-6 border border-border dark:border-slate-800 shadow-sm space-y-6">
-        <div className="flex items-center gap-2 text-primary">
-          <Home className="w-4 h-4" />
-          <h3 className="text-sm font-bold uppercase tracking-tight">Endereço e Contato</h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-primary">
+            <Home className="w-4 h-4" />
+            <h3 className="text-sm font-bold uppercase tracking-tight">Endereço e Contato</h3>
+          </div>
+          {formData.householdId && onOpenHouseholdModal && (
+            <button
+              type="button"
+              onClick={onOpenHouseholdModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-900/60 text-teal-700 dark:text-teal-300 rounded-lg text-xs font-bold border border-teal-200 dark:border-teal-800 transition-all cursor-pointer shadow-2xs active:scale-95"
+              title="Abrir lista de familiares residentes no mesmo domicílio"
+            >
+              <Users className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+              <span>Ver Familiares no Domicílio</span>
+            </button>
+          )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-4">
           <div className="md:col-span-8 relative" ref={dropdownRef}>
