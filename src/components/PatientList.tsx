@@ -929,6 +929,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
             )}
           </div>
         </div>
+      </div>
 
           {/* Right Column: Editable Patient Record Form (Detail Panel) */}
           {selectedPatientId && (
