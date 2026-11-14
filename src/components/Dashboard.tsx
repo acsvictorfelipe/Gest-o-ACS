@@ -22,7 +22,8 @@ import {
   Megaphone,
   Sparkles,
   UserPlus,
-  ArrowUpRight
+  ArrowUpRight,
+  Home
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDate, calculateAge } from '../lib/dateUtils';
