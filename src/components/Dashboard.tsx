@@ -30,10 +30,6 @@ import { formatDate, calculateAge } from '../lib/dateUtils';
 import { Badge } from './Badge';
 import { PendingCalendar } from './PendingCalendar';
 import { motion } from 'motion/react';
-import {
-  AreaChart, Area, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
-} from 'recharts';
 import { UI_CONFIG } from '../constants';
 
 import { useDashboard } from '../hooks/useDashboard';
@@ -112,61 +108,56 @@ export function Dashboard({ user }: { user: AppUser | null }) {
     ((stats as any).gestantesPendentes || 0) +
     ((stats as any).semDomicilioAlerts || 0);
 
+  const categoryList = React.useMemo(() => [
+    { id: 'gestantes', label: 'Gestantes', sublabel: 'Acompanhamento pré-natal', value: stats.gestantes, filter: 'gestantes', icon: UI_CONFIG.categorias.gestantes.icon, color: '#ec4899' },
+    { id: 'criancas', label: 'Crianças ≤ 2 anos', sublabel: 'Puericultura e vacinas', value: stats.criancas2y, filter: 'criancas', icon: UI_CONFIG.categorias.criancas.icon, color: '#3b82f6' },
+    { id: 'hipertensos', label: 'Hipertensos', sublabel: 'Aferição e receitas', value: stats.hipertensos, filter: 'hipertensos', icon: UI_CONFIG.categorias.hipertensos.icon, color: '#f43f5e' },
+    { id: 'diabeticos', label: 'Diabéticos', sublabel: 'Glicemia e insulina', value: stats.diabeticos, filter: 'diabeticos', icon: UI_CONFIG.categorias.diabeticos.icon, color: '#06b6d4' },
+    { id: 'idosos', label: 'Idosos (60+)', sublabel: 'Acompanhamento contínuo', value: stats.idosos, filter: 'idosos', icon: UI_CONFIG.categorias.idosos.icon, color: '#f97316' },
+    { id: 'acamados', label: 'Acamados / Domiciliados', sublabel: 'Visitas domiciliares', value: stats.acamados, filter: 'acamados', icon: Bed, color: '#8b5cf6' },
+    { id: 'saudemental', label: 'Saúde Mental', sublabel: 'Acompanhamento psicossocial', value: stats.saudeMental || 0, filter: 'saudemental', icon: Heart, color: '#10b981' },
+    { id: 'sem_domicilio', label: 'Sem Domicílio Cadastrado', sublabel: 'Pendentes de endereço', value: (stats as any).semDomicilioAlerts || 0, filter: 'sem_domicilio', icon: Home, color: '#e11d48' },
+    { id: 'domicilios', label: 'Domicílios', sublabel: 'Total de residências', value: stats.totalHouseholds, filter: 'households', icon: MapPin, color: '#6366f1' },
+    { id: 'cidadaos', label: 'Cidadãos (Total)', sublabel: 'População cadastrada', value: stats.totalPatients, filter: 'all', icon: Users, color: '#64748b' },
+  ], [stats]);
+
   if (loading) return null;
 
   return (
-    <div className="space-y-6 relative pb-10">
-      {/* 1. Hero Header Welcome Banner */}
-      <motion.div
-        initial={{ opacity: 0, y: -15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="relative overflow-hidden rounded-[32px] bg-gradient-to-r from-teal-600 via-teal-700 to-emerald-800 p-6 md:p-8 text-white shadow-xl shadow-teal-900/10 border border-teal-500/30"
-      >
-        {/* Glow Effects */}
-        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-64 h-64 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 -mb-12 w-48 h-48 bg-teal-300/10 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-teal-100 text-[11px] font-bold uppercase tracking-wider border border-white/20">
-                <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-                Painel do Agente Comunitário
-              </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/20 text-teal-200 text-[10px] font-bold">
-                <MapPin className="w-3 h-3 text-teal-300" />
-                {user?.microarea ? `Microárea ${user.microarea}` : 'Microárea Geral'}
-              </span>
-            </div>
-
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
-              {greeting}, {user?.name || 'Agente'}! 👋
+    <div className="space-y-5 relative pb-10">
+      {/* 1. Header Minimalista da Microárea (Sem Banner Verde) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 pt-1 border-b border-border/40">
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-black text-text-primary tracking-tight">
+              Painel do Agente
             </h1>
-
-            <p className="text-xs sm:text-sm text-teal-100/90 font-medium leading-relaxed max-w-xl">
-              Acompanhamento integrado da saúde da sua comunidade.
-            </p>
+            <span className="px-2.5 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-900/40 text-[10px] font-bold">
+              {user?.microarea ? `Microárea ${user.microarea}` : 'Microárea Geral'}
+            </span>
           </div>
-
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <button
-              onClick={() => navigate('/pacientes?action=new')}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white text-teal-900 font-extrabold text-xs shadow-lg shadow-black/10 hover:bg-teal-50 active:scale-95 transition-all cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4 text-teal-700" />
-              Novo Cidadão
-            </button>
-            <button
-              onClick={() => navigate('/domicilios')}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/15 hover:bg-white/25 backdrop-blur-md text-white font-extrabold text-xs border border-white/20 active:scale-95 transition-all cursor-pointer"
-            >
-              <MapPin className="w-4 h-4 text-teal-200" />
-              Buscar Domicílio
-            </button>
-          </div>
+          <p className="text-xs text-text-muted font-medium mt-0.5">
+            {greeting}, <span className="font-bold text-text-primary">{user?.name || 'Agente'}</span>! Acompanhamento integrado da comunidade.
+          </p>
         </div>
-      </motion.div>
+
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            onClick={() => navigate('/pacientes?action=new')}
+            className="flex items-center gap-2 px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
+          >
+            <UserPlus className="w-4 h-4" />
+            Novo Cidadão
+          </button>
+          <button
+            onClick={() => navigate('/domicilios')}
+            className="flex items-center gap-2 px-3.5 py-2 bg-bg-secondary hover:bg-bg-primary text-text-primary border border-border rounded-xl font-bold text-xs active:scale-95 transition-all cursor-pointer"
+          >
+            <MapPin className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            Buscar Domicílio
+          </button>
+        </div>
+      </div>
 
       {/* Active Campaigns Banner */}
       {activeCampaigns.length > 0 && (
@@ -303,8 +294,8 @@ export function Dashboard({ user }: { user: AppUser | null }) {
               <Users className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-text-primary tracking-tight">Categorias de Acompanhamento</h3>
-              <p className="text-[11px] text-text-muted">Lista com filtro rápido — clique na categoria para visualizar e editar os pacientes</p>
+              <h3 className="text-sm font-extrabold text-text-primary tracking-tight">Categorias da Comunidade</h3>
+              <p className="text-[11px] text-text-muted">Lista com filtro instantâneo — clique em qualquer categoria para abrir a lista de pacientes filtrada</p>
             </div>
           </div>
           <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/50 px-2.5 py-1 rounded-full border border-teal-200 dark:border-teal-900/50 w-fit">
@@ -313,36 +304,36 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </div>
 
         {/* Linhas da Lista de Categorias */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-          {statCards.map((stat) => {
-            const Icon = stat.icon;
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5">
+          {categoryList.map((item) => {
+            const Icon = item.icon;
             return (
               <button
-                key={stat.id}
+                key={item.id}
                 type="button"
-                onClick={() => navigate(stat.id === 'domicilios' ? '/domicilios' : `/pacientes?filter=${stat.filter}`)}
-                className="flex items-center justify-between p-2.5 px-3 rounded-xl bg-bg-primary/60 hover:bg-teal-50/70 dark:hover:bg-teal-950/40 border border-border hover:border-teal-300 dark:hover:border-teal-700/60 transition-all text-left group cursor-pointer shadow-2xs"
+                onClick={() => navigate(item.id === 'domicilios' ? '/domicilios' : `/pacientes?filter=${item.filter}`)}
+                className="flex items-center justify-between py-2 px-3 rounded-xl bg-bg-primary/40 hover:bg-teal-50/70 dark:hover:bg-teal-950/40 border border-border/70 hover:border-teal-300 dark:hover:border-teal-700/60 transition-all text-left group cursor-pointer shadow-2xs"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div 
                     className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform"
-                    style={{ background: `${stat.config.primary}18`, color: stat.config.primary }}
+                    style={{ background: `${item.color}18`, color: item.color }}
                   >
                     <Icon className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
                     <span className="text-xs font-bold text-text-primary group-hover:text-teal-700 dark:group-hover:text-teal-300 block truncate">
-                      {stat.label}
+                      {item.label}
                     </span>
                     <span className="text-[10px] text-text-muted block truncate">
-                      {stat.sublabel || 'Ver pacientes'}
+                      {item.sublabel}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0 pl-2">
                   <span className="px-2 py-0.5 rounded-md bg-bg-secondary dark:bg-slate-800 border border-border text-xs font-extrabold text-text-primary tabular-nums group-hover:border-teal-300 group-hover:text-teal-600 transition-colors">
-                    {stat.value}
+                    {item.value}
                   </span>
                   <ChevronRight className="w-3.5 h-3.5 text-text-muted group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all" />
                 </div>
@@ -352,18 +343,71 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </div>
       </div>
 
-      {/* 3. Row 1: Planejamento e Acompanhamento (Calendário, Prioritários) */}
+      {/* 3. Planejamento, Alertas & Cadastros Recentes */}
       <div className="grid grid-cols-12 gap-6 items-start">
-        {/* Calendário de Visitas Realizadas */}
-        <div className="col-span-12 lg:col-span-7 flex flex-col">
+        {/* Coluna Esquerda: Calendário + Últimos Cadastros */}
+        <div className="col-span-12 lg:col-span-7 flex flex-col gap-6">
+          {/* Calendário de Visitas Realizadas */}
           <div className="bg-bg-secondary rounded-[32px] p-4 sm:p-5 border border-border shadow-sm flex flex-col">
             <div className="overflow-auto">
               <PendingCalendar visits={visits} patients={allPatients} />
             </div>
           </div>
+
+          {/* Últimos Cadastros */}
+          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col">
+            <div className="flex items-center justify-between mb-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/25">
+                  <Users className="w-4.5 h-4.5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-text-primary tracking-tight">Últimos Cadastros</h3>
+                  <p className="text-[10px] text-text-muted font-semibold">Cidadãos adicionados recentemente</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-[20px] font-black text-emerald-600 dark:text-emerald-400 leading-none">+{stats.newCidadaos}</p>
+                <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Este Mês</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2 pr-1 custom-scrollbar max-h-[340px] overflow-y-auto">
+              {lastRegisteredPatients.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center p-4">
+                  <p className="text-xs text-text-muted">Nenhum cidadão cadastrado recentemente.</p>
+                </div>
+              ) : (
+                lastRegisteredPatients.map((p, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="flex items-center gap-3 p-3 rounded-2xl bg-bg-primary/50 dark:bg-slate-800/20 hover:bg-bg-primary dark:hover:bg-slate-800/40 border border-border/50 transition-all duration-200 cursor-pointer group"
+                    onClick={() => navigate(`/domicilio/${p.household_id || ''}`)}
+                  >
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-xs shrink-0 shadow-sm bg-gradient-to-br from-teal-400 to-emerald-600">
+                      {p.name?.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-bold text-text-primary truncate leading-tight group-hover:text-teal-600 transition-colors">{p.name}</p>
+                      <p className="text-[9px] text-text-muted mt-0.5 font-semibold truncate">
+                        {p.birth_date ? calculateAge(p.birth_date) : 'Idade não informada'}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className="text-[9px] font-semibold text-text-muted">{p.created_at ? formatDate(p.created_at) : '--'}</span>
+                      <span className="px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wide bg-teal-100 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400">✦ Novo</span>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Acompanhamento Prioritário */}
+        {/* Coluna Direita: Acompanhamento Prioritário */}
         <div className="col-span-12 lg:col-span-5 flex flex-col">
           <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col">
             <div className="flex items-center justify-between mb-4 shrink-0">
@@ -543,138 +587,6 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Row 2: Histórico e Análises (Últimos Cadastros, Rosca Demográfica) */}
-      <div className="grid grid-cols-12 gap-6 items-stretch">
-        {/* Últimos Cadastros */}
-        <div className="col-span-12 lg:col-span-6 flex flex-col">
-          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col h-full min-h-[320px]">
-            <div className="flex items-center justify-between mb-4 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/25">
-                  <Users className="w-4.5 h-4.5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-text-primary tracking-tight">Últimos Cadastros</h3>
-                  <p className="text-[10px] text-text-muted font-semibold">Cidadãos adicionados recentemente</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-[20px] font-black text-emerald-600 dark:text-emerald-400 leading-none">+{stats.newCidadaos}</p>
-                <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Este Mês</p>
-              </div>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-              {lastRegisteredPatients.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                  <p className="text-xs text-text-muted">Nenhum cidadão cadastrado recentemente.</p>
-                </div>
-              ) : (
-                lastRegisteredPatients.map((p, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="flex items-center gap-3 p-3 rounded-2xl bg-bg-primary/50 dark:bg-slate-800/20 hover:bg-bg-primary dark:hover:bg-slate-800/40 border border-border/50 transition-all duration-200 cursor-pointer group"
-                    onClick={() => navigate(`/domicilio/${p.household_id || ''}`)}
-                  >
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-xs shrink-0 shadow-sm bg-gradient-to-br from-teal-400 to-emerald-600">
-                      {p.name?.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[12px] font-bold text-text-primary truncate leading-tight group-hover:text-teal-600 transition-colors">{p.name}</p>
-                      <p className="text-[9px] text-text-muted mt-0.5 font-semibold truncate">
-                        {p.birth_date ? calculateAge(p.birth_date) : 'Idade não informada'}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className="text-[9px] font-semibold text-text-muted">{p.created_at ? formatDate(p.created_at) : '--'}</span>
-                      <span className="px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wide bg-teal-100 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400">✦ Novo</span>
-                    </div>
-                  </motion.div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Distribuição por Categoria (Donut) */}
-        <div className="col-span-12 lg:col-span-6 flex flex-col">
-          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col h-full min-h-[320px]">
-            <div className="flex items-center gap-3 mb-4 shrink-0">
-              <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white shadow-md shadow-violet-500/25">
-                <Activity className="w-4.5 h-4.5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-text-primary tracking-tight">Perfil Clínico da Microárea</h3>
-                <p className="text-[10px] text-text-muted font-semibold">Distribuição de comorbidades e faixas etárias</p>
-              </div>
-            </div>
-            {distribuicaoData.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <p className="text-xs text-text-muted">Sem dados cadastrados.</p>
-              </div>
-            ) : (
-              <div className="flex-1 flex flex-col sm:flex-row items-center justify-between gap-4 min-h-0">
-                <div className="relative w-[140px] h-[140px] shrink-0 flex items-center justify-center">
-                  <PieChart width={140} height={140}>
-                    <Pie
-                      data={distribuicaoData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={42}
-                      outerRadius={60}
-                      paddingAngle={3}
-                      dataKey="value"
-                    >
-                      {distribuicaoData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'rgba(255, 255, 255, 0.96)', 
-                        border: '1px solid #e2e8f0', 
-                        borderRadius: '14px',
-                        fontSize: '11px',
-                        fontWeight: 'bold'
-                      }}
-                    />
-                  </PieChart>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-                    <span className="text-[20px] font-black text-text-primary leading-none">{stats.totalPatients}</span>
-                    <span className="text-[8px] text-text-muted font-black uppercase tracking-wider mt-0.5">Total</span>
-                  </div>
-                </div>
-                <div className="flex-1 w-full grid grid-cols-2 gap-x-3 gap-y-2 max-h-[240px] overflow-y-auto pr-1 custom-scrollbar">
-                  {distribuicaoData.map((d, index) => {
-                    const pct = stats.totalPatients > 0 ? ((d.value / stats.totalPatients) * 100).toFixed(0) : '0';
-                    return (
-                      <div key={index} className="flex flex-col gap-1 p-2 rounded-xl bg-bg-primary/30 dark:bg-slate-800/10 hover:bg-bg-primary/60 transition-colors min-w-0">
-                        <div className="flex items-center justify-between text-[10px] font-bold">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                            <span className="text-text-secondary truncate uppercase leading-none text-[9px] font-black">{d.name}</span>
-                          </div>
-                          <span className="text-text-primary font-black shrink-0 ml-1">{d.value}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: d.color }} />
-                          </div>
-                          <span className="text-[8px] text-text-muted font-extrabold leading-none shrink-0">{pct}%</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
