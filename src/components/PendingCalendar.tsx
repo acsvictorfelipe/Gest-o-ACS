@@ -126,7 +126,8 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
         }
         .react-calendar__month-view__weekdays {
           background: transparent !important;
-          padding: 4px 0 !important;
+          padding: 6px 0 !important;
+          margin-bottom: 3px !important;
           border-bottom: 1px solid var(--color-border) !important;
         }
         .react-calendar__month-view__weekdays__weekday {
@@ -141,9 +142,10 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
           text-decoration: none !important;
         }
         .react-calendar__tile {
-          min-height: 26px !important;
-          height: 26px !important;
-          padding: 1px 1px !important;
+          min-height: 38px !important;
+          height: 39px !important;
+          padding: 2px 1px !important;
+          margin-bottom: 2px !important;
           display: flex !important;
           flex-direction: column !important;
           align-items: center !important;
@@ -210,10 +212,10 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
       </div>
 
       {/* Calendar Body */}
-      <div className="flex-1 min-h-0 p-2.5 flex flex-col justify-between overflow-y-auto custom-scrollbar">
+      <div className="flex-1 min-h-0 p-3 flex flex-col justify-between overflow-y-auto custom-scrollbar">
         <div className="w-full select-none">
           {/* Month Selector Bar */}
-          <div className="flex items-center justify-between bg-bg-primary/90 dark:bg-slate-800 rounded-xl p-1 mb-2 border border-border/70">
+          <div className="flex items-center justify-between bg-bg-primary/90 dark:bg-slate-800 rounded-xl p-1 mb-2.5 border border-border/70">
             <button
               onClick={handlePrevMonth}
               className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-secondary transition-colors cursor-pointer"
@@ -245,7 +247,7 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
         </div>
 
         {/* Bottom Selected Day Status & Compact Legend */}
-        <div className="pt-2 mt-2 border-t border-border/60 flex flex-col gap-1.5">
+        <div className="pt-2.5 mt-auto border-t border-border/60 flex flex-col gap-1.5">
           <div className="flex items-center justify-between bg-bg-primary/60 dark:bg-slate-800/60 px-2.5 py-1.5 rounded-xl text-[11px] border border-border/50">
             <span className="text-text-muted truncate">
               <strong className="text-text-primary">

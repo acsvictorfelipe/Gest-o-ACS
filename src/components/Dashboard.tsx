@@ -84,7 +84,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
     return Array.from(uniqueMap.values())
       .filter(p => p.created_at)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 5);
+      .slice(0, 8);
   }, [allPatients]);
 
   const greeting = React.useMemo(() => {
@@ -534,20 +534,15 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                 <div
                   key={i}
                   onClick={() => navigate(p.household_id ? `/domicilio/${p.household_id}` : '/pacientes')}
-                  className="py-2 px-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors flex items-center justify-between gap-2 cursor-pointer group"
+                  className="py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors flex items-center justify-between gap-2 cursor-pointer group"
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-full bg-teal-600 text-white font-display font-bold text-[11px] flex items-center justify-center shrink-0 shadow-xs">
-                      {p.name?.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-teal-600 dark:group-hover:text-teal-400 truncate leading-tight">
-                        {p.name}
-                      </p>
-                      <p className="text-[10px] text-slate-400 leading-tight mt-0.5 truncate">
-                        {p.birth_date ? calculateAge(p.birth_date) : 'Idade N/I'} • {p.created_at ? formatDate(p.created_at) : '--'}
-                      </p>
-                    </div>
+                  <div className="min-w-0 flex-1 pr-1">
+                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-teal-600 dark:group-hover:text-teal-400 truncate leading-tight">
+                      {p.name}
+                    </p>
+                    <p className="text-[10px] text-slate-400 leading-tight mt-0.5 truncate">
+                      {p.birth_date ? calculateAge(p.birth_date) : 'Idade N/I'} • {p.created_at ? formatDate(p.created_at) : '--'}
+                    </p>
                   </div>
                   <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/50">
                     Novo
