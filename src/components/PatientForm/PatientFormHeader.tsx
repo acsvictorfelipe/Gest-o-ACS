@@ -49,7 +49,12 @@ export function PatientFormHeader({
     if (onClose) {
       onClose();
     } else {
-      navigate('/pacientes');
+      const targetH = formData.householdId;
+      if (targetH) {
+        navigate(`/domicilio/${targetH}`);
+      } else {
+        navigate('/pacientes');
+      }
     }
   };
 

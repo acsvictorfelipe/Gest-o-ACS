@@ -16,6 +16,7 @@ interface UsePatientFormSaveProps {
   setIsDirty: (dirty: boolean) => void;
   navigate: (path: string) => void;
   fromHouseholdId?: string | null;
+  onSaveSuccess?: () => void;
 }
 
 export function usePatientFormSave({
@@ -27,7 +28,8 @@ export function usePatientFormSave({
   originalLastVisitAt,
   setIsDirty,
   navigate,
-  fromHouseholdId
+  fromHouseholdId,
+  onSaveSuccess
 }: UsePatientFormSaveProps) {
   const [loading, setLoading] = useState(false);
 
@@ -269,10 +271,18 @@ export function usePatientFormSave({
           return;
         }
 
+        setIsDirty(false);
         success('Dados salvos localmente. Serão sincronizados quando houver internet.');
+
+        if (onSaveSuccess) {
+          onSaveSuccess();
+          return;
+        }
+
+        const targetHousehold = fromHouseholdId || patientData.household_id || formData.householdId;
         setTimeout(() => {
-          if (fromHouseholdId) {
-            navigate(`/domicilio/${fromHouseholdId}`);
+          if (targetHousehold) {
+            navigate(`/domicilio/${targetHousehold}`);
           } else {
             navigate(`/pacientes?filter=${getRedirectFilter(finalCategories)}`);
           }
@@ -430,10 +440,18 @@ export function usePatientFormSave({
         return;
       }
 
+      setIsDirty(false);
       success('Paciente salvo com sucesso!');
+
+      if (onSaveSuccess) {
+        onSaveSuccess();
+        return;
+      }
+
+      const targetHousehold = fromHouseholdId || householdId || formData.householdId;
       setTimeout(() => {
-        if (fromHouseholdId) {
-          navigate(`/domicilio/${fromHouseholdId}`);
+        if (targetHousehold) {
+          navigate(`/domicilio/${targetHousehold}`);
         } else {
           navigate(`/pacientes?filter=${getRedirectFilter(formData.categories)}`);
         }

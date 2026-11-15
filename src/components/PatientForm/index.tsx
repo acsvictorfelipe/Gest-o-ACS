@@ -398,7 +398,8 @@ export function PatientForm({
     originalLastVisitAt,
     setIsDirty,
     navigate,
-    fromHouseholdId
+    fromHouseholdId: fromHouseholdId || formData.householdId || parentHousehold?.id,
+    onSaveSuccess
   });
 
   const handleSaveAndAddAnother = () => {
@@ -843,8 +844,13 @@ export function PatientForm({
               });
               if (!ok) return;
             }
-            if (fromHouseholdId) {
-              navigate(`/domicilio/${fromHouseholdId}`);
+            if (onClose) {
+              onClose();
+              return;
+            }
+            const targetH = fromHouseholdId || formData.householdId || parentHousehold?.id;
+            if (targetH) {
+              navigate(`/domicilio/${targetH}`);
             } else {
               navigate('/pacientes');
             }
