@@ -143,9 +143,9 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
           text-decoration: none !important;
         }
         .react-calendar__tile {
-          min-height: 32px !important;
-          height: 32px !important;
-          padding: 2px 1px !important;
+          min-height: 28px !important;
+          height: 28px !important;
+          padding: 1px 1px !important;
           display: flex !important;
           flex-direction: column !important;
           align-items: center !important;
@@ -170,7 +170,7 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
           background: var(--color-bg-secondary) !important;
           color: var(--color-text-primary) !important;
           border: 2px solid #0d9488 !important;
-          border-radius: 10px !important;
+          border-radius: 8px !important;
           z-index: 10;
         }
         .react-calendar__tile--active:enabled:hover, .react-calendar__tile--active:enabled:focus {
@@ -185,8 +185,8 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
         }
         @media (min-width: 1024px) {
           .react-calendar__tile {
-            min-height: 32px !important;
-            height: 32px !important;
+            min-height: 28px !important;
+            height: 28px !important;
             padding: 1px 1px !important;
           }
         }
@@ -229,7 +229,7 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
       </div>
 
       {/* Calendar Grid Container */}
-      <div className="flex-1 min-h-[260px] sm:min-h-[300px]">
+      <div className="flex-1 min-h-[190px]">
         <Calendar
           onClickDay={handleDateClick}
           activeStartDate={activeStartDate}
@@ -242,11 +242,11 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
       </div>
 
       {/* Category Legend Bar */}
-      <div className="mt-3 flex flex-wrap justify-center items-center gap-x-3 gap-y-1 px-1 shrink-0 pt-2 border-t border-border/40">
+      <div className="mt-1.5 flex flex-wrap justify-center items-center gap-x-2.5 gap-y-0.5 px-1 shrink-0 pt-1.5 border-t border-border/40">
         {Object.values(CATEGORY_PALETTE).slice(0, 6).map(item => (
-          <div key={item.label} className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: item.primary }} />
-            <span className="text-[9px] font-extrabold text-text-muted uppercase tracking-wider">{item.label}</span>
+          <div key={item.label} className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full shadow-xs" style={{ backgroundColor: item.primary }} />
+            <span className="text-[8px] font-extrabold text-text-muted uppercase tracking-wider">{item.label}</span>
           </div>
         ))}
       </div>

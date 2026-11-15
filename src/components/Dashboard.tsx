@@ -124,36 +124,36 @@ export function Dashboard({ user }: { user: AppUser | null }) {
   if (loading) return null;
 
   return (
-    <div className="space-y-5 relative pb-10">
+    <div className="space-y-3 relative pb-2">
       {/* 1. Header Minimalista da Microárea (Sem Banner Verde) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 pt-1 border-b border-border/40">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1.5 pt-0 border-b border-border/40">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-black text-text-primary tracking-tight">
+            <h1 className="text-lg sm:text-xl font-black text-text-primary tracking-tight">
               Painel do Agente
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-900/40 text-[10px] font-bold">
+            <span className="px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-900/40 text-[10px] font-bold">
               {user?.microarea ? `Microárea ${user.microarea}` : 'Microárea Geral'}
             </span>
           </div>
-          <p className="text-xs text-text-muted font-medium mt-0.5">
+          <p className="text-[11px] text-text-muted font-medium mt-0.5">
             {greeting}, <span className="font-bold text-text-primary">{user?.name || 'Agente'}</span>! Acompanhamento integrado da comunidade.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => navigate('/pacientes?action=new')}
-            className="flex items-center gap-2 px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all cursor-pointer"
           >
-            <UserPlus className="w-4 h-4" />
+            <UserPlus className="w-3.5 h-3.5" />
             Novo Cidadão
           </button>
           <button
             onClick={() => navigate('/domicilios')}
-            className="flex items-center gap-2 px-3.5 py-2 bg-bg-secondary hover:bg-bg-primary text-text-primary border border-border rounded-xl font-bold text-xs active:scale-95 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-bg-secondary hover:bg-bg-primary text-text-primary border border-border rounded-xl font-bold text-xs active:scale-95 transition-all cursor-pointer"
           >
-            <MapPin className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            <MapPin className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
             Buscar Domicílio
           </button>
         </div>
@@ -286,307 +286,292 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </div>
       )}
 
-      {/* 2. Categorias de Acompanhamento em Lista Compacta */}
-      <div className="bg-bg-secondary rounded-[24px] p-4 sm:p-5 border border-border shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-border/60 gap-2">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center">
-              <Users className="w-4 h-4" />
+      {/* Grade 2x2 com os 4 Cards Principais (Visíveis sem rolagem) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-stretch">
+        {/* Card 1: Categorias da Comunidade */}
+        <div className="bg-bg-secondary rounded-2xl p-3 sm:p-3.5 border border-border shadow-xs flex flex-col justify-between h-[305px] overflow-hidden">
+          <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-border/60 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+                <Users className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <h3 className="text-xs font-black text-text-primary tracking-tight">Categorias da Comunidade</h3>
+                <p className="text-[10px] text-text-muted font-medium">Clique para filtrar pacientes instantaneamente</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-extrabold text-text-primary tracking-tight">Categorias da Comunidade</h3>
-              <p className="text-[11px] text-text-muted">Lista com filtro instantâneo — clique em qualquer categoria para abrir a lista de pacientes filtrada</p>
-            </div>
+            <span className="text-[9px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/50 px-2 py-0.5 rounded-full border border-teal-200 dark:border-teal-900/50">
+              Filtro Rápido
+            </span>
           </div>
-          <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/50 px-2.5 py-1 rounded-full border border-teal-200 dark:border-teal-900/50 w-fit">
-            Filtrar ao Clicar
-          </span>
-        </div>
 
-        {/* Linhas da Lista de Categorias */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5">
-          {categoryList.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => navigate(item.id === 'domicilios' ? '/domicilios' : `/pacientes?filter=${item.filter}`)}
-                className="flex items-center justify-between py-2 px-3 rounded-xl bg-bg-primary/40 hover:bg-teal-50/70 dark:hover:bg-teal-950/40 border border-border/70 hover:border-teal-300 dark:hover:border-teal-700/60 transition-all text-left group cursor-pointer shadow-2xs"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div 
-                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform"
-                    style={{ background: `${item.color}18`, color: item.color }}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="min-w-0">
-                    <span className="text-xs font-bold text-text-primary group-hover:text-teal-700 dark:group-hover:text-teal-300 block truncate">
+          <div className="grid grid-cols-2 gap-1.5 flex-1 content-start overflow-y-auto pr-0.5 custom-scrollbar">
+            {categoryList.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => navigate(item.id === 'domicilios' ? '/domicilios' : `/pacientes?filter=${item.filter}`)}
+                  className="flex items-center justify-between py-1.5 px-2 rounded-xl bg-bg-primary/40 hover:bg-teal-50/70 dark:hover:bg-teal-950/40 border border-border/70 hover:border-teal-300 dark:hover:border-teal-700/60 transition-all text-left group cursor-pointer shadow-2xs"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <div 
+                      className="w-5.5 h-5.5 rounded-md flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"
+                      style={{ background: `${item.color}18`, color: item.color }}
+                    >
+                      <Icon className="w-3 h-3" />
+                    </div>
+                    <span className="text-[11px] font-bold text-text-primary group-hover:text-teal-700 dark:group-hover:text-teal-300 truncate">
                       {item.label}
                     </span>
-                    <span className="text-[10px] text-text-muted block truncate">
-                      {item.sublabel}
-                    </span>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-1.5 shrink-0 pl-2">
-                  <span className="px-2 py-0.5 rounded-md bg-bg-secondary dark:bg-slate-800 border border-border text-xs font-extrabold text-text-primary tabular-nums group-hover:border-teal-300 group-hover:text-teal-600 transition-colors">
+                  <span className="px-1.5 py-0.2 rounded bg-bg-secondary dark:bg-slate-800 border border-border text-[10px] font-black text-text-primary tabular-nums shrink-0 ml-1">
                     {item.value}
                   </span>
-                  <ChevronRight className="w-3.5 h-3.5 text-text-muted group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all" />
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 3. Planejamento, Alertas & Cadastros Recentes */}
-      <div className="grid grid-cols-12 gap-6 items-start">
-        {/* Coluna Esquerda: Calendário + Últimos Cadastros */}
-        <div className="col-span-12 lg:col-span-7 flex flex-col gap-6">
-          {/* Calendário de Visitas Realizadas */}
-          <div className="bg-bg-secondary rounded-[32px] p-4 sm:p-5 border border-border shadow-sm flex flex-col">
-            <div className="overflow-auto">
-              <PendingCalendar visits={visits} patients={allPatients} />
-            </div>
-          </div>
-
-          {/* Últimos Cadastros */}
-          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col">
-            <div className="flex items-center justify-between mb-4 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/25">
-                  <Users className="w-4.5 h-4.5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-text-primary tracking-tight">Últimos Cadastros</h3>
-                  <p className="text-[10px] text-text-muted font-semibold">Cidadãos adicionados recentemente</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-[20px] font-black text-emerald-600 dark:text-emerald-400 leading-none">+{stats.newCidadaos}</p>
-                <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Este Mês</p>
-              </div>
-            </div>
-            
-            <div className="space-y-2 pr-1 custom-scrollbar max-h-[340px] overflow-y-auto">
-              {lastRegisteredPatients.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center p-4">
-                  <p className="text-xs text-text-muted">Nenhum cidadão cadastrado recentemente.</p>
-                </div>
-              ) : (
-                lastRegisteredPatients.map((p, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="flex items-center gap-3 p-3 rounded-2xl bg-bg-primary/50 dark:bg-slate-800/20 hover:bg-bg-primary dark:hover:bg-slate-800/40 border border-border/50 transition-all duration-200 cursor-pointer group"
-                    onClick={() => navigate(`/domicilio/${p.household_id || ''}`)}
-                  >
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-xs shrink-0 shadow-sm bg-gradient-to-br from-teal-400 to-emerald-600">
-                      {p.name?.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[12px] font-bold text-text-primary truncate leading-tight group-hover:text-teal-600 transition-colors">{p.name}</p>
-                      <p className="text-[9px] text-text-muted mt-0.5 font-semibold truncate">
-                        {p.birth_date ? calculateAge(p.birth_date) : 'Idade não informada'}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className="text-[9px] font-semibold text-text-muted">{p.created_at ? formatDate(p.created_at) : '--'}</span>
-                      <span className="px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wide bg-teal-100 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400">✦ Novo</span>
-                    </div>
-                  </motion.div>
-                ))
-              )}
-            </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Coluna Direita: Acompanhamento Prioritário */}
-        <div className="col-span-12 lg:col-span-5 flex flex-col">
-          <div className="bg-bg-secondary rounded-[32px] p-5 border border-border shadow-sm flex flex-col">
-            <div className="flex items-center justify-between mb-4 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white shadow-md shadow-red-500/25">
-                  <ShieldAlert className="w-4.5 h-4.5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-text-primary tracking-tight">Acompanhamento Prioritário</h3>
-                  <p className="text-[10px] text-text-muted font-semibold">Alertas clínicos ativos</p>
-                </div>
+        {/* Card 2: Acompanhamento Prioritário */}
+        <div className="bg-bg-secondary rounded-2xl p-3 sm:p-3.5 border border-border shadow-xs flex flex-col justify-between h-[305px] overflow-hidden">
+          <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-border/60 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white shadow-xs shrink-0">
+                <ShieldAlert className="w-3.5 h-3.5" />
               </div>
-              {totalPriorityAlerts > 0 && (
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900/40">
-                  {totalPriorityAlerts}
-                </span>
-              )}
+              <div>
+                <h3 className="text-xs font-black text-text-primary tracking-tight">Acompanhamento Prioritário</h3>
+                <p className="text-[10px] text-text-muted font-medium">Alertas clínicos ativos na microárea</p>
+              </div>
+            </div>
+            {totalPriorityAlerts > 0 && (
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900/40">
+                {totalPriorityAlerts} alertas
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-1.5 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+            {/* Alerta 1: Crianças / Bebês */}
+            <div 
+              onClick={() => navigate('/pacientes?filter=pending_6m')} 
+              className={`p-2 rounded-xl border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
+                stats.childVisitAlerts > 0
+                  ? 'border-red-100 dark:border-red-950/30 bg-red-50/10 hover:bg-red-50/20'
+                  : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
+              }`}
+            >
+              <div className={`absolute top-0 left-0 w-[3px] h-full ${stats.childVisitAlerts > 0 ? 'bg-red-500' : 'bg-emerald-500'}`} />
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white shadow-xs shrink-0 ${stats.childVisitAlerts > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                {stats.childVisitAlerts > 0 ? <Baby className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
+              </div>
+              <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
+                <div className="min-w-0">
+                  <h5 className="text-[11px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
+                    {stats.childVisitAlerts > 0 ? `${stats.childVisitAlerts} visitas (bebês)` : 'Bebês c/ Visita'}
+                  </h5>
+                  <p className="text-[9px] text-text-muted font-bold uppercase truncate">Acompanhamento até 6m</p>
+                </div>
+                <Badge variant={stats.childVisitAlerts > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0">
+                  {stats.childVisitAlerts > 0 ? 'PENDENTE' : 'EM DIA'}
+                </Badge>
+              </div>
             </div>
 
-            <div className="space-y-2.5 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-              {/* Alerta 1: Crianças / Bebês */}
-              <div 
-                onClick={() => navigate('/pacientes?filter=pending_6m')} 
-                className={`p-3 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
-                  stats.childVisitAlerts > 0
-                    ? 'border-red-100 dark:border-red-950/30 bg-red-50/10 hover:bg-red-50/20'
-                    : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
-                }`}
-              >
-                <div className={`absolute top-0 left-0 w-[4px] h-full ${stats.childVisitAlerts > 0 ? 'bg-red-500' : 'bg-emerald-500'}`} />
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${stats.childVisitAlerts > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
-                  {stats.childVisitAlerts > 0 ? <Baby className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
-                </div>
-                <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                  <div className="min-w-0">
-                    <h5 className="text-[12px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
-                      {stats.childVisitAlerts > 0 ? `${stats.childVisitAlerts} visitas (bebês)` : 'Bebês c/ Visita'}
-                    </h5>
-                    <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Acompanhamento até 6m</p>
-                  </div>
-                  <Badge variant={stats.childVisitAlerts > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-lg shrink-0">
-                    {stats.childVisitAlerts > 0 ? 'PENDENTE' : 'EM DIA'}
-                  </Badge>
-                </div>
+            {/* Alerta 2: Sem Domicílio Cadastrado */}
+            <div 
+              onClick={() => navigate('/pacientes?filter=sem_domicilio')} 
+              className={`p-2 rounded-xl border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
+                ((stats as any).semDomicilioAlerts || 0) > 0
+                  ? 'border-rose-100 dark:border-rose-950/30 bg-rose-50/10 hover:bg-rose-50/20'
+                  : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
+              }`}
+              title="Clique para filtrar cidadãos sem domicílio e vincular/criar endereço"
+            >
+              <div className={`absolute top-0 left-0 w-[3px] h-full ${((stats as any).semDomicilioAlerts || 0) > 0 ? 'bg-rose-600' : 'bg-emerald-500'}`} />
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white shadow-xs shrink-0 ${((stats as any).semDomicilioAlerts || 0) > 0 ? 'bg-rose-600' : 'bg-emerald-500'}`}>
+                {((stats as any).semDomicilioAlerts || 0) > 0 ? <Home className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
-
-              {/* Alerta: Pacientes Sem Domicílio Cadastrado (Imediatamente Visível) */}
-              <div 
-                onClick={() => navigate('/pacientes?filter=sem_domicilio')} 
-                className={`p-3 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
-                  ((stats as any).semDomicilioAlerts || 0) > 0
-                    ? 'border-rose-100 dark:border-rose-950/30 bg-rose-50/10 hover:bg-rose-50/20'
-                    : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
-                }`}
-                title="Clique para filtrar cidadãos sem domicílio e vincular/criar endereço"
-              >
-                <div className={`absolute top-0 left-0 w-[4px] h-full ${((stats as any).semDomicilioAlerts || 0) > 0 ? 'bg-rose-600' : 'bg-emerald-500'}`} />
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${((stats as any).semDomicilioAlerts || 0) > 0 ? 'bg-rose-600' : 'bg-emerald-500'}`}>
-                  {((stats as any).semDomicilioAlerts || 0) > 0 ? <Home className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
+              <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
+                <div className="min-w-0">
+                  <h5 className="text-[11px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
+                    {((stats as any).semDomicilioAlerts || 0) > 0 
+                      ? `${(stats as any).semDomicilioAlerts} sem domicílio` 
+                      : 'Domicílios Vinculados'}
+                  </h5>
+                  <p className="text-[9px] text-text-muted font-bold uppercase truncate">Gerar / Vincular Endereço</p>
                 </div>
-                <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                  <div className="min-w-0">
-                    <h5 className="text-[12px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
-                      {((stats as any).semDomicilioAlerts || 0) > 0 
-                        ? `${(stats as any).semDomicilioAlerts} sem domicílio` 
-                        : 'Domicílios Vinculados'}
-                    </h5>
-                    <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Gerar / Vincular Endereço</p>
-                  </div>
-                  <Badge variant={((stats as any).semDomicilioAlerts || 0) > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-lg shrink-0">
-                    {((stats as any).semDomicilioAlerts || 0) > 0 ? 'CADASTRAR' : 'REGULAR'}
-                  </Badge>
-                </div>
+                <Badge variant={((stats as any).semDomicilioAlerts || 0) > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0">
+                  {((stats as any).semDomicilioAlerts || 0) > 0 ? 'CADASTRAR' : 'REGULAR'}
+                </Badge>
               </div>
+            </div>
 
-              {/* Alerta 2: Visitas em Atraso */}
-              <div 
-                onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} 
-                className={`p-3 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
-                  stats.pendingVisits > 0
-                    ? 'border-orange-100 dark:border-orange-950/30 bg-orange-50/10 hover:bg-orange-50/20'
-                    : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
-                }`}
-              >
-                <div className={`absolute top-0 left-0 w-[4px] h-full ${stats.pendingVisits > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`} />
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${stats.pendingVisits > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`}>
-                  {stats.pendingVisits > 0 ? <CalendarIcon className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
-                </div>
-                <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                  <div className="min-w-0">
-                    <h5 className="text-[12px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
-                      {stats.pendingVisits > 0 ? `${stats.pendingVisits} visitas em atraso` : 'Visitas da Microárea'}
-                    </h5>
-                    <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Rotina mensal de campo</p>
-                  </div>
-                  <div className={`px-2 py-0.5 rounded-lg text-[9px] font-black shadow-sm shrink-0 ${stats.pendingVisits > 0 ? 'bg-orange-500 text-white' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'}`}>
-                    {stats.pendingVisits > 0 ? stats.pendingVisits : 'OK'}
-                  </div>
-                </div>
+            {/* Alerta 3: Visitas em Atraso */}
+            <div 
+              onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} 
+              className={`p-2 rounded-xl border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
+                stats.pendingVisits > 0
+                  ? 'border-orange-100 dark:border-orange-950/30 bg-orange-50/10 hover:bg-orange-50/20'
+                  : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
+              }`}
+            >
+              <div className={`absolute top-0 left-0 w-[3px] h-full ${stats.pendingVisits > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`} />
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white shadow-xs shrink-0 ${stats.pendingVisits > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`}>
+                {stats.pendingVisits > 0 ? <CalendarIcon className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
-
-              {/* Alerta 3: Vacinas Atrasadas */}
-              <div 
-                onClick={() => navigate('/pacientes?filter=vacinas_atrasadas')} 
-                className={`p-3 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
-                  stats.lateVaccines > 0
-                    ? 'border-red-100 dark:border-red-950/30 bg-red-50/10 hover:bg-red-50/20'
-                    : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
-                }`}
-              >
-                <div className={`absolute top-0 left-0 w-[4px] h-full ${stats.lateVaccines > 0 ? 'bg-red-500' : 'bg-emerald-500'}`} />
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${stats.lateVaccines > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
-                  {stats.lateVaccines > 0 ? <ShieldAlert className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
+              <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
+                <div className="min-w-0">
+                  <h5 className="text-[11px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
+                    {stats.pendingVisits > 0 ? `${stats.pendingVisits} visitas em atraso` : 'Visitas da Microárea'}
+                  </h5>
+                  <p className="text-[9px] text-text-muted font-bold uppercase truncate">Rotina mensal de campo</p>
                 </div>
-                <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                  <div className="min-w-0">
-                    <h5 className="text-[12px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
-                      {stats.lateVaccines > 0 ? `${stats.lateVaccines} vacinas atrasadas` : 'Vacinação de Crianças'}
-                    </h5>
-                    <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Crianças menores de 2 anos</p>
-                  </div>
-                  <Badge variant={stats.lateVaccines > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-lg shrink-0">
-                    {stats.lateVaccines > 0 ? 'ATRASO' : 'COMPLETO'}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Alerta 4: Receitas Vencendo */}
-              <div 
-                onClick={() => navigate('/pacientes?filter=receitas_vencendo')} 
-                className={`p-3 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
-                  stats.receitasAVencer > 0
-                    ? 'border-purple-100 dark:border-purple-950/30 bg-purple-50/10 hover:bg-purple-50/20'
-                    : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
-                }`}
-              >
-                <div className={`absolute top-0 left-0 w-[4px] h-full ${stats.receitasAVencer > 0 ? 'bg-purple-500' : 'bg-emerald-500'}`} />
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${stats.receitasAVencer > 0 ? 'bg-purple-500' : 'bg-emerald-500'}`}>
-                  {stats.receitasAVencer > 0 ? <Activity className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
-                </div>
-                <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                  <div className="min-w-0">
-                    <h5 className="text-[12px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
-                      {stats.receitasAVencer > 0 ? `${stats.receitasAVencer} receitas vencendo` : 'Receitas de Uso Contínuo'}
-                    </h5>
-                    <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Medicamentos controlados</p>
-                  </div>
-                  <Badge variant={stats.receitasAVencer > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-lg shrink-0 ${stats.receitasAVencer > 0 ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300' : ''}`}>
-                    {stats.receitasAVencer > 0 ? 'ATENÇÃO' : 'VÁLIDAS'}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Alerta 5: Pré-Natal / Visitas Gestante Pendentes */}
-              <div 
-                onClick={() => navigate('/pacientes?filter=gestantes')} 
-                className={`p-3 rounded-[20px] border flex items-center gap-3 relative overflow-hidden group transition-all cursor-pointer ${
-                  (stats as any).gestantesPendentes > 0
-                    ? 'border-pink-100 dark:border-pink-950/30 bg-pink-50/10 hover:bg-pink-50/20'
-                    : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
-                }`}
-              >
-                <div className={`absolute top-0 left-0 w-[4px] h-full ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-500' : 'bg-emerald-500'}`} />
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-500' : 'bg-emerald-500'}`}>
-                  {(stats as any).gestantesPendentes > 0 ? <Baby className="w-4.5 h-4.5" /> : <Check className="w-4.5 h-4.5 stroke-[3]" />}
-                </div>
-                <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                  <div className="min-w-0">
-                    <h5 className="text-[12px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
-                      {(stats as any).gestantesPendentes > 0 ? `${(stats as any).gestantesPendentes} gestações pendentes` : 'Gestações em Dia'}
-                    </h5>
-                    <p className="text-[9px] text-text-muted font-bold mt-0.5 uppercase">Metas de Consultas (9) & ACS (3)</p>
-                  </div>
-                  <Badge variant={(stats as any).gestantesPendentes > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-lg shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300' : ''}`}>
-                    {(stats as any).gestantesPendentes > 0 ? 'ATENÇÃO' : 'COMPLETO'}
-                  </Badge>
+                <div className={`px-1.5 py-0.5 rounded text-[8px] font-black shadow-xs shrink-0 ${stats.pendingVisits > 0 ? 'bg-orange-500 text-white' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'}`}>
+                  {stats.pendingVisits > 0 ? stats.pendingVisits : 'OK'}
                 </div>
               </div>
             </div>
+
+            {/* Alerta 4: Vacinas Atrasadas */}
+            <div 
+              onClick={() => navigate('/pacientes?filter=vacinas_atrasadas')} 
+              className={`p-2 rounded-xl border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
+                stats.lateVaccines > 0
+                  ? 'border-red-100 dark:border-red-950/30 bg-red-50/10 hover:bg-red-50/20'
+                  : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
+              }`}
+            >
+              <div className={`absolute top-0 left-0 w-[3px] h-full ${stats.lateVaccines > 0 ? 'bg-red-500' : 'bg-emerald-500'}`} />
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white shadow-xs shrink-0 ${stats.lateVaccines > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                {stats.lateVaccines > 0 ? <ShieldAlert className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
+              </div>
+              <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
+                <div className="min-w-0">
+                  <h5 className="text-[11px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
+                    {stats.lateVaccines > 0 ? `${stats.lateVaccines} vacinas atrasadas` : 'Vacinação de Crianças'}
+                  </h5>
+                  <p className="text-[9px] text-text-muted font-bold uppercase truncate">Crianças menores de 2 anos</p>
+                </div>
+                <Badge variant={stats.lateVaccines > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0">
+                  {stats.lateVaccines > 0 ? 'ATRASO' : 'COMPLETO'}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Alerta 5: Receitas Vencendo */}
+            <div 
+              onClick={() => navigate('/pacientes?filter=receitas_vencendo')} 
+              className={`p-2 rounded-xl border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
+                stats.receitasAVencer > 0
+                  ? 'border-purple-100 dark:border-purple-950/30 bg-purple-50/10 hover:bg-purple-50/20'
+                  : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
+              }`}
+            >
+              <div className={`absolute top-0 left-0 w-[3px] h-full ${stats.receitasAVencer > 0 ? 'bg-purple-500' : 'bg-emerald-500'}`} />
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white shadow-xs shrink-0 ${stats.receitasAVencer > 0 ? 'bg-purple-500' : 'bg-emerald-500'}`}>
+                {stats.receitasAVencer > 0 ? <Activity className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
+              </div>
+              <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
+                <div className="min-w-0">
+                  <h5 className="text-[11px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
+                    {stats.receitasAVencer > 0 ? `${stats.receitasAVencer} receitas vencendo` : 'Receitas de Uso Contínuo'}
+                  </h5>
+                  <p className="text-[9px] text-text-muted font-bold uppercase truncate">Medicamentos controlados</p>
+                </div>
+                <Badge variant={stats.receitasAVencer > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0 ${stats.receitasAVencer > 0 ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300' : ''}`}>
+                  {stats.receitasAVencer > 0 ? 'ATENÇÃO' : 'VÁLIDAS'}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Alerta 6: Pré-Natal / Visitas Gestante Pendentes */}
+            <div 
+              onClick={() => navigate('/pacientes?filter=gestantes')} 
+              className={`p-2 rounded-xl border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
+                (stats as any).gestantesPendentes > 0
+                  ? 'border-pink-100 dark:border-pink-950/30 bg-pink-50/10 hover:bg-pink-50/20'
+                  : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
+              }`}
+            >
+              <div className={`absolute top-0 left-0 w-[3px] h-full ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-500' : 'bg-emerald-500'}`} />
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white shadow-xs shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-500' : 'bg-emerald-500'}`}>
+                {(stats as any).gestantesPendentes > 0 ? <Baby className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
+              </div>
+              <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
+                <div className="min-w-0">
+                  <h5 className="text-[11px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
+                    {(stats as any).gestantesPendentes > 0 ? `${(stats as any).gestantesPendentes} gestações pendentes` : 'Gestações em Dia'}
+                  </h5>
+                  <p className="text-[9px] text-text-muted font-bold uppercase truncate">Metas Consultas (9) & ACS (3)</p>
+                </div>
+                <Badge variant={(stats as any).gestantesPendentes > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300' : ''}`}>
+                  {(stats as any).gestantesPendentes > 0 ? 'ATENÇÃO' : 'COMPLETO'}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Calendário de Visitas Realizadas */}
+        <div className="bg-bg-secondary rounded-2xl p-3 border border-border shadow-xs flex flex-col justify-between h-[305px] overflow-hidden">
+          <div className="h-full overflow-hidden">
+            <PendingCalendar visits={visits} patients={allPatients} />
+          </div>
+        </div>
+
+        {/* Card 4: Últimos Cadastros */}
+        <div className="bg-bg-secondary rounded-2xl p-3 sm:p-3.5 border border-border shadow-xs flex flex-col justify-between h-[305px] overflow-hidden">
+          <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-border/60 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-xs shrink-0">
+                <Users className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <h3 className="text-xs font-black text-text-primary tracking-tight">Últimos Cadastros</h3>
+                <p className="text-[10px] text-text-muted font-medium">Cidadãos adicionados recentemente</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">+{stats.newCidadaos}</span>
+              <span className="text-[9px] text-text-muted font-bold uppercase ml-1">este mês</span>
+            </div>
+          </div>
+
+          <div className="space-y-1.5 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+            {lastRegisteredPatients.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center p-4">
+                <p className="text-xs text-text-muted">Nenhum cidadão cadastrado recentemente.</p>
+              </div>
+            ) : (
+              lastRegisteredPatients.map((p, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2.5 p-2 rounded-xl bg-bg-primary/50 dark:bg-slate-800/20 hover:bg-bg-primary dark:hover:bg-slate-800/40 border border-border/50 transition-all cursor-pointer group"
+                  onClick={() => navigate(p.household_id ? `/domicilio/${p.household_id}` : `/pacientes?filter=all`)}
+                >
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-black text-[10px] shrink-0 shadow-xs bg-gradient-to-br from-teal-400 to-emerald-600">
+                    {p.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold text-text-primary truncate leading-tight group-hover:text-teal-600 transition-colors">
+                      {p.name}
+                    </p>
+                    <p className="text-[9px] text-text-muted font-semibold truncate">
+                      {p.birth_date ? calculateAge(p.birth_date) : 'Idade não informada'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[9px] font-semibold text-text-muted">{p.created_at ? formatDate(p.created_at) : '--'}</span>
+                    <span className="px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-wide bg-teal-100 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400">Novo</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
