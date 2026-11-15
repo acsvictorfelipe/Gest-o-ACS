@@ -3,35 +3,28 @@ import { supabase } from '../lib/supabase';
 import {
   Baby,
   Calendar as CalendarIcon,
-  ChevronRight,
-  TrendingUp,
-  TrendingDown,
-  Eye,
   Bed,
   MapPin,
-  Activity,
-  CheckSquare,
-  Square,
-  Trash2,
-  Plus,
-  Check,
   ShieldAlert,
   Heart,
-  Stethoscope,
   Users,
   Megaphone,
-  Sparkles,
   UserPlus,
-  ArrowUpRight,
-  Home
+  Home,
+  UserCheck,
+  HeartPulse,
+  Droplet,
+  Brain,
+  Pill,
+  Syringe,
+  Clock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDate, calculateAge } from '../lib/dateUtils';
-import { Badge } from './Badge';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { PendingCalendar } from './PendingCalendar';
 import { motion } from 'motion/react';
-import { UI_CONFIG } from '../constants';
-
 import { useDashboard } from '../hooks/useDashboard';
 import { AppUser } from '../types';
 import { isAdminRole, isGestorRole } from '../lib/roleUtils';
@@ -108,50 +101,64 @@ export function Dashboard({ user }: { user: AppUser | null }) {
     ((stats as any).gestantesPendentes || 0) +
     ((stats as any).semDomicilioAlerts || 0);
 
-  const categoryList = React.useMemo(() => [
-    { id: 'gestantes', label: 'Gestantes', sublabel: 'Acompanhamento pré-natal', value: stats.gestantes, filter: 'gestantes', icon: UI_CONFIG.categorias.gestantes.icon, color: '#ec4899' },
-    { id: 'criancas', label: 'Crianças ≤ 2 anos', sublabel: 'Puericultura e vacinas', value: stats.criancas2y, filter: 'criancas', icon: UI_CONFIG.categorias.criancas.icon, color: '#3b82f6' },
-    { id: 'hipertensos', label: 'Hipertensos', sublabel: 'Aferição e receitas', value: stats.hipertensos, filter: 'hipertensos', icon: UI_CONFIG.categorias.hipertensos.icon, color: '#f43f5e' },
-    { id: 'diabeticos', label: 'Diabéticos', sublabel: 'Glicemia e insulina', value: stats.diabeticos, filter: 'diabeticos', icon: UI_CONFIG.categorias.diabeticos.icon, color: '#06b6d4' },
-    { id: 'idosos', label: 'Idosos (60+)', sublabel: 'Acompanhamento contínuo', value: stats.idosos, filter: 'idosos', icon: UI_CONFIG.categorias.idosos.icon, color: '#f97316' },
-    { id: 'acamados', label: 'Acamados / Domiciliados', sublabel: 'Visitas domiciliares', value: stats.acamados, filter: 'acamados', icon: Bed, color: '#8b5cf6' },
-    { id: 'saudemental', label: 'Saúde Mental', sublabel: 'Acompanhamento psicossocial', value: stats.saudeMental || 0, filter: 'saudemental', icon: Heart, color: '#10b981' },
-    { id: 'sem_domicilio', label: 'Sem Domicílio Cadastrado', sublabel: 'Pendentes de endereço', value: (stats as any).semDomicilioAlerts || 0, filter: 'sem_domicilio', icon: Home, color: '#e11d48' },
-    { id: 'domicilios', label: 'Domicílios', sublabel: 'Total de residências', value: stats.totalHouseholds, filter: 'households', icon: MapPin, color: '#6366f1' },
-    { id: 'cidadaos', label: 'Cidadãos (Total)', sublabel: 'População cadastrada', value: stats.totalPatients, filter: 'all', icon: Users, color: '#64748b' },
+  const categories = React.useMemo(() => [
+    { id: 'gestantes', label: 'Gestantes', count: stats.gestantes, filter: 'gestantes', icon: Heart, color: 'text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/60' },
+    { id: 'criancas', label: 'Crianças ≤ 2 anos', count: stats.criancas2y, filter: 'criancas', icon: Baby, color: 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/60' },
+    { id: 'hipertensos', label: 'Hipertensos', count: stats.hipertensos, filter: 'hipertensos', icon: HeartPulse, color: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60' },
+    { id: 'diabeticos', label: 'Diabéticos', count: stats.diabeticos, filter: 'diabeticos', icon: Droplet, color: 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/60' },
+    { id: 'idosos', label: 'Idosos (60+)', count: stats.idosos, filter: 'idosos', icon: Users, color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60' },
+    { id: 'acamados', label: 'Acamados / Domiciliados', count: stats.acamados, filter: 'acamados', icon: Bed, color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60' },
+    { id: 'saudemental', label: 'Saúde Mental', count: stats.saudeMental || 0, filter: 'saudemental', icon: Brain, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60' },
+    { id: 'sem_domicilio', label: 'Sem Domicílio Cadastrado', count: (stats as any).semDomicilioAlerts || 0, filter: 'sem_domicilio', icon: Home, color: 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/60' },
+    { id: 'domicilios', label: 'Domicílios', count: stats.totalHouseholds, filter: 'households', icon: Home, color: 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/60' },
+    { id: 'cidadaos', label: 'Cidadãos (Total)', count: stats.totalPatients, filter: 'all', icon: Users, color: 'text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800' },
   ], [stats]);
 
   if (loading) return null;
 
   return (
-    <div className="space-y-3 relative pb-2">
-      {/* 1. Header Minimalista da Microárea (Sem Banner Verde) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1.5 pt-0 border-b border-border/40">
-        <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-lg sm:text-xl font-black text-text-primary tracking-tight">
+    <div className="flex flex-col h-full gap-3 pb-2">
+      {/* COMPACT SUBHEADER BAR */}
+      <div className="shrink-0 bg-white/60 dark:bg-slate-900/40 border-b border-border/60 px-3 lg:px-4 py-2 flex flex-wrap items-center justify-between gap-2 rounded-2xl">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-base sm:text-lg font-bold tracking-tight text-text-primary">
               Painel do Agente
             </h1>
-            <span className="px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-900/40 text-[10px] font-bold">
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-teal-50 dark:bg-teal-950/70 text-teal-700 dark:text-teal-300 border border-teal-200/70 dark:border-teal-800/60">
               {user?.microarea ? `Microárea ${user.microarea}` : 'Microárea Geral'}
             </span>
           </div>
-          <p className="text-[11px] text-text-muted font-medium mt-0.5">
-            {greeting}, <span className="font-bold text-text-primary">{user?.name || 'Agente'}</span>! Acompanhamento integrado da comunidade.
+          <span className="hidden xl:inline text-border">|</span>
+          <p className="hidden md:block text-xs text-text-muted">
+            {greeting}, <strong className="font-semibold text-text-primary">{user?.name || 'Agente'}</strong>! Acompanhamento integrado da comunidade.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Inline KPI Pills + Quick Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="hidden xl:flex items-center gap-1.5 mr-2 text-[11px]">
+            <span className="px-2.5 py-1 rounded-lg bg-bg-secondary border border-border font-medium text-text-secondary">
+              <strong className="text-text-primary font-bold">{stats.totalPatients}</strong> Cidadãos
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-bg-secondary border border-border font-medium text-text-secondary">
+              <strong className="text-text-primary font-bold">{stats.totalHouseholds}</strong> Domicílios
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-rose-50/70 dark:bg-rose-950/40 border border-rose-200/60 dark:border-rose-800/50 font-medium text-rose-700 dark:text-rose-300">
+              <strong className="font-bold">{totalPriorityAlerts}</strong> Alertas
+            </span>
+          </div>
+
           <button
             onClick={() => navigate('/pacientes?action=new')}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 shadow-sm transition-all cursor-pointer"
           >
             <UserPlus className="w-3.5 h-3.5" />
             Novo Cidadão
           </button>
           <button
             onClick={() => navigate('/domicilios')}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-bg-secondary hover:bg-bg-primary text-text-primary border border-border rounded-xl font-bold text-xs active:scale-95 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-text-primary bg-bg-secondary border border-border hover:bg-bg-primary shadow-xs transition-all cursor-pointer"
           >
             <MapPin className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
             Buscar Domicílio
@@ -286,263 +293,238 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </div>
       )}
 
-      {/* Grade 2x2 com os 4 Cards Principais Quadrados (Visíveis sem rolagem) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-stretch">
-        {/* Card 1: Categorias da Comunidade */}
-        <div className="bg-bg-secondary rounded-none p-3 sm:p-3.5 border border-border shadow-xs flex flex-col justify-between h-[320px] overflow-hidden">
-          <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-border/60 shrink-0">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-none bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+      {/* MAIN ZERO-SCROLL COCKPIT VIEWPORT (4 EQUAL COLUMNS) */}
+      <div className="flex-1 min-h-[500px] lg:min-h-0 lg:h-[calc(100vh-175px)] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3.5 overflow-y-auto lg:overflow-hidden">
+
+        {/* COLUMN 1 (3 Cols): CATEGORIAS DA COMUNIDADE */}
+        <section className="lg:col-span-3 h-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-soft flex flex-col min-h-0 overflow-hidden">
+          <div className="shrink-0 px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-950/70 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
                 <Users className="w-3.5 h-3.5" />
               </div>
-              <div>
-                <h3 className="text-xs font-black text-text-primary uppercase tracking-tight">Categorias da Comunidade</h3>
-                <p className="text-[10px] text-text-muted font-medium">Clique para filtrar pacientes instantaneamente</p>
+              <div className="truncate">
+                <h2 className="font-display font-bold text-xs uppercase tracking-wide text-slate-800 dark:text-white truncate">Categorias da Comunidade</h2>
+                <p className="text-[10px] text-slate-400 truncate">Clique para filtrar pacientes</p>
               </div>
             </div>
-            <span className="text-[9px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/50 px-2 py-0.5 rounded-none border border-teal-200 dark:border-teal-900/50">
-              Filtro Rápido
+            <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60 dark:border-teal-800/50">
+              Filtro
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-1.5 flex-1 content-start overflow-y-auto pr-0.5 custom-scrollbar">
-            {categoryList.map((item) => {
-              const Icon = item.icon;
+          <div className="flex-1 min-h-0 p-2 flex flex-col gap-0.5 divide-y divide-slate-100/80 dark:divide-slate-800/60 overflow-y-auto custom-scrollbar">
+            {categories.map((cat) => {
+              const Icon = cat.icon;
               return (
                 <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => navigate(item.id === 'domicilios' ? '/domicilios' : `/pacientes?filter=${item.filter}`)}
-                  className="flex items-center justify-between py-1.5 px-2 rounded-none bg-bg-primary/40 hover:bg-teal-50/70 dark:hover:bg-teal-950/40 border border-border/70 hover:border-teal-300 dark:hover:border-teal-700/60 transition-all text-left group cursor-pointer shadow-2xs"
+                  key={cat.id}
+                  onClick={() => navigate(cat.id === 'domicilios' ? '/domicilios' : `/pacientes?filter=${cat.filter}`)}
+                  className="w-full group py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors flex items-center justify-between gap-2 text-left cursor-pointer"
                 >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <div 
-                      className="w-5.5 h-5.5 rounded-none flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"
-                      style={{ background: `${item.color}18`, color: item.color }}
-                    >
-                      <Icon className="w-3 h-3" />
-                    </div>
-                    <span className="text-[11px] font-bold text-text-primary group-hover:text-teal-700 dark:group-hover:text-teal-300 truncate">
-                      {item.label}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={`w-6 h-6 rounded-md ${cat.color} flex items-center justify-center shrink-0`}>
+                      <Icon className="w-3.5 h-3.5" />
+                    </span>
+                    <span className="text-xs font-medium text-slate-700 dark:text-slate-200 group-hover:text-teal-600 dark:group-hover:text-teal-400 truncate">
+                      {cat.label}
                     </span>
                   </div>
-
-                  <span className="px-1.5 py-0.2 rounded-none bg-bg-secondary dark:bg-slate-800 border border-border text-[10px] font-black text-text-primary tabular-nums shrink-0 ml-1">
-                    {item.value}
+                  <span className="shrink-0 px-2 py-0.5 rounded-md text-xs font-display font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 group-hover:bg-teal-600 group-hover:text-white transition-colors">
+                    {cat.count}
                   </span>
                 </button>
               );
             })}
           </div>
-        </div>
+        </section>
 
-        {/* Card 2: Acompanhamento Prioritário */}
-        <div className="bg-bg-secondary rounded-none p-3 sm:p-3.5 border border-border shadow-xs flex flex-col justify-between h-[320px] overflow-hidden">
-          <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-border/60 shrink-0">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-none bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white shadow-xs shrink-0">
+        {/* COLUMN 2 (3 Cols): ACOMPANHAMENTO PRIORITÁRIO */}
+        <section className="lg:col-span-3 h-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-soft flex flex-col min-h-0 overflow-hidden">
+          <div className="shrink-0 px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
                 <ShieldAlert className="w-3.5 h-3.5" />
               </div>
-              <div>
-                <h3 className="text-xs font-black text-text-primary uppercase tracking-tight">Acompanhamento Prioritário</h3>
-                <p className="text-[10px] text-text-muted font-medium">Alertas clínicos ativos na microárea</p>
+              <div className="truncate">
+                <h2 className="font-display font-bold text-xs uppercase tracking-wide text-slate-800 dark:text-white truncate">Acompanhamento Prioritário</h2>
+                <p className="text-[10px] text-slate-400 truncate">Alertas clínicos ativos</p>
               </div>
             </div>
-            {totalPriorityAlerts > 0 && (
-              <span className="px-2 py-0.5 rounded-none text-[9px] font-black bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900/40">
-                {totalPriorityAlerts} alertas
+            <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/50">
+              {totalPriorityAlerts} alertas
+            </span>
+          </div>
+
+          <div className="flex-1 min-h-0 p-2 flex flex-col gap-1.5 overflow-y-auto custom-scrollbar">
+            {/* 1. Sem Domicílio Cadastrado */}
+            <button
+              onClick={() => navigate('/pacientes?filter=sem_domicilio')}
+              className="w-full group text-left px-2.5 py-2 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800 border border-slate-200/70 dark:border-slate-800 border-l-[3px] border-l-rose-500 transition-all flex items-center justify-between gap-2 cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                  <Home className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-display font-bold text-xs text-slate-900 dark:text-white truncate leading-tight">
+                    {((stats as any).semDomicilioAlerts || 0)} Sem Domicílio
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5 leading-tight">
+                    Gerar / vincular endereço residencial
+                  </p>
+                </div>
+              </div>
+              <span className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold border bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-300 border-rose-200/70 dark:border-rose-800/60">
+                Cadastrar
               </span>
-            )}
+            </button>
+
+            {/* 2. Visitas em Atraso */}
+            <button
+              onClick={() => navigate('/pacientes?filter=visitas_atrasadas')}
+              className="w-full group text-left px-2.5 py-2 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800 border border-slate-200/70 dark:border-slate-800 border-l-[3px] border-l-amber-500 transition-all flex items-center justify-between gap-2 cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/70 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <Clock className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-display font-bold text-xs text-slate-900 dark:text-white truncate leading-tight">
+                    {stats.pendingVisits || 0} Visitas em Atraso
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5 leading-tight">
+                    Rotina mensal de campo pendente
+                  </p>
+                </div>
+              </div>
+              <span className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold border bg-amber-500 text-white border-amber-500">
+                {stats.pendingVisits || 0}
+              </span>
+            </button>
+
+            {/* 3. Vacinas Atrasadas */}
+            <button
+              onClick={() => navigate('/pacientes?filter=vacinas_atrasadas')}
+              className="w-full group text-left px-2.5 py-2 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800 border border-slate-200/70 dark:border-slate-800 border-l-[3px] border-l-orange-500 transition-all flex items-center justify-between gap-2 cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-orange-50 dark:bg-orange-950/70 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
+                  <Syringe className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-display font-bold text-xs text-slate-900 dark:text-white truncate leading-tight">
+                    {stats.lateVaccines || 0} Vacinas Atrasadas
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5 leading-tight">
+                    Crianças menores de 2 anos
+                  </p>
+                </div>
+              </div>
+              <span className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold border bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-300 border-orange-200/70 dark:border-orange-800/60">
+                Atraso
+              </span>
+            </button>
+
+            {/* 4. Receitas Vencendo */}
+            <button
+              onClick={() => navigate('/pacientes?filter=receitas_vencendo')}
+              className="w-full group text-left px-2.5 py-2 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800 border border-slate-200/70 dark:border-slate-800 border-l-[3px] border-l-violet-500 transition-all flex items-center justify-between gap-2 cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-violet-50 dark:bg-violet-950/70 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
+                  <Pill className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-display font-bold text-xs text-slate-900 dark:text-white truncate leading-tight">
+                    {stats.receitasAVencer || 0} Receitas Vencendo
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5 leading-tight">
+                    Medicamentos controlados
+                  </p>
+                </div>
+              </div>
+              <span className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold border bg-violet-50 dark:bg-violet-950 text-violet-600 dark:text-violet-300 border-violet-200/70 dark:border-violet-800/60">
+                Atenção
+              </span>
+            </button>
+
+            {/* 5. Gestações Pendentes */}
+            <button
+              onClick={() => navigate('/pacientes?filter=gestantes')}
+              className="w-full group text-left px-2.5 py-2 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800 border border-slate-200/70 dark:border-slate-800 border-l-[3px] border-l-pink-500 transition-all flex items-center justify-between gap-2 cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-pink-50 dark:bg-pink-950/70 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0">
+                  <Baby className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-display font-bold text-xs text-slate-900 dark:text-white truncate leading-tight">
+                    {((stats as any).gestantesPendentes || 0)} Gestações Pendentes
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5 leading-tight">
+                    Metas consultas (9) & ACS (3)
+                  </p>
+                </div>
+              </div>
+              <span className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold border bg-pink-50 dark:bg-pink-950 text-pink-600 dark:text-pink-300 border-pink-200/70 dark:border-pink-800/60">
+                Atenção
+              </span>
+            </button>
+
+            {/* 6. Bebês até 6m */}
+            <button
+              onClick={() => navigate('/pacientes?filter=pending_6m')}
+              className="w-full group text-left px-2.5 py-2 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800 border border-slate-200/70 dark:border-slate-800 border-l-[3px] border-l-sky-500 transition-all flex items-center justify-between gap-2 cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-sky-50 dark:bg-sky-950/70 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                  <Baby className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-display font-bold text-xs text-slate-900 dark:text-white truncate leading-tight">
+                    {stats.childVisitAlerts || 0} Visitas (Bebês)
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5 leading-tight">
+                    Acompanhamento até 6 meses
+                  </p>
+                </div>
+              </div>
+              <span className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold border bg-sky-50 dark:bg-sky-950 text-sky-600 dark:text-sky-300 border-sky-200/70 dark:border-sky-800/60">
+                Pendente
+              </span>
+            </button>
           </div>
 
-          <div className="space-y-1.5 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-            {/* Alerta 1: Crianças / Bebês */}
-            <div 
-              onClick={() => navigate('/pacientes?filter=pending_6m')} 
-              className={`p-2 rounded-none border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
-                stats.childVisitAlerts > 0
-                  ? 'border-red-100 dark:border-red-950/30 bg-red-50/10 hover:bg-red-50/20'
-                  : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
-              }`}
+          <div className="shrink-0 px-3.5 py-2 bg-slate-50/80 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+            <span className="text-slate-500 dark:text-slate-400 truncate">Foco: <strong className="text-slate-700 dark:text-slate-200">Busca Ativa</strong></span>
+            <button
+              onClick={() => navigate('/pacientes?filter=sem_domicilio')}
+              className="font-semibold text-teal-600 dark:text-teal-400 hover:underline shrink-0 cursor-pointer"
             >
-              <div className={`absolute top-0 left-0 w-[3px] h-full ${stats.childVisitAlerts > 0 ? 'bg-red-500' : 'bg-emerald-500'}`} />
-              <div className={`w-7 h-7 rounded-none flex items-center justify-center text-white shadow-xs shrink-0 ${stats.childVisitAlerts > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
-                {stats.childVisitAlerts > 0 ? <Baby className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
-              </div>
-              <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
-                <div className="min-w-0">
-                  <h5 className="text-[11px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
-                    {stats.childVisitAlerts > 0 ? `${stats.childVisitAlerts} visitas (bebês)` : 'Bebês c/ Visita'}
-                  </h5>
-                  <p className="text-[9px] text-text-muted font-bold uppercase truncate">Acompanhamento até 6m</p>
-                </div>
-                <Badge variant={stats.childVisitAlerts > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-none shrink-0">
-                  {stats.childVisitAlerts > 0 ? 'PENDENTE' : 'EM DIA'}
-                </Badge>
-              </div>
-            </div>
-
-            {/* Alerta 2: Sem Domicílio Cadastrado */}
-            <div 
-              onClick={() => navigate('/pacientes?filter=sem_domicilio')} 
-              className={`p-2 rounded-none border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
-                ((stats as any).semDomicilioAlerts || 0) > 0
-                  ? 'border-rose-100 dark:border-rose-950/30 bg-rose-50/10 hover:bg-rose-50/20'
-                  : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
-              }`}
-              title="Clique para filtrar cidadãos sem domicílio e vincular/criar endereço"
-            >
-              <div className={`absolute top-0 left-0 w-[3px] h-full ${((stats as any).semDomicilioAlerts || 0) > 0 ? 'bg-rose-600' : 'bg-emerald-500'}`} />
-              <div className={`w-7 h-7 rounded-none flex items-center justify-center text-white shadow-xs shrink-0 ${((stats as any).semDomicilioAlerts || 0) > 0 ? 'bg-rose-600' : 'bg-emerald-500'}`}>
-                {((stats as any).semDomicilioAlerts || 0) > 0 ? <Home className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
-              </div>
-              <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
-                <div className="min-w-0">
-                  <h5 className="text-[11px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
-                    {((stats as any).semDomicilioAlerts || 0) > 0 
-                      ? `${(stats as any).semDomicilioAlerts} sem domicílio` 
-                      : 'Domicílios Vinculados'}
-                  </h5>
-                  <p className="text-[9px] text-text-muted font-bold uppercase truncate">Gerar / Vincular Endereço</p>
-                </div>
-                <Badge variant={((stats as any).semDomicilioAlerts || 0) > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-none shrink-0">
-                  {((stats as any).semDomicilioAlerts || 0) > 0 ? 'CADASTRAR' : 'REGULAR'}
-                </Badge>
-              </div>
-            </div>
-
-            {/* Alerta 3: Visitas em Atraso */}
-            <div 
-              onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} 
-              className={`p-2 rounded-none border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
-                stats.pendingVisits > 0
-                  ? 'border-orange-100 dark:border-orange-950/30 bg-orange-50/10 hover:bg-orange-50/20'
-                  : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
-              }`}
-            >
-              <div className={`absolute top-0 left-0 w-[3px] h-full ${stats.pendingVisits > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`} />
-              <div className={`w-7 h-7 rounded-none flex items-center justify-center text-white shadow-xs shrink-0 ${stats.pendingVisits > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`}>
-                {stats.pendingVisits > 0 ? <CalendarIcon className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
-              </div>
-              <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
-                <div className="min-w-0">
-                  <h5 className="text-[11px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
-                    {stats.pendingVisits > 0 ? `${stats.pendingVisits} visitas em atraso` : 'Visitas da Microárea'}
-                  </h5>
-                  <p className="text-[9px] text-text-muted font-bold uppercase truncate">Rotina mensal de campo</p>
-                </div>
-                <div className={`px-1.5 py-0.5 rounded-none text-[8px] font-black shadow-xs shrink-0 ${stats.pendingVisits > 0 ? 'bg-orange-500 text-white' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'}`}>
-                  {stats.pendingVisits > 0 ? stats.pendingVisits : 'OK'}
-                </div>
-              </div>
-            </div>
-
-            {/* Alerta 4: Vacinas Atrasadas */}
-            <div 
-              onClick={() => navigate('/pacientes?filter=vacinas_atrasadas')} 
-              className={`p-2 rounded-none border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
-                stats.lateVaccines > 0
-                  ? 'border-red-100 dark:border-red-950/30 bg-red-50/10 hover:bg-red-50/20'
-                  : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
-              }`}
-            >
-              <div className={`absolute top-0 left-0 w-[3px] h-full ${stats.lateVaccines > 0 ? 'bg-red-500' : 'bg-emerald-500'}`} />
-              <div className={`w-7 h-7 rounded-none flex items-center justify-center text-white shadow-xs shrink-0 ${stats.lateVaccines > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
-                {stats.lateVaccines > 0 ? <ShieldAlert className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
-              </div>
-              <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
-                <div className="min-w-0">
-                  <h5 className="text-[11px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
-                    {stats.lateVaccines > 0 ? `${stats.lateVaccines} vacinas atrasadas` : 'Vacinação de Crianças'}
-                  </h5>
-                  <p className="text-[9px] text-text-muted font-bold uppercase truncate">Crianças menores de 2 anos</p>
-                </div>
-                <Badge variant={stats.lateVaccines > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-none shrink-0">
-                  {stats.lateVaccines > 0 ? 'ATRASO' : 'COMPLETO'}
-                </Badge>
-              </div>
-            </div>
-
-            {/* Alerta 5: Receitas Vencendo */}
-            <div 
-              onClick={() => navigate('/pacientes?filter=receitas_vencendo')} 
-              className={`p-2 rounded-none border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
-                stats.receitasAVencer > 0
-                  ? 'border-purple-100 dark:border-purple-950/30 bg-purple-50/10 hover:bg-purple-50/20'
-                  : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
-              }`}
-            >
-              <div className={`absolute top-0 left-0 w-[3px] h-full ${stats.receitasAVencer > 0 ? 'bg-purple-500' : 'bg-emerald-500'}`} />
-              <div className={`w-7 h-7 rounded-none flex items-center justify-center text-white shadow-xs shrink-0 ${stats.receitasAVencer > 0 ? 'bg-purple-500' : 'bg-emerald-500'}`}>
-                {stats.receitasAVencer > 0 ? <Activity className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
-              </div>
-              <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
-                <div className="min-w-0">
-                  <h5 className="text-[11px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
-                    {stats.receitasAVencer > 0 ? `${stats.receitasAVencer} receitas vencendo` : 'Receitas de Uso Contínuo'}
-                  </h5>
-                  <p className="text-[9px] text-text-muted font-bold uppercase truncate">Medicamentos controlados</p>
-                </div>
-                <Badge variant={stats.receitasAVencer > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-none shrink-0 ${stats.receitasAVencer > 0 ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300' : ''}`}>
-                  {stats.receitasAVencer > 0 ? 'ATENÇÃO' : 'VÁLIDAS'}
-                </Badge>
-              </div>
-            </div>
-
-            {/* Alerta 6: Pré-Natal / Visitas Gestante Pendentes */}
-            <div 
-              onClick={() => navigate('/pacientes?filter=gestantes')} 
-              className={`p-2 rounded-none border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
-                (stats as any).gestantesPendentes > 0
-                  ? 'border-pink-100 dark:border-pink-950/30 bg-pink-50/10 hover:bg-pink-50/20'
-                  : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
-              }`}
-            >
-              <div className={`absolute top-0 left-0 w-[3px] h-full ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-500' : 'bg-emerald-500'}`} />
-              <div className={`w-7 h-7 rounded-none flex items-center justify-center text-white shadow-xs shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-500' : 'bg-emerald-500'}`}>
-                {(stats as any).gestantesPendentes > 0 ? <Baby className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
-              </div>
-              <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
-                <div className="min-w-0">
-                  <h5 className="text-[11px] font-black text-text-primary leading-tight truncate uppercase tracking-tight">
-                    {(stats as any).gestantesPendentes > 0 ? `${(stats as any).gestantesPendentes} gestações pendentes` : 'Gestações em Dia'}
-                  </h5>
-                  <p className="text-[9px] text-text-muted font-bold uppercase truncate">Metas Consultas (9) & ACS (3)</p>
-                </div>
-                <Badge variant={(stats as any).gestantesPendentes > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-none shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300' : ''}`}>
-                  {(stats as any).gestantesPendentes > 0 ? 'ATENÇÃO' : 'COMPLETO'}
-                </Badge>
-              </div>
-            </div>
+              Ver Alertas →
+            </button>
           </div>
-        </div>
+        </section>
 
-        {/* Card 3: Calendário de Visitas Realizadas */}
-        <div className="bg-bg-secondary rounded-none p-3 border border-border shadow-xs flex flex-col justify-between h-[320px] overflow-hidden">
-          <div className="h-full overflow-hidden">
-            <PendingCalendar visits={visits} patients={allPatients} />
-          </div>
-        </div>
-
-        {/* Card 4: Últimos Cadastros */}
-        <div className="bg-bg-secondary rounded-none p-3 sm:p-3.5 border border-border shadow-xs flex flex-col justify-between h-[320px] overflow-hidden">
-          <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-border/60 shrink-0">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-none bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-xs shrink-0">
-                <Users className="w-3.5 h-3.5" />
+        {/* COLUMN 3 (3 Cols): ÚLTIMOS CADASTROS */}
+        <section className="lg:col-span-3 h-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-soft flex flex-col min-h-0 overflow-hidden">
+          <div className="shrink-0 px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <UserCheck className="w-3.5 h-3.5" />
               </div>
-              <div>
-                <h3 className="text-xs font-black text-text-primary uppercase tracking-tight">Últimos Cadastros</h3>
-                <p className="text-[10px] text-text-muted font-medium">Cidadãos adicionados recentemente</p>
+              <div className="truncate">
+                <h2 className="font-display font-bold text-xs uppercase tracking-wide text-slate-800 dark:text-white truncate">Últimos Cadastros</h2>
+                <p className="text-[10px] text-slate-400 truncate">Cidadãos adicionados recentemente</p>
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">+{stats.newCidadaos}</span>
-              <span className="text-[9px] text-text-muted font-bold uppercase ml-1">este mês</span>
-            </div>
+            <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/50">
+              +{stats.newCidadaos} mês
+            </span>
           </div>
 
-          <div className="space-y-1.5 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+          <div className="flex-1 min-h-0 p-2 flex flex-col gap-0.5 divide-y divide-slate-100 dark:divide-slate-800/70 overflow-y-auto custom-scrollbar">
             {lastRegisteredPatients.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center p-4">
                 <p className="text-xs text-text-muted">Nenhum cidadão cadastrado recentemente.</p>
@@ -551,29 +533,46 @@ export function Dashboard({ user }: { user: AppUser | null }) {
               lastRegisteredPatients.map((p, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-2.5 p-2 rounded-none bg-bg-primary/50 dark:bg-slate-800/20 hover:bg-bg-primary dark:hover:bg-slate-800/40 border border-border/50 transition-all cursor-pointer group"
-                  onClick={() => navigate(p.household_id ? `/domicilio/${p.household_id}` : `/pacientes?filter=all`)}
+                  onClick={() => navigate(p.household_id ? `/domicilio/${p.household_id}` : '/pacientes')}
+                  className="py-2 px-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors flex items-center justify-between gap-2 cursor-pointer group"
                 >
-                  <div className="w-7 h-7 rounded-none flex items-center justify-center text-white font-black text-[10px] shrink-0 shadow-xs bg-gradient-to-br from-teal-400 to-emerald-600">
-                    {p.name?.charAt(0).toUpperCase()}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-full bg-teal-600 text-white font-display font-bold text-[11px] flex items-center justify-center shrink-0 shadow-xs">
+                      {p.name?.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-teal-600 dark:group-hover:text-teal-400 truncate leading-tight">
+                        {p.name}
+                      </p>
+                      <p className="text-[10px] text-slate-400 leading-tight mt-0.5 truncate">
+                        {p.birth_date ? calculateAge(p.birth_date) : 'Idade N/I'} • {p.created_at ? formatDate(p.created_at) : '--'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-bold text-text-primary truncate leading-tight group-hover:text-teal-600 transition-colors">
-                      {p.name}
-                    </p>
-                    <p className="text-[9px] text-text-muted font-semibold truncate">
-                      {p.birth_date ? calculateAge(p.birth_date) : 'Idade não informada'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[9px] font-semibold text-text-muted">{p.created_at ? formatDate(p.created_at) : '--'}</span>
-                    <span className="px-1.5 py-0.2 rounded-none text-[8px] font-black uppercase tracking-wide bg-teal-100 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400">Novo</span>
-                  </div>
+                  <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/50">
+                    Novo
+                  </span>
                 </div>
               ))
             )}
           </div>
-        </div>
+
+          <div className="shrink-0 px-3.5 py-2 bg-slate-50/80 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+            <span className="text-slate-500 dark:text-slate-400 capitalize">{format(new Date(), 'MMMM yyyy', { locale: ptBR })}</span>
+            <button
+              onClick={() => navigate('/pacientes')}
+              className="font-semibold text-teal-600 dark:text-teal-400 hover:underline cursor-pointer"
+            >
+              Ver todos ({stats.totalPatients}) →
+            </button>
+          </div>
+        </section>
+
+        {/* COLUMN 4 (3 Cols on Far Right): VISITAS REALIZADAS */}
+        <section className="lg:col-span-3 h-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-soft flex flex-col min-h-0 overflow-hidden">
+          <PendingCalendar visits={visits} patients={allPatients} />
+        </section>
+
       </div>
     </div>
   );

@@ -112,29 +112,27 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
   };
 
   return (
-    <div className="w-full flex flex-col relative h-full font-sans">
+    <div className="w-full flex flex-col relative h-full font-sans justify-between">
       <style>{`
         .react-calendar {
           width: 100% !important;
-          border: 1px solid var(--color-border) !important;
-          border-radius: 0px !important;
-          background: var(--color-bg-secondary) !important;
+          border: none !important;
+          background: transparent !important;
           font-family: inherit !important;
           overflow: hidden;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
         .react-calendar__viewContainer {
           padding: 0 !important;
         }
         .react-calendar__month-view__weekdays {
-          background: var(--color-bg-primary) !important;
-          padding: 6px 0 !important;
+          background: transparent !important;
+          padding: 4px 0 !important;
           border-bottom: 1px solid var(--color-border) !important;
         }
         .react-calendar__month-view__weekdays__weekday {
           text-decoration: none !important;
           font-size: 10px !important;
-          font-weight: 800 !important;
+          font-weight: 700 !important;
           color: var(--color-text-muted) !important;
           text-transform: uppercase !important;
           letter-spacing: 0.05em;
@@ -143,112 +141,137 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
           text-decoration: none !important;
         }
         .react-calendar__tile {
-          min-height: 28px !important;
-          height: 28px !important;
+          min-height: 26px !important;
+          height: 26px !important;
           padding: 1px 1px !important;
           display: flex !important;
           flex-direction: column !important;
           align-items: center !important;
           justify-content: space-between !important;
+          border-radius: 8px !important;
           border: 0.5px solid var(--color-border) !important;
           font-size: 11px !important;
-          font-weight: 700 !important;
+          font-weight: 600 !important;
           color: var(--color-text-primary) !important;
-          background: var(--color-bg-secondary) !important;
+          background: var(--color-bg-primary) !important;
           cursor: pointer;
           transition: all 0.15s ease;
         }
         .react-calendar__tile:enabled:hover, .react-calendar__tile:enabled:focus {
-          background: var(--color-bg-primary) !important;
+          background: var(--color-bg-secondary) !important;
         }
         .react-calendar__tile--now {
-          background: var(--color-bg-primary) !important;
-          color: var(--color-primary) !important;
-          font-weight: 900 !important;
+          background: #f0fdfa !important;
+          color: #0f766e !important;
+          border-color: #2dd4bf !important;
+          font-weight: 800 !important;
+        }
+        .dark .react-calendar__tile--now {
+          background: rgba(19, 78, 74, 0.4) !important;
+          color: #5eead4 !important;
+          border-color: #14b8a6 !important;
         }
         .react-calendar__tile--active {
-          background: var(--color-bg-secondary) !important;
-          color: var(--color-text-primary) !important;
-          border: 2px solid #0d9488 !important;
-          border-radius: 0px !important;
-          z-index: 10;
+          background: #0d9488 !important;
+          color: #ffffff !important;
+          border-color: #0d9488 !important;
+          font-weight: 800 !important;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
         }
         .react-calendar__tile--active:enabled:hover, .react-calendar__tile--active:enabled:focus {
-          background: var(--color-bg-secondary) !important;
+          background: #0f766e !important;
         }
         .react-calendar__month-view__days__day--neighboringMonth {
           color: var(--color-text-muted) !important;
-          opacity: 0.25;
+          opacity: 0.3;
         }
         .react-calendar__navigation {
           display: none !important;
         }
-        @media (min-width: 1024px) {
-          .react-calendar__tile {
-            min-height: 28px !important;
-            height: 28px !important;
-            padding: 1px 1px !important;
-          }
-        }
       `}</style>
 
-      {/* Custom Header Navigation */}
-      <div className="flex items-center justify-between mb-3 shrink-0 px-1 gap-2 flex-wrap sm:flex-nowrap">
+      {/* Unified Card Header */}
+      <div className="shrink-0 px-3.5 py-2.5 border-b border-border/80 flex items-center justify-between gap-1.5">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 rounded-none bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
-            <CalendarIcon className="w-4 h-4" />
+          <div className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-950/70 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+            <CalendarIcon className="w-3.5 h-3.5" />
           </div>
-          <div>
-            <h3 className="text-xs font-black text-text-primary uppercase tracking-tight truncate">Visitas Realizadas</h3>
-            <p className="text-[9px] text-text-muted font-bold">Histórico de atendimento presencial</p>
+          <div className="truncate">
+            <h2 className="font-bold text-xs uppercase tracking-wide text-text-primary truncate">Visitas Realizadas</h2>
+            <p className="text-[10px] text-text-muted truncate">Histórico presencial</p>
           </div>
         </div>
+        <button
+          onClick={handleToday}
+          className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-50 dark:bg-teal-950/70 text-teal-700 dark:text-teal-300 border border-teal-200/70 dark:border-teal-800 hover:bg-teal-100 transition-colors cursor-pointer"
+        >
+          Hoje
+        </button>
+      </div>
 
-        <div className="flex items-center gap-2 shrink-0 ml-auto">
-          <div className="flex items-center gap-1 bg-bg-primary dark:bg-slate-800/40 rounded-none p-1 border border-border shrink-0">
-            <button onClick={handlePrevMonth} className="p-1 text-text-muted hover:text-text-primary hover:bg-bg-secondary rounded-none transition-colors cursor-pointer">
-              <ChevronLeft className="w-4 h-4" />
+      {/* Calendar Body */}
+      <div className="flex-1 min-h-0 p-2.5 flex flex-col justify-between overflow-y-auto custom-scrollbar">
+        <div className="w-full select-none">
+          {/* Month Selector Bar */}
+          <div className="flex items-center justify-between bg-bg-primary/90 dark:bg-slate-800 rounded-xl p-1 mb-2 border border-border/70">
+            <button
+              onClick={handlePrevMonth}
+              className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-secondary transition-colors cursor-pointer"
+              title="Mês anterior"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
             </button>
-
-            <span className="text-[11px] font-black text-text-primary capitalize px-2 min-w-[80px] text-center">
+            <span className="text-xs font-bold text-text-primary capitalize">
               {format(activeStartDate, 'MMMM yyyy', { locale: ptBR })}
             </span>
-
-            <button onClick={handleNextMonth} className="p-1 text-text-muted hover:text-text-primary hover:bg-bg-secondary rounded-none transition-colors cursor-pointer">
-              <ChevronRight className="w-4 h-4" />
+            <button
+              onClick={handleNextMonth}
+              className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-secondary transition-colors cursor-pointer"
+              title="Próximo mês"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <button
-            onClick={handleToday}
-            className="px-2.5 py-1.5 rounded-none bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-900/60 border border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 text-[10px] font-extrabold transition-colors shrink-0 cursor-pointer shadow-sm"
-          >
-            Hoje
-          </button>
+          <Calendar
+            onClickDay={handleDateClick}
+            activeStartDate={activeStartDate}
+            onActiveStartDateChange={({ activeStartDate: newDate }) => newDate && setActiveStartDate(newDate)}
+            value={selectedDate}
+            locale="pt-BR"
+            tileContent={getTilesContent}
+            showNavigation={false}
+          />
         </div>
-      </div>
 
-      {/* Calendar Grid Container */}
-      <div className="flex-1 min-h-[190px]">
-        <Calendar
-          onClickDay={handleDateClick}
-          activeStartDate={activeStartDate}
-          onActiveStartDateChange={({ activeStartDate: newDate }) => newDate && setActiveStartDate(newDate)}
-          value={selectedDate}
-          locale="pt-BR"
-          tileContent={getTilesContent}
-          showNavigation={false}
-        />
-      </div>
-
-      {/* Category Legend Bar */}
-      <div className="mt-1.5 flex flex-wrap justify-center items-center gap-x-2.5 gap-y-0.5 px-1 shrink-0 pt-1.5 border-t border-border/40">
-        {Object.values(CATEGORY_PALETTE).slice(0, 6).map(item => (
-          <div key={item.label} className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-none shadow-xs" style={{ backgroundColor: item.primary }} />
-            <span className="text-[8px] font-extrabold text-text-muted uppercase tracking-wider">{item.label}</span>
+        {/* Bottom Selected Day Status & Compact Legend */}
+        <div className="pt-2 mt-2 border-t border-border/60 flex flex-col gap-1.5">
+          <div className="flex items-center justify-between bg-bg-primary/60 dark:bg-slate-800/60 px-2.5 py-1.5 rounded-xl text-[11px] border border-border/50">
+            <span className="text-text-muted truncate">
+              <strong className="text-text-primary">
+                Dia {format(selectedDate, 'dd')}{isSameDay(selectedDate, new Date()) ? ' (Hoje)' : ''}:
+              </strong>{' '}
+              {getVisitsForDate(selectedDate).length > 0 
+                ? `${getVisitsForDate(selectedDate).length} visita(s) presencial(is)`
+                : 'Sem registros'}
+            </span>
+            <button
+              onClick={() => navigate('/pacientes')}
+              className="font-semibold text-teal-600 dark:text-teal-400 hover:underline shrink-0 ml-1.5 cursor-pointer text-[10px]"
+            >
+              + Visita
+            </button>
           </div>
-        ))}
+
+          <div className="grid grid-cols-3 gap-x-2 gap-y-0.5 text-[9px] font-medium text-text-muted px-0.5">
+            {Object.values(CATEGORY_PALETTE).slice(0, 6).map(item => (
+              <span key={item.label} className="inline-flex items-center gap-1 truncate">
+                <span className="w-1.5 h-1.5 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: item.primary }} />
+                <span className="truncate">{item.label}</span>
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Day Details Popup Modal */}
