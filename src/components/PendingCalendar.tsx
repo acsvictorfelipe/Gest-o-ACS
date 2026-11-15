@@ -117,7 +117,7 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
         .react-calendar {
           width: 100% !important;
           border: 1px solid var(--color-border) !important;
-          border-radius: 20px !important;
+          border-radius: 0px !important;
           background: var(--color-bg-secondary) !important;
           font-family: inherit !important;
           overflow: hidden;
@@ -170,7 +170,7 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
           background: var(--color-bg-secondary) !important;
           color: var(--color-text-primary) !important;
           border: 2px solid #0d9488 !important;
-          border-radius: 8px !important;
+          border-radius: 0px !important;
           z-index: 10;
         }
         .react-calendar__tile--active:enabled:hover, .react-calendar__tile--active:enabled:focus {
@@ -195,7 +195,7 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
       {/* Custom Header Navigation */}
       <div className="flex items-center justify-between mb-3 shrink-0 px-1 gap-2 flex-wrap sm:flex-nowrap">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-none bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
             <CalendarIcon className="w-4 h-4" />
           </div>
           <div>
@@ -205,8 +205,8 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
         </div>
 
         <div className="flex items-center gap-2 shrink-0 ml-auto">
-          <div className="flex items-center gap-1 bg-bg-primary dark:bg-slate-800/40 rounded-xl p-1 border border-border shrink-0">
-            <button onClick={handlePrevMonth} className="p-1 text-text-muted hover:text-text-primary hover:bg-bg-secondary rounded-lg transition-colors cursor-pointer">
+          <div className="flex items-center gap-1 bg-bg-primary dark:bg-slate-800/40 rounded-none p-1 border border-border shrink-0">
+            <button onClick={handlePrevMonth} className="p-1 text-text-muted hover:text-text-primary hover:bg-bg-secondary rounded-none transition-colors cursor-pointer">
               <ChevronLeft className="w-4 h-4" />
             </button>
 
@@ -214,14 +214,14 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
               {format(activeStartDate, 'MMMM yyyy', { locale: ptBR })}
             </span>
 
-            <button onClick={handleNextMonth} className="p-1 text-text-muted hover:text-text-primary hover:bg-bg-secondary rounded-lg transition-colors cursor-pointer">
+            <button onClick={handleNextMonth} className="p-1 text-text-muted hover:text-text-primary hover:bg-bg-secondary rounded-none transition-colors cursor-pointer">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
           <button
             onClick={handleToday}
-            className="px-2.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-900/60 border border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 text-[10px] font-extrabold transition-colors shrink-0 cursor-pointer shadow-sm"
+            className="px-2.5 py-1.5 rounded-none bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-900/60 border border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 text-[10px] font-extrabold transition-colors shrink-0 cursor-pointer shadow-sm"
           >
             Hoje
           </button>
@@ -245,7 +245,7 @@ export const PendingCalendar: React.FC<PendingCalendarProps> = ({ visits, patien
       <div className="mt-1.5 flex flex-wrap justify-center items-center gap-x-2.5 gap-y-0.5 px-1 shrink-0 pt-1.5 border-t border-border/40">
         {Object.values(CATEGORY_PALETTE).slice(0, 6).map(item => (
           <div key={item.label} className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full shadow-xs" style={{ backgroundColor: item.primary }} />
+            <span className="w-1.5 h-1.5 rounded-none shadow-xs" style={{ backgroundColor: item.primary }} />
             <span className="text-[8px] font-extrabold text-text-muted uppercase tracking-wider">{item.label}</span>
           </div>
         ))}

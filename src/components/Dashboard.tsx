@@ -286,21 +286,21 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </div>
       )}
 
-      {/* Grade 2x2 com os 4 Cards Principais (Visíveis sem rolagem) */}
+      {/* Grade 2x2 com os 4 Cards Principais Quadrados (Visíveis sem rolagem) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-stretch">
         {/* Card 1: Categorias da Comunidade */}
-        <div className="bg-bg-secondary rounded-2xl p-3 sm:p-3.5 border border-border shadow-xs flex flex-col justify-between h-[305px] overflow-hidden">
+        <div className="bg-bg-secondary rounded-none p-3 sm:p-3.5 border border-border shadow-xs flex flex-col justify-between h-[320px] overflow-hidden">
           <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-border/60 shrink-0">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 rounded-none bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
                 <Users className="w-3.5 h-3.5" />
               </div>
               <div>
-                <h3 className="text-xs font-black text-text-primary tracking-tight">Categorias da Comunidade</h3>
+                <h3 className="text-xs font-black text-text-primary uppercase tracking-tight">Categorias da Comunidade</h3>
                 <p className="text-[10px] text-text-muted font-medium">Clique para filtrar pacientes instantaneamente</p>
               </div>
             </div>
-            <span className="text-[9px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/50 px-2 py-0.5 rounded-full border border-teal-200 dark:border-teal-900/50">
+            <span className="text-[9px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/50 px-2 py-0.5 rounded-none border border-teal-200 dark:border-teal-900/50">
               Filtro Rápido
             </span>
           </div>
@@ -313,11 +313,11 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                   key={item.id}
                   type="button"
                   onClick={() => navigate(item.id === 'domicilios' ? '/domicilios' : `/pacientes?filter=${item.filter}`)}
-                  className="flex items-center justify-between py-1.5 px-2 rounded-xl bg-bg-primary/40 hover:bg-teal-50/70 dark:hover:bg-teal-950/40 border border-border/70 hover:border-teal-300 dark:hover:border-teal-700/60 transition-all text-left group cursor-pointer shadow-2xs"
+                  className="flex items-center justify-between py-1.5 px-2 rounded-none bg-bg-primary/40 hover:bg-teal-50/70 dark:hover:bg-teal-950/40 border border-border/70 hover:border-teal-300 dark:hover:border-teal-700/60 transition-all text-left group cursor-pointer shadow-2xs"
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
                     <div 
-                      className="w-5.5 h-5.5 rounded-md flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"
+                      className="w-5.5 h-5.5 rounded-none flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"
                       style={{ background: `${item.color}18`, color: item.color }}
                     >
                       <Icon className="w-3 h-3" />
@@ -327,7 +327,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                     </span>
                   </div>
 
-                  <span className="px-1.5 py-0.2 rounded bg-bg-secondary dark:bg-slate-800 border border-border text-[10px] font-black text-text-primary tabular-nums shrink-0 ml-1">
+                  <span className="px-1.5 py-0.2 rounded-none bg-bg-secondary dark:bg-slate-800 border border-border text-[10px] font-black text-text-primary tabular-nums shrink-0 ml-1">
                     {item.value}
                   </span>
                 </button>
@@ -337,19 +337,19 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </div>
 
         {/* Card 2: Acompanhamento Prioritário */}
-        <div className="bg-bg-secondary rounded-2xl p-3 sm:p-3.5 border border-border shadow-xs flex flex-col justify-between h-[305px] overflow-hidden">
+        <div className="bg-bg-secondary rounded-none p-3 sm:p-3.5 border border-border shadow-xs flex flex-col justify-between h-[320px] overflow-hidden">
           <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-border/60 shrink-0">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white shadow-xs shrink-0">
+              <div className="w-7 h-7 rounded-none bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white shadow-xs shrink-0">
                 <ShieldAlert className="w-3.5 h-3.5" />
               </div>
               <div>
-                <h3 className="text-xs font-black text-text-primary tracking-tight">Acompanhamento Prioritário</h3>
+                <h3 className="text-xs font-black text-text-primary uppercase tracking-tight">Acompanhamento Prioritário</h3>
                 <p className="text-[10px] text-text-muted font-medium">Alertas clínicos ativos na microárea</p>
               </div>
             </div>
             {totalPriorityAlerts > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900/40">
+              <span className="px-2 py-0.5 rounded-none text-[9px] font-black bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900/40">
                 {totalPriorityAlerts} alertas
               </span>
             )}
@@ -359,14 +359,14 @@ export function Dashboard({ user }: { user: AppUser | null }) {
             {/* Alerta 1: Crianças / Bebês */}
             <div 
               onClick={() => navigate('/pacientes?filter=pending_6m')} 
-              className={`p-2 rounded-xl border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
+              className={`p-2 rounded-none border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
                 stats.childVisitAlerts > 0
                   ? 'border-red-100 dark:border-red-950/30 bg-red-50/10 hover:bg-red-50/20'
                   : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
               }`}
             >
               <div className={`absolute top-0 left-0 w-[3px] h-full ${stats.childVisitAlerts > 0 ? 'bg-red-500' : 'bg-emerald-500'}`} />
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white shadow-xs shrink-0 ${stats.childVisitAlerts > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
+              <div className={`w-7 h-7 rounded-none flex items-center justify-center text-white shadow-xs shrink-0 ${stats.childVisitAlerts > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
                 {stats.childVisitAlerts > 0 ? <Baby className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
               <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
@@ -376,7 +376,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                   </h5>
                   <p className="text-[9px] text-text-muted font-bold uppercase truncate">Acompanhamento até 6m</p>
                 </div>
-                <Badge variant={stats.childVisitAlerts > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0">
+                <Badge variant={stats.childVisitAlerts > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-none shrink-0">
                   {stats.childVisitAlerts > 0 ? 'PENDENTE' : 'EM DIA'}
                 </Badge>
               </div>
@@ -385,7 +385,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
             {/* Alerta 2: Sem Domicílio Cadastrado */}
             <div 
               onClick={() => navigate('/pacientes?filter=sem_domicilio')} 
-              className={`p-2 rounded-xl border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
+              className={`p-2 rounded-none border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
                 ((stats as any).semDomicilioAlerts || 0) > 0
                   ? 'border-rose-100 dark:border-rose-950/30 bg-rose-50/10 hover:bg-rose-50/20'
                   : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
@@ -393,7 +393,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
               title="Clique para filtrar cidadãos sem domicílio e vincular/criar endereço"
             >
               <div className={`absolute top-0 left-0 w-[3px] h-full ${((stats as any).semDomicilioAlerts || 0) > 0 ? 'bg-rose-600' : 'bg-emerald-500'}`} />
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white shadow-xs shrink-0 ${((stats as any).semDomicilioAlerts || 0) > 0 ? 'bg-rose-600' : 'bg-emerald-500'}`}>
+              <div className={`w-7 h-7 rounded-none flex items-center justify-center text-white shadow-xs shrink-0 ${((stats as any).semDomicilioAlerts || 0) > 0 ? 'bg-rose-600' : 'bg-emerald-500'}`}>
                 {((stats as any).semDomicilioAlerts || 0) > 0 ? <Home className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
               <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
@@ -405,7 +405,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                   </h5>
                   <p className="text-[9px] text-text-muted font-bold uppercase truncate">Gerar / Vincular Endereço</p>
                 </div>
-                <Badge variant={((stats as any).semDomicilioAlerts || 0) > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0">
+                <Badge variant={((stats as any).semDomicilioAlerts || 0) > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-none shrink-0">
                   {((stats as any).semDomicilioAlerts || 0) > 0 ? 'CADASTRAR' : 'REGULAR'}
                 </Badge>
               </div>
@@ -414,14 +414,14 @@ export function Dashboard({ user }: { user: AppUser | null }) {
             {/* Alerta 3: Visitas em Atraso */}
             <div 
               onClick={() => navigate('/pacientes?filter=visitas_atrasadas')} 
-              className={`p-2 rounded-xl border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
+              className={`p-2 rounded-none border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
                 stats.pendingVisits > 0
                   ? 'border-orange-100 dark:border-orange-950/30 bg-orange-50/10 hover:bg-orange-50/20'
                   : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
               }`}
             >
               <div className={`absolute top-0 left-0 w-[3px] h-full ${stats.pendingVisits > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`} />
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white shadow-xs shrink-0 ${stats.pendingVisits > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`}>
+              <div className={`w-7 h-7 rounded-none flex items-center justify-center text-white shadow-xs shrink-0 ${stats.pendingVisits > 0 ? 'bg-orange-500' : 'bg-emerald-500'}`}>
                 {stats.pendingVisits > 0 ? <CalendarIcon className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
               <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
@@ -431,7 +431,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                   </h5>
                   <p className="text-[9px] text-text-muted font-bold uppercase truncate">Rotina mensal de campo</p>
                 </div>
-                <div className={`px-1.5 py-0.5 rounded text-[8px] font-black shadow-xs shrink-0 ${stats.pendingVisits > 0 ? 'bg-orange-500 text-white' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'}`}>
+                <div className={`px-1.5 py-0.5 rounded-none text-[8px] font-black shadow-xs shrink-0 ${stats.pendingVisits > 0 ? 'bg-orange-500 text-white' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'}`}>
                   {stats.pendingVisits > 0 ? stats.pendingVisits : 'OK'}
                 </div>
               </div>
@@ -440,14 +440,14 @@ export function Dashboard({ user }: { user: AppUser | null }) {
             {/* Alerta 4: Vacinas Atrasadas */}
             <div 
               onClick={() => navigate('/pacientes?filter=vacinas_atrasadas')} 
-              className={`p-2 rounded-xl border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
+              className={`p-2 rounded-none border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
                 stats.lateVaccines > 0
                   ? 'border-red-100 dark:border-red-950/30 bg-red-50/10 hover:bg-red-50/20'
                   : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
               }`}
             >
               <div className={`absolute top-0 left-0 w-[3px] h-full ${stats.lateVaccines > 0 ? 'bg-red-500' : 'bg-emerald-500'}`} />
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white shadow-xs shrink-0 ${stats.lateVaccines > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
+              <div className={`w-7 h-7 rounded-none flex items-center justify-center text-white shadow-xs shrink-0 ${stats.lateVaccines > 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
                 {stats.lateVaccines > 0 ? <ShieldAlert className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
               <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
@@ -457,7 +457,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                   </h5>
                   <p className="text-[9px] text-text-muted font-bold uppercase truncate">Crianças menores de 2 anos</p>
                 </div>
-                <Badge variant={stats.lateVaccines > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0">
+                <Badge variant={stats.lateVaccines > 0 ? 'danger' : 'success'} className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-none shrink-0">
                   {stats.lateVaccines > 0 ? 'ATRASO' : 'COMPLETO'}
                 </Badge>
               </div>
@@ -466,14 +466,14 @@ export function Dashboard({ user }: { user: AppUser | null }) {
             {/* Alerta 5: Receitas Vencendo */}
             <div 
               onClick={() => navigate('/pacientes?filter=receitas_vencendo')} 
-              className={`p-2 rounded-xl border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
+              className={`p-2 rounded-none border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
                 stats.receitasAVencer > 0
                   ? 'border-purple-100 dark:border-purple-950/30 bg-purple-50/10 hover:bg-purple-50/20'
                   : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
               }`}
             >
               <div className={`absolute top-0 left-0 w-[3px] h-full ${stats.receitasAVencer > 0 ? 'bg-purple-500' : 'bg-emerald-500'}`} />
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white shadow-xs shrink-0 ${stats.receitasAVencer > 0 ? 'bg-purple-500' : 'bg-emerald-500'}`}>
+              <div className={`w-7 h-7 rounded-none flex items-center justify-center text-white shadow-xs shrink-0 ${stats.receitasAVencer > 0 ? 'bg-purple-500' : 'bg-emerald-500'}`}>
                 {stats.receitasAVencer > 0 ? <Activity className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
               <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
@@ -483,7 +483,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                   </h5>
                   <p className="text-[9px] text-text-muted font-bold uppercase truncate">Medicamentos controlados</p>
                 </div>
-                <Badge variant={stats.receitasAVencer > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0 ${stats.receitasAVencer > 0 ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300' : ''}`}>
+                <Badge variant={stats.receitasAVencer > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-none shrink-0 ${stats.receitasAVencer > 0 ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300' : ''}`}>
                   {stats.receitasAVencer > 0 ? 'ATENÇÃO' : 'VÁLIDAS'}
                 </Badge>
               </div>
@@ -492,14 +492,14 @@ export function Dashboard({ user }: { user: AppUser | null }) {
             {/* Alerta 6: Pré-Natal / Visitas Gestante Pendentes */}
             <div 
               onClick={() => navigate('/pacientes?filter=gestantes')} 
-              className={`p-2 rounded-xl border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
+              className={`p-2 rounded-none border flex items-center gap-2.5 relative overflow-hidden group transition-all cursor-pointer ${
                 (stats as any).gestantesPendentes > 0
                   ? 'border-pink-100 dark:border-pink-950/30 bg-pink-50/10 hover:bg-pink-50/20'
                   : 'border-emerald-100 dark:border-emerald-950/20 bg-emerald-500/5 hover:bg-emerald-500/10'
               }`}
             >
               <div className={`absolute top-0 left-0 w-[3px] h-full ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-500' : 'bg-emerald-500'}`} />
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white shadow-xs shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-500' : 'bg-emerald-500'}`}>
+              <div className={`w-7 h-7 rounded-none flex items-center justify-center text-white shadow-xs shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-500' : 'bg-emerald-500'}`}>
                 {(stats as any).gestantesPendentes > 0 ? <Baby className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
               <div className="flex-1 flex items-center justify-between gap-1.5 min-w-0">
@@ -509,7 +509,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                   </h5>
                   <p className="text-[9px] text-text-muted font-bold uppercase truncate">Metas Consultas (9) & ACS (3)</p>
                 </div>
-                <Badge variant={(stats as any).gestantesPendentes > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300' : ''}`}>
+                <Badge variant={(stats as any).gestantesPendentes > 0 ? 'default' : 'success'} className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-none shrink-0 ${(stats as any).gestantesPendentes > 0 ? 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300' : ''}`}>
                   {(stats as any).gestantesPendentes > 0 ? 'ATENÇÃO' : 'COMPLETO'}
                 </Badge>
               </div>
@@ -518,21 +518,21 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </div>
 
         {/* Card 3: Calendário de Visitas Realizadas */}
-        <div className="bg-bg-secondary rounded-2xl p-3 border border-border shadow-xs flex flex-col justify-between h-[305px] overflow-hidden">
+        <div className="bg-bg-secondary rounded-none p-3 border border-border shadow-xs flex flex-col justify-between h-[320px] overflow-hidden">
           <div className="h-full overflow-hidden">
             <PendingCalendar visits={visits} patients={allPatients} />
           </div>
         </div>
 
         {/* Card 4: Últimos Cadastros */}
-        <div className="bg-bg-secondary rounded-2xl p-3 sm:p-3.5 border border-border shadow-xs flex flex-col justify-between h-[305px] overflow-hidden">
+        <div className="bg-bg-secondary rounded-none p-3 sm:p-3.5 border border-border shadow-xs flex flex-col justify-between h-[320px] overflow-hidden">
           <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-border/60 shrink-0">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-xs shrink-0">
+              <div className="w-7 h-7 rounded-none bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-xs shrink-0">
                 <Users className="w-3.5 h-3.5" />
               </div>
               <div>
-                <h3 className="text-xs font-black text-text-primary tracking-tight">Últimos Cadastros</h3>
+                <h3 className="text-xs font-black text-text-primary uppercase tracking-tight">Últimos Cadastros</h3>
                 <p className="text-[10px] text-text-muted font-medium">Cidadãos adicionados recentemente</p>
               </div>
             </div>
@@ -551,10 +551,10 @@ export function Dashboard({ user }: { user: AppUser | null }) {
               lastRegisteredPatients.map((p, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-2.5 p-2 rounded-xl bg-bg-primary/50 dark:bg-slate-800/20 hover:bg-bg-primary dark:hover:bg-slate-800/40 border border-border/50 transition-all cursor-pointer group"
+                  className="flex items-center gap-2.5 p-2 rounded-none bg-bg-primary/50 dark:bg-slate-800/20 hover:bg-bg-primary dark:hover:bg-slate-800/40 border border-border/50 transition-all cursor-pointer group"
                   onClick={() => navigate(p.household_id ? `/domicilio/${p.household_id}` : `/pacientes?filter=all`)}
                 >
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-black text-[10px] shrink-0 shadow-xs bg-gradient-to-br from-teal-400 to-emerald-600">
+                  <div className="w-7 h-7 rounded-none flex items-center justify-center text-white font-black text-[10px] shrink-0 shadow-xs bg-gradient-to-br from-teal-400 to-emerald-600">
                     {p.name?.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -567,7 +567,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <span className="text-[9px] font-semibold text-text-muted">{p.created_at ? formatDate(p.created_at) : '--'}</span>
-                    <span className="px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-wide bg-teal-100 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400">Novo</span>
+                    <span className="px-1.5 py-0.2 rounded-none text-[8px] font-black uppercase tracking-wide bg-teal-100 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400">Novo</span>
                   </div>
                 </div>
               ))
