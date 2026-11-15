@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { syncService } from '../lib/syncService';
-import { formatDate, isPatientBolsaFamilia } from '../lib/dateUtils';
+import { formatDate, isPatientBolsaFamilia, calculateAge } from '../lib/dateUtils';
 import { useToast } from './Toast';
 import { queryClient } from '../lib/queryClient';
+import { PatientForm } from './PatientForm';
 import { 
   Home, 
   Users, 
@@ -44,6 +45,7 @@ export function HouseholdView({ user }: { user: any }) {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
   const [linkingId, setLinkingId] = useState<string | null>(null);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
 
   const [editForm, setEditForm] = useState({
     address: '',
@@ -158,51 +160,54 @@ export function HouseholdView({ user }: { user: any }) {
     }
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!id) return;
-      try {
-        const { data: hData, error: hError } = await supabase
-          .from('households')
+  const fetchHouseholdData = useCallback(async () => {
+    if (!id) return;
+    try {
+      const { data: hData, error: hError } = await supabase
+        .from('households')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (hError) throw hError;
+
+      if (hData) {
+        setHousehold(hData);
+        
+        // Fetch residents
+        const { data: rData, error: rError } = await supabase
+          .from('patients')
           .select('*')
-          .eq('id', id)
-          .single();
+          .eq('household_id', id);
 
-        if (hError) throw hError;
+        if (rError) throw rError;
+        setResidents(rData || []);
 
-        if (hData) {
-          setHousehold(hData);
-          
-          // Fetch residents
-          const { data: rData, error: rError } = await supabase
-            .from('patients')
+        // Fetch visits for all residents
+        if (rData && rData.length > 0) {
+          const residentIds = rData.map(d => d.id);
+          const { data: vData, error: vError } = await supabase
+            .from('visits')
             .select('*')
-            .eq('household_id', id);
+            .in('patient_id', residentIds)
+            .order('date', { ascending: false });
 
-          if (rError) throw rError;
-          setResidents(rData || []);
-
-          // Fetch visits for all residents
-          if (rData && rData.length > 0) {
-            const residentIds = rData.map(d => d.id);
-            const { data: vData, error: vError } = await supabase
-              .from('visits')
-              .select('*')
-              .in('patient_id', residentIds)
-              .order('date', { ascending: false });
-
-            if (vError) throw vError;
-            setVisits(vData || []);
-          }
+          if (vError) throw vError;
+          setVisits(vData || []);
+        } else {
+          setVisits([]);
         }
-      } catch (error) {
-        console.error("Household fetch error:", error);
-      } finally {
-        setLoading(false);
       }
-    };
-    fetchData();
+    } catch (error) {
+      console.error("Household fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
+
+  useEffect(() => {
+    fetchHouseholdData();
+  }, [fetchHouseholdData]);
 
   useEffect(() => {
     if (household) {
@@ -327,148 +332,210 @@ export function HouseholdView({ user }: { user: any }) {
         </div>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column */}
-        <div className="lg:col-span-5 space-y-8">
-          <div className="bg-green-50 dark:bg-green-900/20 p-8 rounded-[2rem] text-green-800 dark:text-green-400 border border-green-100 dark:border-green-900/30">
-            <div className="flex items-start justify-between">
-              <div>
-                <h4 className="text-lg font-bold font-headline mb-2">Acompanhamento do Domicílio</h4>
-                <p className="text-sm opacity-80 mb-6">O protocolo recomenda retorno periódico para acompanhamento de rotina de todos os moradores.</p>
-                {user.role !== 'Gestor' && (
-                  <button 
-                    onClick={() => {
-                      if (residents.length === 1) {
-                        navigate(`/editar-paciente/${residents[0].id}?nova-visita=true`);
-                      } else {
-                        setShowVisitModal(true);
-                      }
-                    }}
-                    className="bg-green-600 dark:bg-green-700 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-md hover:bg-green-700 dark:hover:bg-green-600 transition-all flex items-center gap-2"
-                  >
-                    <PlusCircle className="w-4 h-4" />
-                    Registrar Nova Visita
-                  </button>
-                )}
+      {/* Master-Detail Split Screen Layout */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        {/* Master Column (Household Info, Residents List, History) */}
+        <div className={`w-full transition-all duration-300 ${selectedPatientId ? 'lg:w-[42%] shrink-0 space-y-6' : 'w-full'}`}>
+          <div className={selectedPatientId ? 'space-y-6' : 'grid grid-cols-1 lg:grid-cols-12 gap-8'}>
+            
+            {/* Acompanhamento do Domicílio */}
+            <div className={selectedPatientId ? 'w-full' : 'lg:col-span-5'}>
+              <div className="bg-emerald-50 dark:bg-emerald-950/20 p-6 sm:p-7 rounded-[2rem] text-emerald-800 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="text-base sm:text-lg font-bold font-headline mb-1.5">Acompanhamento do Domicílio</h4>
+                    <p className="text-xs sm:text-sm opacity-80 mb-5">O protocolo recomenda retorno periódico para acompanhamento de rotina de todos os moradores.</p>
+                    {user.role !== 'Gestor' && (
+                      <button 
+                        onClick={() => {
+                          if (residents.length === 1) {
+                            setSelectedPatientId(residents[0].id);
+                          } else {
+                            setShowVisitModal(true);
+                          }
+                        }}
+                        className="bg-teal-600 dark:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-md hover:bg-teal-700 dark:hover:bg-teal-600 transition-all flex items-center gap-2 cursor-pointer"
+                      >
+                        <PlusCircle className="w-4 h-4" />
+                        Registrar Nova Visita
+                      </button>
+                    )}
+                  </div>
+                  <Home className="w-10 h-10 opacity-10 shrink-0" />
+                </div>
               </div>
-              <Home className="w-12 h-12 opacity-10" />
             </div>
-          </div>
-        </div>
 
-        {/* Right Column */}
-        <div className="lg:col-span-7 space-y-8">
-          {/* Residents */}
-          <div className="bg-bg-secondary dark:bg-slate-900 p-8 rounded-[2rem] shadow-sm border border-border dark:border-slate-800">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-              <h3 className="text-xl font-bold font-headline text-text-primary">Moradores Dependentes</h3>
-              <div className="flex flex-wrap items-center gap-2">
-                {user.role !== 'Gestor' && (
-                  <>
-                    <button 
-                      onClick={() => navigate(`/novo-cadastro?household=${household.id}`)}
-                      className="bg-primary hover:bg-primary/90 text-white text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
-                      title="Cadastrar novo morador neste domicílio"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Novo Morador
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setShowLinkModal(true);
-                        setSearchQuery('');
-                        setSearchResults([]);
-                      }}
-                      className="bg-teal-50 hover:bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:hover:bg-teal-950/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800/80 text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all shadow-xs active:scale-95"
-                      title="Vincular cidadão já cadastrado a esta residência"
-                    >
-                      <UserPlus className="w-3.5 h-3.5" />
-                      Vincular Existente
-                    </button>
-                  </>
-                )}
-                <span className="bg-primary/10 text-primary text-xs px-3 py-1.5 rounded-full font-bold">{residents.length} Residentes</span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              {residents.map(r => (
-                <div key={r.id} className="flex items-center justify-between p-4 rounded-2xl hover:bg-bg-primary transition-colors group cursor-pointer">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-bg-primary flex items-center justify-center text-text-secondary dark:text-text-muted font-bold text-sm group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                      {r.name?.substring(0, 2).toUpperCase()}
+            {/* Residents & History */}
+            <div className={selectedPatientId ? 'w-full space-y-6' : 'lg:col-span-7 space-y-8'}>
+              {/* Residents Card */}
+              <div className="bg-bg-secondary dark:bg-slate-900 p-6 sm:p-8 rounded-[2rem] shadow-sm border border-border dark:border-slate-800">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-bold font-headline text-text-primary">Moradores do Domicílio</h3>
+                    <p className="text-xs text-text-muted mt-0.5">Clique em um morador para abrir a ficha de edição ao lado</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {user.role !== 'Gestor' && (
+                      <>
+                        <button 
+                          onClick={() => navigate(`/novo-cadastro?household=${household.id}`)}
+                          className="bg-primary hover:bg-primary/90 text-white text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+                          title="Cadastrar novo morador neste domicílio"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Novo Morador
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setShowLinkModal(true);
+                            setSearchQuery('');
+                            setSearchResults([]);
+                          }}
+                          className="bg-teal-50 hover:bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:hover:bg-teal-950/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800/80 text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer"
+                          title="Vincular cidadão já cadastrado a esta residência"
+                        >
+                          <UserPlus className="w-3.5 h-3.5" />
+                          Vincular Existente
+                        </button>
+                      </>
+                    )}
+                    <span className="bg-primary/10 text-primary text-xs px-3 py-1.5 rounded-full font-bold">{residents.length} Residentes</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5">
+                  {residents.length === 0 ? (
+                    <div className="text-center py-8 text-text-muted text-sm">
+                      Nenhum morador vinculado a este domicílio.
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-text-primary">{r.name}</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        <p className="text-[10px] text-text-muted dark:text-text-secondary uppercase tracking-wider mr-2">SUS: {r.cns}</p>
-                        {r.categories?.map((cat: string) => (
-                          <span key={cat} className="text-[8px] px-1.5 py-0.5 bg-bg-primary text-text-secondary dark:text-text-muted rounded font-bold uppercase">
-                            {cat}
+                  ) : (
+                    residents.map(r => {
+                      const isSelected = selectedPatientId === r.id;
+                      return (
+                        <div 
+                          key={r.id} 
+                          onClick={() => setSelectedPatientId(isSelected ? null : r.id)}
+                          className={`p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer group flex items-center justify-between gap-3 ${
+                            isSelected
+                              ? 'border-teal-500 bg-teal-50/70 dark:bg-teal-950/40 ring-2 ring-teal-500/20 shadow-sm'
+                              : 'border-border/60 hover:border-teal-300 dark:hover:border-teal-800 bg-bg-primary/50 dark:bg-slate-800/30 hover:bg-bg-primary dark:hover:bg-slate-800/60'
+                          }`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className={`text-sm font-bold truncate leading-tight transition-colors ${
+                                isSelected ? 'text-teal-700 dark:text-teal-300' : 'text-text-primary group-hover:text-teal-600'
+                              }`}>
+                                {r.name}
+                              </p>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                                r.is_family_responsible 
+                                  ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/60 dark:text-teal-300' 
+                                  : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                              }`}>
+                                {r.is_family_responsible ? 'Responsável' : 'Dependente'}
+                              </span>
+                              {isSelected && (
+                                <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-teal-600 text-white shadow-xs">
+                                  Editando
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[11px] text-text-muted">
+                              <span>{r.birth_date ? calculateAge(r.birth_date) : 'Idade N/I'}</span>
+                              <span>•</span>
+                              <span className="font-mono">SUS: {r.cns || 'N/I'}</span>
+                              {r.categories?.map((cat: string) => (
+                                <span key={cat} className="text-[9px] px-1.5 py-0.5 bg-bg-primary dark:bg-slate-800 text-text-secondary dark:text-text-muted rounded-md font-bold uppercase border border-border/50">
+                                  {cat}
+                                </span>
+                              ))}
+                              {isPatientBolsaFamilia(r) && (
+                                <span className="text-[9px] px-1.5 py-0.5 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded-md font-bold uppercase border border-emerald-300 dark:border-emerald-800">
+                                  🎁 Bolsa Família
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button 
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedPatientId(isSelected ? null : r.id);
+                              }}
+                              className={`p-2 rounded-xl transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'bg-teal-600 text-white shadow-sm'
+                                  : 'text-text-muted hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/50'
+                              }`}
+                              title={isSelected ? 'Fechar Edição' : 'Editar Morador'}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${
+                              isSelected ? 'text-teal-600 rotate-90' : 'text-text-muted group-hover:text-teal-600'
+                            }`} />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* History */}
+              <div className="bg-bg-secondary dark:bg-slate-900 p-6 sm:p-8 rounded-[2rem] shadow-sm border border-border dark:border-slate-800">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg sm:text-xl font-bold font-headline text-text-primary">Histórico de Visitas</h3>
+                  <button 
+                    onClick={() => navigate('/historico')}
+                    className="text-primary text-xs sm:text-sm font-bold hover:underline cursor-pointer"
+                  >
+                    Ver tudo
+                  </button>
+                </div>
+                <div className="space-y-6">
+                  {visits.length > 0 ? visits.map((v, i) => (
+                    <div key={v.id} className="flex gap-4 relative">
+                      {i !== visits.length - 1 && <div className="absolute left-5 top-10 bottom-0 w-[2px] bg-bg-primary"></div>}
+                      <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 z-10 shrink-0">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </div>
+                      <div className="pb-4">
+                        <div className="flex items-center gap-3 mb-1">
+                          <span className="text-sm font-bold text-text-primary">{v.type}</span>
+                          <span className="text-[10px] font-bold bg-bg-primary px-2 py-0.5 rounded text-text-muted dark:text-text-secondary uppercase">
+                            {formatDate(v.date)}
                           </span>
-                        ))}
-                        {isPatientBolsaFamilia(r) && (
-                          <span className="text-[8px] px-1.5 py-0.5 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded font-bold uppercase border border-emerald-300 dark:border-emerald-800">
-                            🎁 Bolsa Família
-                          </span>
-                        )}
+                        </div>
+                        <p className="text-sm text-text-secondary dark:text-text-muted leading-relaxed">{v.summary}</p>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-[10px] bg-bg-primary px-2 py-1 rounded text-text-secondary dark:text-text-muted font-bold uppercase">
-                      {r.is_family_responsible ? 'Responsável' : 'Dependente'}
-                    </span>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/editar-paciente/${r.id}`);
-                      }}
-                      className="p-2 text-text-muted hover:text-primary transition-colors"
-                      title="Editar Paciente"
-                    >
-                      {user.role === 'Gestor' ? <Eye className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
-                    </button>
-                    <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-primary transition-colors" />
-                  </div>
+                  )) : (
+                    <p className="text-center text-text-muted dark:text-text-secondary text-sm py-4">Nenhuma visita registrada recentemente.</p>
+                  )}
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* History */}
-          <div className="bg-bg-secondary dark:bg-slate-900 p-8 rounded-[2rem] shadow-sm border border-border dark:border-slate-800">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-xl font-bold font-headline text-text-primary">Histórico de Visitas</h3>
-              <button 
-                onClick={() => navigate('/historico')}
-                className="text-primary text-sm font-bold hover:underline"
-              >
-                Ver tudo
-              </button>
-            </div>
-            <div className="space-y-8">
-              {visits.length > 0 ? visits.map((v, i) => (
-                <div key={v.id} className="flex gap-4 relative">
-                  {i !== visits.length - 1 && <div className="absolute left-5 top-10 bottom-0 w-[2px] bg-bg-primary"></div>}
-                  <div className="w-10 h-10 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center text-green-600 dark:text-green-400 z-10 shrink-0">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                  <div className="pb-4">
-                    <div className="flex items-center gap-3 mb-1">
-                      <span className="text-sm font-bold text-text-primary">{v.type}</span>
-                      <span className="text-[10px] font-bold bg-bg-primary px-2 py-0.5 rounded text-text-muted dark:text-text-secondary uppercase">
-                        {formatDate(v.date)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-text-secondary dark:text-text-muted leading-relaxed">{v.summary}</p>
-                  </div>
-                </div>
-              )) : (
-                <p className="text-center text-text-muted dark:text-text-secondary text-sm py-4">Nenhuma visita registrada recentemente.</p>
-              )}
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Right Column (Detail): Editable Patient Form */}
+        {selectedPatientId && (
+          <div className="w-full lg:w-[58%] bg-bg-secondary rounded-3xl border border-border p-4 sm:p-6 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+            <PatientForm 
+              user={user} 
+              patientId={selectedPatientId} 
+              onClose={() => setSelectedPatientId(null)}
+              onSaveSuccess={() => {
+                fetchHouseholdData();
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}
@@ -611,16 +678,19 @@ export function HouseholdView({ user }: { user: any }) {
               {residents.map(r => (
                 <button
                   key={r.id}
-                  onClick={() => navigate(`/editar-paciente/${r.id}?nova-visita=true`)}
-                  className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-bg-primary transition-all text-left group"
+                  onClick={() => {
+                    setShowVisitModal(false);
+                    setSelectedPatientId(r.id);
+                  }}
+                  className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-bg-primary transition-all text-left group border border-border/50 hover:border-teal-500"
                 >
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm group-hover:bg-primary group-hover:text-white transition-all">
-                    {r.name?.substring(0, 2).toUpperCase()}
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-text-primary group-hover:text-teal-600 transition-colors">{r.name}</p>
+                    <p className="text-[10px] text-text-muted dark:text-text-secondary uppercase tracking-wider">
+                      {r.birth_date ? calculateAge(r.birth_date) : 'Idade N/I'} • SUS: {r.cns || 'Não informado'}
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-text-primary">{r.name}</p>
-                    <p className="text-[10px] text-text-muted dark:text-text-secondary uppercase tracking-wider">SUS: {r.cns}</p>
-                  </div>
+                  <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-teal-600 transition-colors shrink-0" />
                 </button>
               ))}
             </div>
@@ -685,20 +755,15 @@ export function HouseholdView({ user }: { user: any }) {
                     key={p.id}
                     className="flex items-center justify-between p-3.5 rounded-2xl bg-bg-primary/60 dark:bg-slate-800/40 border border-border/60 dark:border-slate-800 hover:bg-bg-primary dark:hover:bg-slate-800 transition-all gap-3"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                        {p.name?.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-text-primary truncate">{p.name}</p>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                          <span className="text-[10px] text-text-muted font-medium">CNS: {p.cns || 'Sem CNS'}</span>
-                          {p.birth_date && (
-                            <span className="text-[9px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded font-bold">
-                              {formatDate(p.birth_date)}
-                            </span>
-                          )}
-                        </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-text-primary truncate">{p.name}</p>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                        <span className="text-[10px] text-text-muted font-medium">CNS: {p.cns || 'Sem CNS'}</span>
+                        {p.birth_date && (
+                          <span className="text-[9px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded font-bold">
+                            {formatDate(p.birth_date)}
+                          </span>
+                        )}
                       </div>
                     </div>
 
