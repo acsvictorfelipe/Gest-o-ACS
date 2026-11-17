@@ -76,6 +76,12 @@ export function PatientList({ user }: { user: AppUser | null }) {
     newParams.delete('selected');
     setSearchParams(newParams, { replace: true });
   };
+
+  useEffect(() => {
+    if (selectedPatientId) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [selectedPatientId]);
   const {
     patients,
     loading,
@@ -120,7 +126,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 ${selectedPatientId ? 'hidden lg:flex' : 'flex'}`}>
         <header className="flex flex-col gap-1">
           <h2 className="text-2xl font-headline font-bold tracking-tight text-text-primary leading-none">
             {activeFilter === 'gestantes' ? 'Gestantes' :
@@ -154,7 +160,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
       </div>
 
       {/* Search Bar & Filters */}
-      <div className="space-y-6">
+      <div className={`space-y-6 ${selectedPatientId ? 'hidden lg:block' : 'block'}`}>
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full flex-wrap xl:flex-nowrap">
             {/* 1. Campo de Busca */}
@@ -272,7 +278,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
         <div className="space-y-4">
           {/* Dynamic Search/Filter Stats */}
           {(searchTerm || selectedStreet || activeFilter !== 'all') && (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-teal-50/45 dark:bg-emerald-950/10 border border-teal-100 dark:border-emerald-900/30 p-4 rounded-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-teal-50/45 dark:bg-emerald-950/10 border border-teal-100 dark:border-emerald-900/30 p-4 rounded-2xl animate-in fade-in slide-in-from-top-2 duration-200 ${selectedPatientId ? 'hidden lg:flex' : 'flex'}`}>
               <div className="flex items-center gap-2 text-teal-800 dark:text-teal-300 flex-wrap">
                 <Search className="w-4 h-4 text-teal-600 shrink-0" />
                 <p className="text-xs font-semibold">
@@ -371,7 +377,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
 
           {/* Split Screen Master-Detail Layout */}
           <div className="flex flex-col lg:flex-row gap-5 items-start">
-            <div className={`w-full transition-all duration-300 ${selectedPatientId ? 'lg:w-[42%] shrink-0' : 'w-full'}`}>
+            <div className={`w-full transition-all duration-300 ${selectedPatientId ? 'hidden lg:block lg:w-[42%] shrink-0' : 'w-full'}`}>
               <div className="bg-bg-secondary rounded-3xl border border-border overflow-hidden shadow-sm shadow-slate-100">
                 {/* Desktop Table View */}
                 <div className="hidden lg:block overflow-x-auto">
@@ -934,6 +940,19 @@ export function PatientList({ user }: { user: AppUser | null }) {
           {/* Right Column: Editable Patient Record Form (Detail Panel) */}
           {selectedPatientId && (
             <div className="w-full lg:w-[58%] bg-bg-secondary rounded-3xl border border-border p-4 sm:p-6 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+              {/* Return to list button for tablet and mobile (< lg) */}
+              <div className="lg:hidden mb-4 pb-3 border-b border-border flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={handleCloseDetail}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 font-bold text-xs hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors cursor-pointer shadow-xs border border-teal-200/50 dark:border-teal-800/50"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Voltar para Lista de Pacientes</span>
+                </button>
+                <span className="text-xs font-bold text-teal-600 dark:text-teal-400">Perfil do Cidadão</span>
+              </div>
+
               <PatientForm 
                 user={user} 
                 patientId={selectedPatientId} 
@@ -945,7 +964,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
 
         {/* Pagination Controls */}
         {totalCount > 0 && (
-          <div className="px-6 py-4 bg-bg-secondary rounded-2xl border border-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-text-muted mt-4">
+          <div className={`px-6 py-4 bg-bg-secondary rounded-2xl border border-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-text-muted mt-4 ${selectedPatientId ? 'hidden lg:flex' : 'flex'}`}>
             <div className="flex items-center gap-2">
               <span>Exibindo página <strong>{currentPage}</strong> de <strong>{totalPages}</strong> ({totalCount} cidadãos cadastrados)</span>
             </div>

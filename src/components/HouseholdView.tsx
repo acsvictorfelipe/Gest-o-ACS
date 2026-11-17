@@ -25,7 +25,8 @@ import {
   Plus,
   UserPlus,
   Search,
-  Check
+  Check,
+  ArrowLeft
 } from 'lucide-react';
 
 export function HouseholdView({ user }: { user: any }) {
@@ -46,6 +47,12 @@ export function HouseholdView({ user }: { user: any }) {
   const [searching, setSearching] = useState(false);
   const [linkingId, setLinkingId] = useState<string | null>(null);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedPatientId) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [selectedPatientId]);
 
   const [editForm, setEditForm] = useState({
     address: '',
@@ -296,7 +303,7 @@ export function HouseholdView({ user }: { user: any }) {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header Card */}
-      <section className="bg-teal-600 dark:bg-teal-800 rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl">
+      <section className={`bg-teal-600 dark:bg-teal-800 rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl ${selectedPatientId ? 'hidden lg:block' : 'block'}`}>
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-90 mb-2 block">Responsável Familiar</span>
@@ -335,7 +342,7 @@ export function HouseholdView({ user }: { user: any }) {
       {/* Master-Detail Split Screen Layout */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         {/* Master Column (Household Info, Residents List, History) */}
-        <div className={`w-full transition-all duration-300 ${selectedPatientId ? 'lg:w-[42%] shrink-0 space-y-6' : 'w-full'}`}>
+        <div className={`w-full transition-all duration-300 ${selectedPatientId ? 'hidden lg:block lg:w-[42%] shrink-0 space-y-6' : 'w-full'}`}>
           <div className={selectedPatientId ? 'space-y-6' : 'grid grid-cols-1 lg:grid-cols-12 gap-8'}>
             
             {/* Acompanhamento do Domicílio */}
@@ -526,6 +533,19 @@ export function HouseholdView({ user }: { user: any }) {
         {/* Right Column (Detail): Editable Patient Form */}
         {selectedPatientId && (
           <div className="w-full lg:w-[58%] bg-bg-secondary rounded-3xl border border-border p-4 sm:p-6 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+            {/* Top return bar visible on tablet and mobile (< lg) */}
+            <div className="lg:hidden mb-4 pb-3 border-b border-border flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setSelectedPatientId(null)}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 font-bold text-xs hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors cursor-pointer shadow-xs border border-teal-200/50 dark:border-teal-800/50"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Voltar para o Domicílio</span>
+              </button>
+              <span className="text-xs font-bold text-teal-600 dark:text-teal-400">Editando Morador</span>
+            </div>
+
             <PatientForm 
               user={user} 
               patientId={selectedPatientId} 
