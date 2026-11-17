@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gestao-acs-v10';
+const CACHE_NAME = 'gestao-acs-v12';
 const FONTS_CACHE_NAME = 'gestao-acs-fonts-v1';
 const ASSETS_TO_CACHE = [
   '/',

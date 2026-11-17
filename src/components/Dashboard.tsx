@@ -293,11 +293,11 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </div>
       )}
 
-      {/* MAIN ZERO-SCROLL COCKPIT VIEWPORT (4 EQUAL COLUMNS) */}
-      <div className="flex-1 min-h-[500px] lg:min-h-0 lg:h-[calc(100vh-175px)] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3.5 overflow-y-auto lg:overflow-hidden">
+      {/* MAIN ZERO-SCROLL COCKPIT VIEWPORT (4 EQUAL COLUMNS ON DESKTOP, 2x2 ON TABLET) */}
+      <div className="flex-1 min-h-[500px] xl:min-h-0 xl:h-[calc(100vh-175px)] grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3.5 sm:gap-4 overflow-y-auto xl:overflow-hidden">
 
         {/* COLUMN 1 (3 Cols): CATEGORIAS DA COMUNIDADE */}
-        <section className="lg:col-span-3 h-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-soft flex flex-col min-h-0 overflow-hidden">
+        <section className="xl:col-span-3 min-h-[360px] xl:min-h-0 h-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-soft flex flex-col overflow-hidden">
           <div className="shrink-0 px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-950/70 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
@@ -340,7 +340,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </section>
 
         {/* COLUMN 2 (3 Cols): ACOMPANHAMENTO PRIORITÁRIO */}
-        <section className="lg:col-span-3 h-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-soft flex flex-col min-h-0 overflow-hidden">
+        <section className="xl:col-span-3 min-h-[360px] xl:min-h-0 h-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-soft flex flex-col overflow-hidden">
           <div className="shrink-0 px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
@@ -508,7 +508,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </section>
 
         {/* COLUMN 3 (3 Cols): ÚLTIMOS CADASTROS */}
-        <section className="lg:col-span-3 h-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-soft flex flex-col min-h-0 overflow-hidden">
+        <section className="xl:col-span-3 min-h-[360px] xl:min-h-0 h-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-soft flex flex-col overflow-hidden">
           <div className="shrink-0 px-3.5 py-2.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
@@ -564,7 +564,7 @@ export function Dashboard({ user }: { user: AppUser | null }) {
         </section>
 
         {/* COLUMN 4 (3 Cols on Far Right): VISITAS REALIZADAS */}
-        <section className="lg:col-span-3 h-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-soft flex flex-col min-h-0 overflow-hidden">
+        <section className="xl:col-span-3 min-h-[360px] xl:min-h-0 h-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-soft flex flex-col overflow-hidden">
           <PendingCalendar visits={visits} patients={allPatients} />
         </section>
 

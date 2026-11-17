@@ -9,6 +9,7 @@ import {
   Search, 
   User, 
   ChevronRight, 
+  ChevronDown,
   MapPin, 
   Plus,
   Loader2,
@@ -193,9 +194,9 @@ export function HouseholdList({ user }: { user: any }) {
         )}
       </div>
 
-      {/* Search Bar & Number Filter */}
-      <div className="flex flex-col sm:flex-row items-center gap-3 max-w-3xl">
-        <div className="relative group flex-1 w-full">
+      {/* Search Bar & Filters */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full max-w-4xl">
+        <div className="relative group flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" />
           <input 
             type="text" 
@@ -206,7 +207,7 @@ export function HouseholdList({ user }: { user: any }) {
           />
         </div>
 
-        <div className="relative group w-full sm:w-48 shrink-0">
+        <div className="relative group w-full sm:w-44 shrink-0">
           <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" />
           <input 
             type="text" 
@@ -216,6 +217,21 @@ export function HouseholdList({ user }: { user: any }) {
             className="w-full bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-lg py-2.5 pl-11 pr-4 shadow-sm focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium text-text-primary dark:text-white"
           />
         </div>
+
+        <div className="relative w-full sm:w-60 shrink-0">
+          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-600 shrink-0 pointer-events-none" />
+          <select
+            value={selectedStreet || ''}
+            onChange={(e) => setSelectedStreet(e.target.value ? e.target.value : null)}
+            className="w-full bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-lg py-2.5 pl-11 pr-10 shadow-sm focus:ring-2 focus:ring-primary/20 transition-all text-sm font-semibold text-text-primary dark:text-white appearance-none cursor-pointer"
+          >
+            <option value="">🗺️ Todas as Ruas ({households.length})</option>
+            {streetStats.map(([street, count]) => (
+              <option key={street} value={street}>{street} ({count})</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        </div>
       </div>
 
       {loading ? (
@@ -224,48 +240,9 @@ export function HouseholdList({ user }: { user: any }) {
           <p className="text-sm font-medium">Carregando dados...</p>
         </div>
       ) : (
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Street Filter Sidebar */}
-          <aside className="w-full lg:w-64 shrink-0 space-y-4">
-            <div className="bg-bg-secondary dark:bg-slate-900 rounded-xl border border-border dark:border-slate-800 overflow-hidden">
-              <div className="p-4 border-b border-border dark:border-slate-800 bg-bg-primary/50">
-                <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-widest flex items-center gap-2">
-                  <MapPin className="w-3 h-3" />
-                  Ruas ({streetStats.length})
-                </h3>
-              </div>
-              <div className="max-h-[300px] lg:max-h-[600px] overflow-y-auto custom-scrollbar">
-                <button
-                  onClick={() => setSelectedStreet(null)}
-                  className={`w-full flex items-center justify-between px-4 py-3 text-xs font-semibold transition-colors border-b border-border/50 last:border-0 ${
-                    !selectedStreet ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-bg-primary'
-                  }`}
-                >
-                  <span>Todas as Ruas</span>
-                  <span className="bg-bg-primary dark:bg-slate-800 px-2 py-0.5 rounded-full text-[10px] text-text-muted">{households.length}</span>
-                </button>
-                {streetStats.map(([street, count]) => (
-                  <button
-                    key={street}
-                    onClick={() => setSelectedStreet(street === selectedStreet ? null : street)}
-                    className={`w-full flex items-center justify-between px-4 py-3 text-xs font-semibold transition-colors border-b border-border/50 last:border-0 text-left ${
-                      selectedStreet === street ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-bg-primary'
-                    }`}
-                  >
-                    <span className="truncate pr-2">
-                      {street}
-                    </span>
-                    <span className="bg-bg-primary dark:bg-slate-800 px-2 py-0.5 rounded-full text-[10px] text-text-muted">{count}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </aside>
-
-          {/* Household Cards rendered as a polished list */}
-          <div className="flex-1">
-            {filteredHouseholds.length > 0 ? (
-              <div className="bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+        <div className="w-full">
+          {filteredHouseholds.length > 0 ? (
+            <div className="bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
                 {/* Header or column titles for desktop */}
                 <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3.5 bg-bg-primary/50 dark:bg-slate-800/30 text-[10px] font-bold uppercase tracking-wider text-text-muted border-b border-border dark:border-slate-800">
                   <div className="col-span-4">Endereço</div>
@@ -423,8 +400,7 @@ export function HouseholdList({ user }: { user: any }) {
               </div>
             )}
           </div>
-        </div>
-      )}
+        )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (

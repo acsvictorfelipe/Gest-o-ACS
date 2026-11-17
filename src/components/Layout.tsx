@@ -220,7 +220,10 @@ export function Layout({
           <>
             <div className="mt-8 mb-4 px-4 text-[11px] font-bold text-text-muted uppercase tracking-widest">Relatórios & Exportação</div>
             <button 
-              onClick={() => navigate('/relatorios')}
+              onClick={() => {
+                navigate('/relatorios');
+                setIsMobileMenuOpen(false);
+              }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
                 location.pathname === '/relatorios' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
               }`}
@@ -229,7 +232,10 @@ export function Layout({
               <span className={`text-[14px] font-semibold ${location.pathname === '/relatorios' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Indicadores</span>
             </button>
             <button 
-              onClick={() => navigate('/historico')}
+              onClick={() => {
+                navigate('/historico');
+                setIsMobileMenuOpen(false);
+              }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
                 location.pathname === '/historico' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
               }`}
@@ -238,7 +244,10 @@ export function Layout({
               <span className={`text-[14px] font-semibold ${location.pathname === '/historico' ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'}`}>Histórico de Visitas</span>
             </button>
             <button 
-              onClick={() => navigate('/exportar')}
+              onClick={() => {
+                navigate('/exportar');
+                setIsMobileMenuOpen(false);
+              }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
                 location.pathname === '/exportar' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
               }`}
@@ -251,7 +260,10 @@ export function Layout({
           <>
             <div className="mt-8 mb-4 px-4 text-[11px] font-bold text-text-muted uppercase tracking-widest">Ações & Exportação</div>
             <button 
-              onClick={() => navigate('/exportar')}
+              onClick={() => {
+                navigate('/exportar');
+                setIsMobileMenuOpen(false);
+              }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
                 location.pathname === '/exportar' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
               }`}
@@ -265,7 +277,10 @@ export function Layout({
         <div className="mt-8 mb-4 px-4 text-[11px] font-bold text-text-muted uppercase tracking-widest">Configurações</div>
         {(user?.role === 'Administrador' || user?.role === 'Gestor') && (
           <button 
-            onClick={() => navigate('/usuarios')}
+            onClick={() => {
+              navigate('/usuarios');
+              setIsMobileMenuOpen(false);
+            }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group mb-1 ${
               location.pathname === '/usuarios' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
             }`}
@@ -275,7 +290,10 @@ export function Layout({
           </button>
         )}
         <button 
-          onClick={() => navigate('/configuracoes')}
+          onClick={() => {
+            navigate('/configuracoes');
+            setIsMobileMenuOpen(false);
+          }}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
             location.pathname === '/configuracoes' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:bg-bg-primary hover:text-text-primary'
           }`}
@@ -320,7 +338,7 @@ export function Layout({
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setIsMobileMenuOpen(true)}
-            className="lg:hidden p-2 text-text-secondary rounded-xl hover:bg-bg-primary transition-colors cursor-pointer"
+            className="md:hidden p-2 text-text-secondary rounded-xl hover:bg-bg-primary transition-colors cursor-pointer"
           >
             <Menu className="w-6 h-6" />
           </button>
@@ -354,8 +372,8 @@ export function Layout({
           )}
         </div>
 
-        {/* Center: Primary Navigation Pills (Desktop) */}
-        <nav className="hidden lg:flex items-center gap-1.5 bg-bg-primary/90 p-1 rounded-2xl border border-border">
+        {/* Center: Primary Navigation Pills (Tablet & Desktop) */}
+        <nav className="hidden md:flex items-center gap-1.5 bg-bg-primary/90 p-1 rounded-2xl border border-border">
           {primaryNavItems.map((item) => {
             const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
             return (
@@ -521,17 +539,17 @@ export function Layout({
       {/* 2. Main Full-Width Content Container */}
       <main className="flex-1 flex flex-col h-[calc(100vh-60px)] overflow-hidden">
         {/* Page Container */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-5 lg:p-6 pb-[88px] sm:pb-[100px] lg:pb-6 space-y-4">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-4 md:p-5 lg:p-6 pb-20 md:pb-5 lg:pb-6 space-y-4">
           <div className="w-full max-w-[1600px] mx-auto">
             <Outlet />
           </div>
         </div>
       </main>
 
-      {/* 3. Animated Mobile Sidebar Drawer */}
+      {/* 3. Animated Mobile Sidebar Drawer (Phone only) */}
       <AnimatePresence>
         {isMobileMenuOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 z-50 md:hidden">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -544,7 +562,7 @@ export function Layout({
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed inset-y-0 left-0 w-80 bg-bg-secondary shadow-2xl z-50 flex flex-col h-full overflow-hidden"
+              className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-bg-secondary shadow-2xl z-50 flex flex-col h-full overflow-hidden"
             >
               {sidebarContent}
               <button 
@@ -558,8 +576,8 @@ export function Layout({
         )}
       </AnimatePresence>
 
-      {/* 4. Mobile Bottom Navigation Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 h-[64px] bg-bg-secondary/95 backdrop-blur-lg border-t border-border flex items-center justify-around px-4 pb-safe-bottom z-40 shadow-lg">
+      {/* 4. Mobile Bottom Navigation Bar (Phone only, hidden on tablet md+) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 h-[64px] bg-bg-secondary/95 backdrop-blur-lg border-t border-border flex items-center justify-around px-2 pb-safe-bottom z-40 shadow-lg">
         {primaryNavItems.map((item) => {
           const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
           return (
@@ -575,6 +593,15 @@ export function Layout({
             </button>
           );
         })}
+        <button
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="flex flex-col items-center justify-center gap-1 py-1 px-3 rounded-2xl relative transition-all shrink-0 text-text-muted hover:text-text-primary cursor-pointer"
+        >
+          <Menu className="w-5 h-5 transition-colors" />
+          <span className="text-[10px] font-extrabold uppercase tracking-wider">
+            Mais
+          </span>
+        </button>
       </div>
 
       {/* Floating Offline UX Toast Banner */}

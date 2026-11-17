@@ -24,11 +24,16 @@
           navigator.serviceWorker.register('/sw.js', { scope: '/' })
             .then(function(reg) {
               console.log('[PWA] Service Worker ativo:', reg.scope);
+              reg.update().catch(function() {});
             })
             .catch(function(err) {
               console.warn('[PWA] Erro no registro do SW:', err);
             });
         };
+        navigator.serviceWorker.addEventListener('controllerchange', function() {
+          console.log('[PWA] Nova versão instalada. Atualizando tela...');
+          window.location.reload();
+        });
         if (document.readyState === 'complete') {
           registerSW();
         } else {
