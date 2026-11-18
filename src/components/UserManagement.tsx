@@ -35,7 +35,7 @@ import {
   ArrowRight,
   Calendar
 } from 'lucide-react';
-import { getAgeInMonths, formatDate, calculateAge, getPatientLastVisitAt } from '../lib/dateUtils';
+import { getAgeInMonths, formatDate, calculateAge, getPatientLastVisitAt, isPatientHipertenso, isPatientDiabetic } from '../lib/dateUtils';
 import { motion, AnimatePresence } from 'motion/react';
 import { EquipeTab } from './user-management/EquipeTab';
 import { PrevineTab } from './user-management/PrevineTab';
@@ -806,7 +806,11 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
       // 1. Saúde Bucal
       if (categories.includes('Gestante')) {
         stats.bucal.den++;
-        if (clinical.gestante?.consulta_odontologica === 'Sim') {
+        if (
+          clinical.gestante?.avaliacaoBucal === 'Sim' ||
+          clinical.gestante?.consulta_odontologica === 'Sim' ||
+          (clinical.gestante?.saudeBucal && clinical.gestante.saudeBucal !== 'Não')
+        ) {
           stats.bucal.num++;
         }
       }
@@ -815,8 +819,20 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
       if (categories.includes('Criança') && ageMonths < 12) {
         stats.vacina.den++;
         const vacinas = clinical.crianca?.vacinas || {};
-        const pentaOk = vacinas['Penta'] === 'Sim' || vacinas['pentavalente'] === 'Sim';
-        const vipOk = vacinas['VIP'] === 'Sim' || vacinas['vip'] === 'Sim';
+        const legacyPentaOk = vacinas['Penta'] === 'Sim' || vacinas['pentavalente'] === 'Sim';
+        const legacyVipOk = vacinas['VIP'] === 'Sim' || vacinas['vip'] === 'Sim';
+        const pentaOk =
+          legacyPentaOk ||
+          (ageMonths < 2) ||
+          (vacinas['penta1'] === 'Sim' &&
+            (ageMonths < 4 || vacinas['penta2'] === 'Sim') &&
+            (ageMonths < 6 || vacinas['penta3'] === 'Sim'));
+        const vipOk =
+          legacyVipOk ||
+          (ageMonths < 2) ||
+          (vacinas['vip1'] === 'Sim' &&
+            (ageMonths < 4 || vacinas['vip2'] === 'Sim') &&
+            (ageMonths < 6 || vacinas['vip3'] === 'Sim'));
         const generalOk = clinical.crianca?.vacina_1ano_completa === 'Sim';
 
         if (generalOk || (pentaOk && vipOk)) {
@@ -825,19 +841,37 @@ export function UserManagement({ currentUser }: { currentUser: AppUser | null })
       }
 
       // 3. Acompanhamento de Hipertensão
-      const isHipertenso = clinical.chronic?.hipertensao === 'Sim' || categories.includes('Hipertenso');
-      if (isHipertenso) {
+      if (isPatientHipertenso(p)) {
         stats.hipertensao.den++;
-        if (clinical.chronic?.pressao_aferida_semestre === 'Sim' || clinical.chronic?.afericao_recente === 'Sim') {
+        const hasConsultas6m =
+          clinical.chronic?.hipertensaoData?.consultas6Meses === 'Sim' ||
+          clinical.adulto?.hipertensaoData?.consultas6Meses === 'Sim' ||
+          clinical.idoso?.hipertensaoData?.consultas6Meses === 'Sim' ||
+          clinical.gestante?.hipertensaoData?.consultas6Meses === 'Sim' ||
+          clinical.acamadodomiciliado?.hipertensaoData?.consultas6Meses === 'Sim';
+        if (
+          hasConsultas6m ||
+          clinical.chronic?.pressao_aferida_semestre === 'Sim' ||
+          clinical.chronic?.afericao_recente === 'Sim'
+        ) {
           stats.hipertensao.num++;
         }
       }
 
       // 4. Acompanhamento de Diabetes (HbA1c)
-      const isDiabetico = clinical.chronic?.diabetes === 'Sim' || categories.includes('Diabético') || categories.includes('Diabetico');
-      if (isDiabetico) {
+      if (isPatientDiabetic(p)) {
         stats.diabetes.den++;
-        if (clinical.chronic?.hba1c_semestre === 'Sim' || clinical.chronic?.exame_recente === 'Sim') {
+        const hasHbA1c =
+          clinical.chronic?.diabetesData?.hemoglobinaGlicada === 'Sim' ||
+          clinical.adulto?.diabetesData?.hemoglobinaGlicada === 'Sim' ||
+          clinical.idoso?.diabetesData?.hemoglobinaGlicada === 'Sim' ||
+          clinical.gestante?.diabetesData?.hemoglobinaGlicada === 'Sim' ||
+          clinical.acamadodomiciliado?.diabetesData?.hemoglobinaGlicada === 'Sim';
+        if (
+          hasHbA1c ||
+          clinical.chronic?.hba1c_semestre === 'Sim' ||
+          clinical.chronic?.exame_recente === 'Sim'
+        ) {
           stats.diabetes.num++;
         }
       }

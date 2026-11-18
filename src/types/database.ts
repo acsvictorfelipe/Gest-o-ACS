@@ -79,6 +79,7 @@ export interface GestanteData {
   hepatiteC: string;
   puerperioConsulta: string;
   puerperioVisita: string;
+  avaliacaoBucal?: string;
   saudeBucal: string;
   planejamentoFamiliar: string;
   diabetes: string;

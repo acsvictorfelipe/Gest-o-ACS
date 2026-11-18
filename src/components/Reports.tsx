@@ -309,14 +309,12 @@ export function Reports({ user }: { user: any }) {
       }
 
       if (categoryFilter === 'Idoso') {
-        const age = p.birth_date ? calculateAge(p.birth_date) : 0;
-        const ageNum = typeof age === 'number' ? age : parseInt(String(age));
+        const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
         return p.categories?.includes('Idoso') || p.categories?.includes('Idosos') || (ageNum >= 60 && !isPatientChild(p));
       }
 
       if (categoryFilter === 'Adulto') {
-        const age = p.birth_date ? calculateAge(p.birth_date) : 0;
-        const ageNum = typeof age === 'number' ? age : parseInt(String(age));
+        const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
         return p.categories?.includes('Adulto') || (!isPatientChild(p) && ageNum < 60 && p.birth_date);
       }
 
@@ -503,7 +501,7 @@ export function Reports({ user }: { user: any }) {
       vacinasPendentes,
       dum: g.dum ? formatDate(g.dum) : '-',
       dpp: g.dpp ? formatDate(g.dpp) : '-',
-      saudeBucal: g.saudeBucal ? formatDate(g.saudeBucal) : '-'
+      saudeBucal: g.avaliacaoBucal ? g.avaliacaoBucal : (g.saudeBucal ? formatDate(g.saudeBucal) : '-')
     };
   };
 
@@ -528,14 +526,18 @@ export function Reports({ user }: { user: any }) {
       vip3: 'VIP 3ª',
       pneumo10_1: 'Pneumo 1ª',
       pneumo10_2: 'Pneumo 2ª',
+      pneumo10_3: 'Pneumo 3ª',
       rotavirus1: 'Rota 1ª',
       rotavirus2: 'Rota 2ª',
       menC1: 'MenC 1ª',
       menC2: 'MenC 2ª',
+      menC3: 'MenC 3ª',
       fa: 'Febre Amarela',
       scr1: 'Tríplice Viral',
       dtp: 'DTP',
-      hepA: 'Hep A'
+      vipR: 'VIP (R)',
+      hepA: 'Hep A',
+      scrv: 'Tetra Viral'
     };
 
     const tomadas = tomadasKeys.map(k => vaccineLabels[k] || k);
@@ -592,8 +594,8 @@ export function Reports({ user }: { user: any }) {
       const vCriancas = visits.filter(v => isPatientChild(v.patients || {})).length;
       const vIdosos = visits.filter(v => {
         const p = v.patients || {};
-        const age = p.birth_date ? calculateAge(p.birth_date) : 0;
-        return p.categories?.includes('Idoso') || Number(age) >= 60;
+        const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
+        return p.categories?.includes('Idoso') || (ageNum >= 60 && !isPatientChild(p));
       }).length;
       const vAcamados = visits.filter(v => v.patients?.categories?.includes('AcamadoDomiciliado')).length;
       const vMental = visits.filter(v => v.patients?.categories?.includes('SaudeMental')).length;
@@ -728,6 +730,7 @@ export function Reports({ user }: { user: any }) {
 
       const tableData = filteredPatients.map((p, idx) => {
         const age = p.birth_date ? calculateAge(p.birth_date) : '-';
+        const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
         const ageInM = p.birth_date ? getAgeInMonths(p.birth_date) : 999;
         
         let grupo = 'Beneficiário Geral';
@@ -735,7 +738,7 @@ export function Reports({ user }: { user: any }) {
           grupo = '🤰 Gestante (Pré-Natal)';
         } else if (isPatientChild(p)) {
           grupo = ageInM <= 84 ? `👶 Criança (${age} - Puericultura/Vacina)` : `🧒 Criança/Adolescente (${age})`;
-        } else if (Number(age) >= 60) {
+        } else if (ageNum >= 60) {
           grupo = '👵 Idoso';
         }
 
@@ -869,7 +872,8 @@ export function Reports({ user }: { user: any }) {
 
       const tableData = filteredPatients.map((p, idx) => {
         const age = p.birth_date ? calculateAge(p.birth_date) : '-';
-        const c = p.clinical_data?.chronic || p.clinical_data?.adulto || p.clinical_data?.idoso || {};
+        const cd = p.clinical_data || {};
+        const c = [cd.chronic, cd.adulto, cd.idoso, cd.gestante, cd.acamadodomiciliado].find(s => s?.diabetes === 'Sim') || cd.chronic || cd.adulto || cd.idoso || {};
         const dData = c.diabetesData || {};
         const tomaInsulina = isPatientInsulinUser(p) ? 'SIM (Insulina)' : 'Não';
         const pes = dData.avaliacaoPes || 'Não';
@@ -916,7 +920,8 @@ export function Reports({ user }: { user: any }) {
 
       const tableData = filteredPatients.map((p, idx) => {
         const age = p.birth_date ? calculateAge(p.birth_date) : '-';
-        const c = p.clinical_data?.chronic || p.clinical_data?.adulto || p.clinical_data?.idoso || {};
+        const cd = p.clinical_data || {};
+        const c = [cd.chronic, cd.adulto, cd.idoso, cd.gestante, cd.acamadodomiciliado].find(s => s?.hipertensao === 'Sim' || s?.pressaoAlta === 'Sim') || cd.chronic || cd.adulto || cd.idoso || {};
         const hData = c.hipertensaoData || {};
         const consultas6m = hData.consultas6Meses || 'Não';
 
@@ -1298,13 +1303,13 @@ export function Reports({ user }: { user: any }) {
     { id: 'Hipertensos', label: '❤️ Hipertensos', count: patients.filter(p => isPatientHipertenso(p)).length },
     { id: 'Diabéticos', label: '🩸 Diabéticos / Insulina', count: patients.filter(p => isPatientDiabetic(p)).length },
     { id: 'Idoso', label: '👵 Idosos', count: patients.filter(p => {
-      const a = p.birth_date ? calculateAge(p.birth_date) : 0;
-      return p.categories?.includes('Idoso') || (Number(a) >= 60 && !isPatientChild(p));
+      const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
+      return p.categories?.includes('Idoso') || (ageNum >= 60 && !isPatientChild(p));
     }).length },
     { id: 'AcamadoDomiciliado', label: '🛏️ Acamados / Domiciliados', count: patients.filter(p => p.categories?.includes('AcamadoDomiciliado') || p.categories?.includes('Acamado')).length },
     { id: 'Adulto', label: '🧑 Adultos', count: patients.filter(p => {
-      const a = p.birth_date ? calculateAge(p.birth_date) : 0;
-      return p.categories?.includes('Adulto') || (!isPatientChild(p) && Number(a) < 60 && p.birth_date);
+      const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
+      return p.categories?.includes('Adulto') || (!isPatientChild(p) && ageNum < 60 && p.birth_date);
     }).length },
     { id: 'SaudeMental', label: '🧠 Saúde Mental', count: patients.filter(p => p.categories?.includes('SaudeMental') || p.categories?.includes('Saúde Mental')).length },
     { id: 'Beneficiários', label: '🏛️ Benefícios Sociais', count: patients.filter(p => (p.clinical_data?.socialBenefits?.length || 0) > 0 || isPatientBolsaFamilia(p)).length },

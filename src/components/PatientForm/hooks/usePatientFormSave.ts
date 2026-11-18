@@ -77,6 +77,16 @@ export function usePatientFormSave({
       cleanClinicalData.consultasGerais = cleanClinicalData.consultasGerais.filter((c: any) => c && c.date);
     }
 
+    if (cleanClinicalData.gestante) {
+      const avaliacao = cleanClinicalData.gestante.avaliacaoBucal;
+      if (avaliacao === 'Sim' || avaliacao === 'Não') {
+        cleanClinicalData.gestante = {
+          ...cleanClinicalData.gestante,
+          consulta_odontologica: avaliacao
+        };
+      }
+    }
+
     let isArchived = false;
     if (formData.categories?.includes('Gestante') && cleanClinicalData.gestante?.puerperioVisita) {
       const historicoGestacoes = Array.isArray(cleanClinicalData.historicoGestacoes) 
@@ -105,7 +115,9 @@ export function usePatientFormSave({
         hepatiteC: 'NÃO REALIZADO',
         puerperioConsulta: '',
         puerperioVisita: '',
+        avaliacaoBucal: 'Não',
         saudeBucal: '',
+        consulta_odontologica: 'Não',
         planejamentoFamiliar: 'Não',
         diabetes: 'Não',
         diabetesData: {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { formatDate } from '../../../lib/dateUtils';
+import { formatDate, VACCINE_SCHEDULE } from '../../../lib/dateUtils';
 import { useToast } from '../../Toast';
 import { getTemplateForType } from '../../../constants/visitTemplates';
 import { 
@@ -414,8 +414,11 @@ export function VisitasHistoricoSection({
   const getVaccineStats = () => {
     if (!formData.categories.includes('Criança')) return { total: 0, checked: 0 };
     const vacinas = formData.clinicalData?.crianca?.vacinas || {};
-    const total = 24; // standard child schedule in dateUtils has ~24 items
-    const checked = Object.values(vacinas).filter(v => v === 'Sim').length;
+    const total = VACCINE_SCHEDULE.reduce((acc, group) => acc + group.vaccines.length, 0);
+    const checked = VACCINE_SCHEDULE.reduce(
+      (acc, group) => acc + group.vaccines.filter(v => vacinas[v.id] === 'Sim').length,
+      0
+    );
     return { total, checked };
   };
 

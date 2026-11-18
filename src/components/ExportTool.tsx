@@ -89,8 +89,8 @@ export function ExportTool({ user }: { user: any }) {
           diabetes: patients.filter(p => isPatientDiabetic(p)).length,
           hypertension: patients.filter(p => isPatientHipertenso(p)).length,
           idosos: patients.filter(p => {
-            const age = p.birth_date ? calculateAge(p.birth_date) : 0;
-            return p.categories?.includes('Idoso') || (Number(age) >= 60 && !isPatientChild(p));
+            const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
+            return p.categories?.includes('Idoso') || (ageNum >= 60 && !isPatientChild(p));
           }).length,
           acamados: patients.filter(p => p.categories?.includes('AcamadoDomiciliado') || p.categories?.includes('Acamado')).length,
           saude_mental: patients.filter(p => p.categories?.includes('SaudeMental') || p.categories?.includes('Saúde Mental')).length,
@@ -310,8 +310,8 @@ export function ExportTool({ user }: { user: any }) {
           filteredData = patients.filter(p => isPatientHipertenso(p));
         } else if (selectedType === 'idosos') {
           filteredData = patients.filter(p => {
-            const age = p.birth_date ? calculateAge(p.birth_date) : 0;
-            return p.categories?.includes('Idoso') || (Number(age) >= 60 && !isPatientChild(p));
+            const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
+            return p.categories?.includes('Idoso') || (ageNum >= 60 && !isPatientChild(p));
           });
         } else if (selectedType === 'acamados') {
           filteredData = patients.filter(p => p.categories?.includes('AcamadoDomiciliado') || p.categories?.includes('Acamado'));
@@ -385,8 +385,10 @@ export function ExportTool({ user }: { user: any }) {
             const isHip = isPatientHipertenso(p) ? 'Sim' : 'Não';
             const isBF = isPatientBolsaFamilia(p) ? 'Sim' : 'Não';
 
-            const dData = c.chronic?.diabetesData || c.adulto?.diabetesData || c.idoso?.diabetesData || c.gestante?.diabetesData || c.acamadodomiciliado?.diabetesData || {};
-            const hData = c.chronic?.hipertensaoData || c.adulto?.hipertensaoData || c.idoso?.hipertensaoData || c.gestante?.hipertensaoData || c.acamadodomiciliado?.hipertensaoData || {};
+            const diabSec = [c.chronic, c.adulto, c.idoso, c.gestante, c.acamadodomiciliado].find(s => s?.diabetes === 'Sim');
+            const hipSec = [c.chronic, c.adulto, c.idoso, c.gestante, c.acamadodomiciliado].find(s => s?.hipertensao === 'Sim' || s?.pressaoAlta === 'Sim');
+            const dData = diabSec?.diabetesData || c.chronic?.diabetesData || c.adulto?.diabetesData || c.idoso?.diabetesData || c.gestante?.diabetesData || c.acamadodomiciliado?.diabetesData || {};
+            const hData = hipSec?.hipertensaoData || c.chronic?.hipertensaoData || c.adulto?.hipertensaoData || c.idoso?.hipertensaoData || c.gestante?.hipertensaoData || c.acamadodomiciliado?.hipertensaoData || {};
 
             const g = c.gestante || {};
             const isGest = p.categories?.includes('Gestante') ? 'Sim' : 'Não';
@@ -400,7 +402,8 @@ export function ExportTool({ user }: { user: any }) {
             const crVacinas = isCr === 'Sim' ? getVaccineStatus(p).pendentesList : 'N/A';
 
             const idoso = c.idoso || {};
-            const isId = (p.categories?.includes('Idoso') || Number(age) >= 60) ? 'Sim' : 'Não';
+            const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
+            const isId = (p.categories?.includes('Idoso') || (ageNum >= 60 && !isPatientChild(p))) ? 'Sim' : 'Não';
 
             const ac = c.acamadodomiciliado || {};
             const isAc = p.categories?.includes('AcamadoDomiciliado') ? 'Sim' : 'Não';
@@ -444,7 +447,7 @@ export function ExportTool({ user }: { user: any }) {
               safeString(g.hepatiteB || 'NÃO REALIZADO'),
               safeString(g.hepatiteC || 'NÃO REALIZADO'),
               safeString(g.dtpa || 'Não'),
-              safeString(g.saudeBucal ? formatDate(g.saudeBucal) : 'Não realizada'),
+              safeString(g.avaliacaoBucal || (g.saudeBucal ? formatDate(g.saudeBucal) : 'Não realizada')),
               safeString(crConsultas),
               safeString(crVisitas),
               safeString(cr.visita30dias ? formatDate(cr.visita30dias) : (cr.visita30diasNaoRealizada ? 'Justificada' : 'Pendente')),
@@ -487,6 +490,7 @@ export function ExportTool({ user }: { user: any }) {
           filteredData.forEach((p: any) => {
             const c = p.clinical_data || {};
             const age = p.birth_date ? calculateAge(p.birth_date) : '';
+            const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
             const ageInM = p.birth_date ? getAgeInMonths(p.birth_date) : 999;
             
             let grupo = 'Beneficiário Geral';
@@ -494,7 +498,7 @@ export function ExportTool({ user }: { user: any }) {
               grupo = 'Gestante (Pré-Natal)';
             } else if (isPatientChild(p)) {
               grupo = ageInM <= 84 ? `Criança (${age} - Puericultura/Vacina)` : `Criança/Adolescente (${age})`;
-            } else if (Number(age) >= 60) {
+            } else if (ageNum >= 60) {
               grupo = 'Idoso';
             }
 
@@ -582,7 +586,7 @@ export function ExportTool({ user }: { user: any }) {
               safeString(g.hepatiteB || 'NÃO REALIZADO'),
               safeString(g.hepatiteC || 'NÃO REALIZADO'),
               safeString(g.dtpa || 'Não'),
-              safeString(g.saudeBucal ? formatDate(g.saudeBucal) : 'Não realizada'),
+              safeString(g.avaliacaoBucal || (g.saudeBucal ? formatDate(g.saudeBucal) : 'Não realizada')),
               safeString(g.hipertensao || g.pressaoAlta || 'Não'),
               safeString(g.diabetes || 'Não')
             ]);
@@ -673,7 +677,8 @@ export function ExportTool({ user }: { user: any }) {
 
           filteredData.forEach((p: any) => {
             const c = p.clinical_data || {};
-            const dData = c.chronic?.diabetesData || c.adulto?.diabetesData || c.idoso?.diabetesData || c.gestante?.diabetesData || c.acamadodomiciliado?.diabetesData || {};
+            const diabSec = [c.chronic, c.adulto, c.idoso, c.gestante, c.acamadodomiciliado].find(s => s?.diabetes === 'Sim');
+            const dData = diabSec?.diabetesData || c.chronic?.diabetesData || c.adulto?.diabetesData || c.idoso?.diabetesData || c.gestante?.diabetesData || c.acamadodomiciliado?.diabetesData || {};
             const age = p.birth_date ? calculateAge(p.birth_date) : '';
 
             const addr = c.address || p.households?.address || p.address || '';
@@ -724,7 +729,8 @@ export function ExportTool({ user }: { user: any }) {
 
           filteredData.forEach((p: any) => {
             const c = p.clinical_data || {};
-            const hData = c.chronic?.hipertensaoData || c.adulto?.hipertensaoData || c.idoso?.hipertensaoData || c.gestante?.hipertensaoData || c.acamadodomiciliado?.hipertensaoData || {};
+            const hipSec = [c.chronic, c.adulto, c.idoso, c.gestante, c.acamadodomiciliado].find(s => s?.hipertensao === 'Sim' || s?.pressaoAlta === 'Sim');
+            const hData = hipSec?.hipertensaoData || c.chronic?.hipertensaoData || c.adulto?.hipertensaoData || c.idoso?.hipertensaoData || c.gestante?.hipertensaoData || c.acamadodomiciliado?.hipertensaoData || {};
             const age = p.birth_date ? calculateAge(p.birth_date) : '';
 
             const addr = c.address || p.households?.address || p.address || '';

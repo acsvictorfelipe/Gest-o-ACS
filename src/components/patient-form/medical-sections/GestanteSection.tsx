@@ -218,12 +218,21 @@ export function GestanteSection({
           <div>
             <label className="block text-[10px] font-semibold uppercase text-text-muted mb-2">Avaliação Bucal?</label>
             <select 
-              value={data.avaliacaoBucal || 'Não'}
+              value={
+                data.avaliacaoBucal ||
+                (data.saudeBucal && data.saudeBucal !== 'Não' ? 'Sim' : '') ||
+                (data.consulta_odontologica === 'Sim' ? 'Sim' : '') ||
+                'Não'
+              }
               onChange={e => setFormData((prev: any) => ({
                 ...prev, 
                 clinicalData: { 
                   ...prev.clinicalData, 
-                  gestante: { ...(prev.clinicalData?.gestante || {}), avaliacaoBucal: e.target.value } 
+                  gestante: { 
+                    ...(prev.clinicalData?.gestante || {}), 
+                    avaliacaoBucal: e.target.value,
+                    consulta_odontologica: e.target.value
+                  } 
                 }
               }))}
               className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-700 rounded-xl p-3 text-sm"

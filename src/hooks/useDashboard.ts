@@ -12,7 +12,7 @@ import {
   ShieldAlert,
   Users
 } from 'lucide-react';
-import { getAgeInMonths, isChildAge, isPatientChild, isPatientDiabetic, VACCINE_SCHEDULE, getAgeNumber, getPatientLastVisitAt, isVisitLate } from '../lib/dateUtils';
+import { getAgeInMonths, isChildAge, isPatientChild, isPatientDiabetic, isPatientHipertenso, VACCINE_SCHEDULE, getAgeNumber, getPatientLastVisitAt, isVisitLate } from '../lib/dateUtils';
 import { generateUUID } from '../lib/utils';
 import { UI_CONFIG } from '../constants';
 import { useDashboardWeeklyChart } from './useDashboardWeeklyChart';
@@ -248,7 +248,7 @@ export function useDashboard(user: any) {
       }
 
       const isDiabetico = isPatientDiabetic(p);
-      const isHipertenso = clinical.chronic?.hipertensao === 'Sim' || clinical.gestante?.hipertensao === 'Sim';
+      const isHipertenso = isPatientHipertenso(p);
 
       if (isDiabetico) newStats.diabeticos++;
       if (isHipertenso) newStats.hipertensos++;

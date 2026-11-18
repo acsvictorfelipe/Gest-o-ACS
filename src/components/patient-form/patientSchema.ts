@@ -37,7 +37,7 @@ export const patientFormSchema = z.object({
         visitaAcs1: z.string().default(''),
         visitaAcs2: z.string().default(''),
         usoInsulina: z.boolean().default(false)
-      }).default({
+      }).passthrough().default({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
@@ -49,12 +49,14 @@ export const patientFormSchema = z.object({
         consultas6Meses: z.string().default('Não'),
         visitaAcs1: z.string().default(''),
         visitaAcs2: z.string().default('')
-      }).default({
+      }).passthrough().default({
         consultas6Meses: 'Não',
         visitaAcs1: '',
         visitaAcs2: ''
-      })
-    }).default({
+      }),
+      usoInsulina: z.boolean().optional(),
+      toma_insulina: z.boolean().optional()
+    }).passthrough().default({
       diabetes: 'Não',
       diabetesData: {
         avaliacaoPes: 'Não',
@@ -138,7 +140,9 @@ export const patientFormSchema = z.object({
       hepatiteC: z.string().default('NÃO REALIZADO'),
       puerperioConsulta: z.string().default(''),
       puerperioVisita: z.string().default(''),
+      avaliacaoBucal: z.string().default('Não'),
       saudeBucal: z.string().default(''),
+      consulta_odontologica: z.string().optional(),
       planejamentoFamiliar: z.string().default('Não'),
       diabetes: z.string().default('Não'),
       diabetesData: z.object({
@@ -147,7 +151,7 @@ export const patientFormSchema = z.object({
         visitaAcs1: z.string().default(''),
         visitaAcs2: z.string().default(''),
         usoInsulina: z.boolean().default(false)
-      }).default({
+      }).passthrough().default({
         avaliacaoPes: 'Não',
         hemoglobinaGlicada: 'Não',
         visitaAcs1: '',
@@ -159,13 +163,13 @@ export const patientFormSchema = z.object({
         consultas6Meses: z.string().default('Não'),
         visitaAcs1: z.string().default(''),
         visitaAcs2: z.string().default('')
-      }).default({
+      }).passthrough().default({
         consultas6Meses: 'Não',
         visitaAcs1: '',
         visitaAcs2: ''
       }),
       notes: z.string().default('')
-    }).default({
+    }).passthrough().default({
       dum: '',
       dpp: '',
       consultas: [],
@@ -178,6 +182,7 @@ export const patientFormSchema = z.object({
       hepatiteC: 'NÃO REALIZADO',
       puerperioConsulta: '',
       puerperioVisita: '',
+      avaliacaoBucal: 'Não',
       saudeBucal: '',
       planejamentoFamiliar: 'Não',
       diabetes: 'Não',
@@ -291,8 +296,9 @@ export const patientFormSchema = z.object({
       vacinaInfluenza: z.string().default('Não'),
       visitaAcs1: z.string().default(''),
       visitaAcs2: z.string().default(''),
-      consultaMedicaAnualData: z.string().default('')
-    }).default({
+      consultaMedicaAnualData: z.string().default(''),
+      notes: z.string().default('')
+    }).passthrough().default({
       diabetes: 'Não',
       diabetesData: {
         avaliacaoPes: 'Não',
@@ -311,14 +317,15 @@ export const patientFormSchema = z.object({
       vacinaInfluenza: 'Não',
       visitaAcs1: '',
       visitaAcs2: '',
-      consultaMedicaAnualData: ''
+      consultaMedicaAnualData: '',
+      notes: ''
     }),
     rastreamento: z.object({
       exameCitopatologico: z.string().default('Não'),
       saudeSexualReprodutiva: z.string().default('Não'),
       mamografia: z.string().default('Não'),
       vacinaHpv: z.string().default('Não')
-    }).default({
+    }).passthrough().default({
       exameCitopatologico: 'Não',
       saudeSexualReprodutiva: 'Não',
       mamografia: 'Não',
@@ -328,12 +335,12 @@ export const patientFormSchema = z.object({
       flg_obito: z.boolean().default(false),
       data_obito: z.string().default(''),
       observacoes: z.string().default('')
-    }).default({
+    }).passthrough().default({
       flg_obito: false,
       data_obito: '',
       observacoes: ''
     })
-  }).default({
+  }).passthrough().default({
     sus_atualizado: 'Não',
     historicoGestacoes: [],
     visitasGerais: [],
@@ -393,6 +400,7 @@ export const patientFormSchema = z.object({
       hepatiteC: 'NÃO REALIZADO',
       puerperioConsulta: '',
       puerperioVisita: '',
+      avaliacaoBucal: 'Não',
       saudeBucal: '',
       planejamentoFamiliar: 'Não',
       diabetes: 'Não',
@@ -459,7 +467,8 @@ export const patientFormSchema = z.object({
       vacinaInfluenza: 'Não',
       visitaAcs1: '',
       visitaAcs2: '',
-      consultaMedicaAnualData: ''
+      consultaMedicaAnualData: '',
+      notes: ''
     },
     rastreamento: {
       exameCitopatologico: 'Não',
@@ -558,6 +567,7 @@ export const initialDefaultValues: PatientFormValues = {
       hepatiteC: 'NÃO REALIZADO',
       puerperioConsulta: '',
       puerperioVisita: '',
+      avaliacaoBucal: 'Não',
       saudeBucal: '',
       planejamentoFamiliar: 'Não',
       diabetes: 'Não',
@@ -624,7 +634,8 @@ export const initialDefaultValues: PatientFormValues = {
       vacinaInfluenza: 'Não',
       visitaAcs1: '',
       visitaAcs2: '',
-      consultaMedicaAnualData: ''
+      consultaMedicaAnualData: '',
+      notes: ''
     },
     rastreamento: {
       exameCitopatologico: 'Não',

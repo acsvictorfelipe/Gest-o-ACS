@@ -74,6 +74,15 @@ const safeMergeClinicalData = (dbClinical: any, defaultClinical: any): any => {
       }
     }
   }
+
+  if (typeof dbClinical === 'object' && dbClinical !== null && !Array.isArray(dbClinical)) {
+    for (const key of Object.keys(dbClinical)) {
+      if (!(key in result) && dbClinical[key] !== undefined && dbClinical[key] !== null) {
+        result[key] = dbClinical[key];
+      }
+    }
+  }
+
   return result;
 };
 
@@ -190,15 +199,40 @@ export function PatientForm({
                 vacinaHpv: 'Não',
                 ...(cleanClinical.rastreamento || {})
               },
-              chronic: cleanClinical.chronic || {
-                diabetes: cleanClinical.chronic?.diabetes || cleanClinical.adulto?.diabetes || cleanClinical.idoso?.diabetes || cleanClinical.gestante?.diabetes || cleanClinical.acamadodomiciliado?.diabetes || 'Não',
-                diabetesData: cleanClinical.chronic?.diabetesData || cleanClinical.adulto?.diabetesData || cleanClinical.idoso?.diabetesData || cleanClinical.gestante?.diabetesData || cleanClinical.acamadodomiciliado?.diabetesData || initialDefaultValues.clinicalData.chronic.diabetesData,
-                hipertensao: cleanClinical.chronic?.hipertensao || cleanClinical.adulto?.hipertensao || cleanClinical.idoso?.hipertensao || cleanClinical.gestante?.hipertensao || cleanClinical.acamadodomiciliado?.hipertensao || cleanClinical.adulto?.pressaoAlta || cleanClinical.idoso?.pressaoAlta || cleanClinical.gestante?.pressaoAlta || cleanClinical.acamadodomiciliado?.pressaoAlta || 'Não',
-                hipertensaoData: cleanClinical.chronic?.hipertensaoData || cleanClinical.adulto?.hipertensaoData || cleanClinical.idoso?.hipertensaoData || cleanClinical.gestante?.hipertensaoData || cleanClinical.acamadodomiciliado?.hipertensaoData || initialDefaultValues.clinicalData.chronic.hipertensaoData,
-              },
+              chronic: (() => {
+                const c = cleanClinical.chronic || {};
+                const sections = [c, cleanClinical.adulto, cleanClinical.idoso, cleanClinical.gestante, cleanClinical.acamadodomiciliado];
+                const diabSection = sections.find(s => s?.diabetes === 'Sim');
+                const hipSection = sections.find(s => s?.hipertensao === 'Sim' || s?.pressaoAlta === 'Sim');
+                return {
+                  ...initialDefaultValues.clinicalData.chronic,
+                  ...c,
+                  diabetes: diabSection ? 'Sim' : (c.diabetes || 'Não'),
+                  diabetesData: {
+                    ...initialDefaultValues.clinicalData.chronic.diabetesData,
+                    ...(diabSection?.diabetesData || c.diabetesData || {}),
+                    usoInsulina: Boolean(
+                      c.diabetesData?.usoInsulina ||
+                      c.usoInsulina ||
+                      c.toma_insulina ||
+                      diabSection?.diabetesData?.usoInsulina
+                    )
+                  },
+                  hipertensao: hipSection ? 'Sim' : (c.hipertensao || 'Não'),
+                  hipertensaoData: {
+                    ...initialDefaultValues.clinicalData.chronic.hipertensaoData,
+                    ...(hipSection?.hipertensaoData || c.hipertensaoData || {})
+                  }
+                };
+              })(),
               gestante: {
                 ...initialDefaultValues.clinicalData.gestante,
                 ...(cleanClinical.gestante || {}),
+                avaliacaoBucal:
+                  cleanClinical.gestante?.avaliacaoBucal ||
+                  (cleanClinical.gestante?.saudeBucal && cleanClinical.gestante.saudeBucal !== 'Não' ? 'Sim' : '') ||
+                  (cleanClinical.gestante?.consulta_odontologica === 'Sim' ? 'Sim' : '') ||
+                  'Não',
                 consultas: cleanClinical.gestante?.consultas || [],
                 visitasAcs: cleanClinical.gestante?.visitasAcs || [],
                 visitasAcsDiabetes: cleanClinical.gestante?.visitasAcsDiabetes || [],

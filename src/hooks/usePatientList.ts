@@ -354,18 +354,7 @@ export function usePatientList(user: AppUser | null | undefined) {
     if (activeFilter === 'saudemental') return matchesSearch && p.categories?.includes('SaudeMental');
 
     if (activeFilter === 'hipertensos') {
-      const clinical = p.clinical_data || {};
-      return matchesSearch && (
-        clinical.chronic?.hipertensao === 'Sim' ||
-        clinical.gestante?.hipertensao === 'Sim' ||
-        clinical.gestante?.pressaoAlta === 'Sim' || 
-        clinical.acamadodomiciliado?.hipertensao === 'Sim' ||
-        clinical.acamadodomiciliado?.pressaoAlta === 'Sim' || 
-        clinical.adulto?.hipertensao === 'Sim' ||
-        clinical.adulto?.pressaoAlta === 'Sim' || 
-        clinical.idoso?.hipertensao === 'Sim' ||
-        clinical.idoso?.pressaoAlta === 'Sim'
-      );
+      return matchesSearch && isPatientHipertenso(p);
     }
 
     if (activeFilter === 'diabeticos_insulina' || activeFilter === 'insulina' || activeFilter === 'uso_insulina') {

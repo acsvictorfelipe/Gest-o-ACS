@@ -27,7 +27,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useToast } from './Toast';
-import { formatDate, getAgeInMonths, calculateAge, getAgeNumber } from '../lib/dateUtils';
+import { formatDate, calculateAge, getAgeNumber, isPatientChild, isPatientHipertenso, isPatientDiabetic } from '../lib/dateUtils';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell
@@ -306,7 +306,7 @@ export function AdminDashboard({ user }: { user: AppUser | null }) {
       color: '#3b82f6',
       bgClass: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
       activeBgClass: 'bg-blue-600 dark:bg-blue-500 text-white border-blue-600',
-      filterFn: (p: any) => p.categories?.includes('Criança') && (p.birth_date ? getAgeInMonths(p.birth_date) <= 24 : false)
+      filterFn: (p: any) => isPatientChild(p)
     },
     {
       id: 'idosos',
@@ -315,7 +315,7 @@ export function AdminDashboard({ user }: { user: AppUser | null }) {
       color: '#a855f7',
       bgClass: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
       activeBgClass: 'bg-purple-600 dark:bg-purple-500 text-white border-purple-600',
-      filterFn: (p: any) => p.categories?.includes('Idoso') || p.categories?.includes('Idosos')
+      filterFn: (p: any) => p.categories?.includes('Idoso') || p.categories?.includes('Idosos') || (p.birth_date ? getAgeNumber(p.birth_date) >= 60 : false)
     },
     {
       id: 'hipertensos',
@@ -324,7 +324,7 @@ export function AdminDashboard({ user }: { user: AppUser | null }) {
       color: '#ef4444',
       bgClass: 'bg-red-500/10 text-red-500 border-red-500/20',
       activeBgClass: 'bg-red-600 dark:bg-red-500 text-white border-red-600',
-      filterFn: (p: any) => p.categories?.includes('Hipertenso') || p.clinical_data?.chronic?.hipertensao === 'Sim'
+      filterFn: (p: any) => isPatientHipertenso(p)
     },
     {
       id: 'diabeticos',
@@ -333,7 +333,7 @@ export function AdminDashboard({ user }: { user: AppUser | null }) {
       color: '#f59e0b',
       bgClass: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
       activeBgClass: 'bg-amber-600 dark:bg-amber-500 text-white border-amber-600',
-      filterFn: (p: any) => p.categories?.includes('Diabetico') || p.categories?.includes('Diabético') || p.clinical_data?.chronic?.diabetes === 'Sim'
+      filterFn: (p: any) => isPatientDiabetic(p)
     },
     {
       id: 'acamados',
@@ -342,7 +342,7 @@ export function AdminDashboard({ user }: { user: AppUser | null }) {
       color: '#06b6d4',
       bgClass: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20',
       activeBgClass: 'bg-cyan-600 dark:bg-cyan-500 text-white border-cyan-600',
-      filterFn: (p: any) => p.categories?.includes('AcamadoDomiciliado')
+      filterFn: (p: any) => p.categories?.includes('AcamadoDomiciliado') || p.categories?.includes('Acamado')
     },
     {
       id: 'sem_domicilio',
