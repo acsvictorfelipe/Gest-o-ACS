@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, Download, UserPlus, X, AlertCircle, Sparkles, Plus, Baby, Activity, CheckCircle2 } from 'lucide-react';
-import { formatDate } from '../../lib/dateUtils';
+import { formatDate, replaceDateInClinicalData } from '../../lib/dateUtils';
 
 interface PatientFormHeaderProps {
   id: string | undefined;
@@ -15,7 +15,7 @@ interface PatientFormHeaderProps {
   confirm: any;
   hasExpiredPrescription: boolean;
   errors: any;
-  onQuickVisit?: (category: 'geral' | 'gestante' | 'cronicos') => void;
+  onQuickVisit?: (category: 'geral' | 'gestante' | 'cronicos', customDate?: string) => void;
   onOpenHouseholdModal?: () => void;
   onClose?: () => void;
 }
@@ -37,6 +37,14 @@ export function PatientFormHeader({
   onClose
 }: PatientFormHeaderProps) {
   const navigate = useNavigate();
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [quickVisitDate, setQuickVisitDate] = React.useState(formData.visitDate || todayStr);
+
+  React.useEffect(() => {
+    if (formData.visitDate) {
+      setQuickVisitDate(formData.visitDate);
+    }
+  }, [formData.visitDate]);
 
   const handleClose = async () => {
     if (isDirty) {
@@ -215,15 +223,38 @@ export function PatientFormHeader({
           <div className="flex items-center gap-2 mr-1">
             <Sparkles className="w-4 h-4 text-teal-600 dark:text-teal-400 animate-pulse" />
             <span className="text-xs font-bold uppercase tracking-wider text-teal-900 dark:text-teal-200">
-              Registrar Visita Hoje:
+              Registrar Visita:
             </span>
           </div>
 
+          <input
+            type="date"
+            aria-label="Data da Visita"
+            value={formData.visitDate || quickVisitDate}
+            onChange={(e) => {
+              const newDate = e.target.value;
+              setQuickVisitDate(newDate);
+              if (formData.visitDate && newDate) {
+                setFormData((prev: any) => {
+                  const res = replaceDateInClinicalData(prev.clinicalData, prev.visitDate, newDate);
+                  return {
+                    ...prev,
+                    visitDate: newDate,
+                    ...(res.changed ? { clinicalData: res.updated } : {})
+                  };
+                });
+                setIsDirty(true);
+              }
+            }}
+            className="bg-white dark:bg-slate-800 border border-teal-300 dark:border-teal-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500/20"
+            title="Escolha ou altere a data da visita"
+          />
+
           <button
             type="button"
-            onClick={() => onQuickVisit?.('geral')}
+            onClick={() => onQuickVisit?.('geral', formData.visitDate || quickVisitDate || todayStr)}
             className="flex items-center gap-1.5 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold uppercase transition-all shadow-sm active:scale-95 cursor-pointer"
-            title="Registrar Visita ACS Padrão realizada hoje"
+            title="Registrar Visita ACS Padrão na data selecionada"
           >
             <Plus className="w-4 h-4" />
             + Visita ACS (Geral)
@@ -234,19 +265,19 @@ export function PatientFormHeader({
             (Array.isArray(formData.categories) && formData.categories.some((c: string) => ['Hipertenso', 'Diabético'].includes(c)))) && (
             <button
               type="button"
-              onClick={() => onQuickVisit?.('cronicos')}
+              onClick={() => onQuickVisit?.('cronicos', formData.visitDate || quickVisitDate || todayStr)}
               className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase transition-all shadow-sm active:scale-95"
-              title="Registrar Visita e atualizar 1ª/2ª visita em Hipertensão/Diabetes"
+              title="Registrar Visita e atualizar 1ª/2ª visita em Hipertensão/Diabetes na data selecionada"
             >
               <Activity className="w-4 h-4" />
               + Visita ACS (Comorbidades)
             </button>
           )}
 
-          {formData.visitDate === new Date().toISOString().split('T')[0] && (
+          {formData.visitDate && (
             <span className="ml-auto text-[11px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 px-3 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4" />
-              Visita Preenchida! Salve o formulário
+              Visita ({formatDate(formData.visitDate)}) Preenchida! Salve o formulário
             </span>
           )}
         </div>

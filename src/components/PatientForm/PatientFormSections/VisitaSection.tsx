@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, X, Plus, FileText, Check, ChevronDown, ChevronUp, Copy } from 'lucide-react';
 import { VISIT_TEMPLATES, VISIT_CATEGORIES, getTemplateForType, isDefaultVisitTemplate, VisitTemplate } from '../../../constants/visitTemplates';
+import { replaceDateInClinicalData } from '../../../lib/dateUtils';
 
 interface VisitaSectionProps {
   formData: any;
@@ -87,7 +88,20 @@ export function VisitaSection({ formData, setFormData, isReadOnly }: VisitaSecti
                 type="date"
                 disabled={isReadOnly}
                 value={formData.visitDate}
-                onChange={e => setFormData((prev: any) => ({ ...prev, visitDate: e.target.value }))}
+                onChange={e => {
+                  const newDate = e.target.value;
+                  setFormData((prev: any) => {
+                    if (prev.visitDate && newDate) {
+                      const res = replaceDateInClinicalData(prev.clinicalData, prev.visitDate, newDate);
+                      return {
+                        ...prev,
+                        visitDate: newDate,
+                        ...(res.changed ? { clinicalData: res.updated } : {})
+                      };
+                    }
+                    return { ...prev, visitDate: newDate };
+                  });
+                }}
                 className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/20 shadow-xs"
               />
             </div>

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { formatDate, VACCINE_SCHEDULE } from '../../../lib/dateUtils';
+import { formatDate, VACCINE_SCHEDULE, replaceDateInClinicalData } from '../../../lib/dateUtils';
+import { queryClient } from '../../../lib/queryClient';
+import { syncAffectedPatientsAfterVisitDateChange } from '../../../lib/visitDateSync';
 import { useToast } from '../../Toast';
 import { getTemplateForType, isDefaultVisitTemplate } from '../../../constants/visitTemplates';
 import { 
@@ -60,7 +62,7 @@ export function VisitasHistoricoSection({
   isReadOnly
 }: VisitasHistoricoSectionProps) {
   const navigate = useNavigate();
-  const { warning } = useToast();
+  const { success, warning, error: toastError } = useToast();
   const [activeTab, setActiveTab] = useState<'timeline' | 'vacinas'>('timeline');
   const [dbVisits, setDbVisits] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -70,9 +72,12 @@ export function VisitasHistoricoSection({
   // Expanded state for long notes
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   
-  // Inline editing state for local visits/consultations
+  // Inline editing state for local and database visits/consultations
   const [editingLocalIndex, setEditingLocalIndex] = useState<number | null>(null);
   const [editingLocalType, setEditingLocalType] = useState<'visitasGerais' | 'consultasGerais' | null>(null);
+  const [editingDbVisitId, setEditingDbVisitId] = useState<string | null>(null);
+  const [editingDbOriginalDate, setEditingDbOriginalDate] = useState<string>('');
+  const [savingDbVisit, setSavingDbVisit] = useState(false);
   const [editDate, setEditDate] = useState('');
   const [editSummary, setEditSummary] = useState('');
   const [editType, setEditType] = useState('Rotina');
@@ -107,11 +112,87 @@ export function VisitasHistoricoSection({
   };
 
   const handleStartEdit = (type: 'visitasGerais' | 'consultasGerais', index: number, currentItem: any) => {
+    setEditingDbVisitId(null);
     setEditingLocalType(type);
     setEditingLocalIndex(index);
     setEditDate(currentItem.date || '');
     setEditSummary(currentItem.summary || '');
     setEditType(currentItem.type || 'Rotina');
+  };
+
+  const handleStartDbEdit = (visitRow: any) => {
+    setEditingLocalIndex(null);
+    setEditingLocalType(null);
+    const currentDay = visitRow.date ? String(visitRow.date).split('T')[0] : '';
+    setEditingDbVisitId(visitRow.id);
+    setEditingDbOriginalDate(currentDay);
+    setEditDate(currentDay);
+    setEditSummary(visitRow.summary || '');
+    setEditType(visitRow.type || 'Rotina');
+  };
+
+  const handleSaveDbEdit = async () => {
+    if (!editingDbVisitId) return;
+    if (!editDate) {
+      warning('Por favor, selecione uma data para salvar o registro.');
+      return;
+    }
+
+    setSavingDbVisit(true);
+    try {
+      const { error } = await supabase
+        .from('visits')
+        .update({
+          date: editDate,
+          type: editType,
+          summary: editSummary
+        })
+        .eq('id', editingDbVisitId);
+
+      if (error) throw error;
+
+      if (id && editingDbOriginalDate !== editDate) {
+        await syncAffectedPatientsAfterVisitDateChange(supabase, [
+          {
+            patientId: id,
+            fromDate: editingDbOriginalDate,
+            toDate: editDate
+          }
+        ]);
+
+        setFormData((prev: any) => {
+          const res = replaceDateInClinicalData(prev.clinicalData, editingDbOriginalDate, editDate);
+          if (!res.changed) return prev;
+          return { ...prev, clinicalData: res.updated };
+        });
+      }
+
+      setDbVisits(prev =>
+        prev
+          .map(v => (v.id === editingDbVisitId ? { ...v, date: editDate, type: editType, summary: editSummary } : v))
+          .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+      );
+
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      queryClient.invalidateQueries({ queryKey: ['patientList'] });
+      queryClient.invalidateQueries({ queryKey: ['householdsList'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['visits'] });
+
+      setEditingDbVisitId(null);
+      setEditingDbOriginalDate('');
+      success('Data e dados da visita atualizados com sucesso!');
+    } catch (err: any) {
+      console.error('Erro ao atualizar visita:', err);
+      toastError(err?.message || 'Erro ao salvar alteração da visita.');
+    } finally {
+      setSavingDbVisit(false);
+    }
+  };
+
+  const handleCancelDbEdit = () => {
+    setEditingDbVisitId(null);
+    setEditingDbOriginalDate('');
   };
 
   const handleSaveEdit = (type: 'visitasGerais' | 'consultasGerais', index: number) => {
@@ -567,25 +648,41 @@ export function VisitasHistoricoSection({
                     <div className={`bg-slate-50 dark:bg-slate-900 border ${style.border} rounded-xl p-4.5 shadow-sm hover:shadow-md hover:translate-x-0.5 transition-all duration-300 ${
                       isFirst && !formData.visitDate ? 'ring-2 ring-primary/5 dark:ring-primary/10' : ''
                     }`}>
-                      {/* Editing panel if it is a local visit/consultation in edit mode */}
-                      {editingLocalIndex === item.index && editingLocalType === (item.type === 'visita_local' ? 'visitasGerais' : 'consultasGerais') ? (
+                      {/* Editing panel if it is a saved DB visit or a local visit/consultation in edit mode */}
+                      {(item.type === 'visita_db' && editingDbVisitId === item.originalData?.id) ||
+                      (editingLocalIndex === item.index && editingLocalType === (item.type === 'visita_local' ? 'visitasGerais' : 'consultasGerais')) ? (
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <h5 className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
-                              {item.type === 'visita_local' ? 'Editando Visita Antiga' : 'Editando Consulta Registrada'}
+                              {item.type === 'visita_db'
+                                ? 'Editando Visita Salva'
+                                : item.type === 'visita_local'
+                                  ? 'Editando Visita Antiga'
+                                  : 'Editando Consulta Registrada'}
                             </h5>
                             <div className="flex gap-2">
                               <button
                                 type="button"
-                                onClick={() => handleSaveEdit(item.type === 'visita_local' ? 'visitasGerais' : 'consultasGerais', item.index!)}
-                                className="p-1.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 rounded-md hover:scale-105 transition-all"
+                                disabled={savingDbVisit}
+                                onClick={() =>
+                                  item.type === 'visita_db'
+                                    ? handleSaveDbEdit()
+                                    : handleSaveEdit(item.type === 'visita_local' ? 'visitasGerais' : 'consultasGerais', item.index!)
+                                }
+                                className="p-1.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 rounded-md hover:scale-105 transition-all disabled:opacity-50"
+                                title="Salvar"
                               >
-                                <Save className="w-3.5 h-3.5" />
+                                {savingDbVisit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleCancelEdit(item.type === 'visita_local' ? 'visitasGerais' : 'consultasGerais', item.index!)}
+                                onClick={() =>
+                                  item.type === 'visita_db'
+                                    ? handleCancelDbEdit()
+                                    : handleCancelEdit(item.type === 'visita_local' ? 'visitasGerais' : 'consultasGerais', item.index!)
+                                }
                                 className="p-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md hover:scale-105 transition-all"
+                                title="Cancelar"
                               >
                                 <X className="w-3.5 h-3.5" />
                               </button>
@@ -600,7 +697,7 @@ export function VisitasHistoricoSection({
                               className="bg-white dark:bg-slate-800 border border-border dark:border-slate-800 rounded px-2 py-1 text-xs font-bold w-full focus:ring-2 focus:ring-primary/20"
                             />
                           </div>
-                          {item.type === 'visita_local' && (
+                          {(item.type === 'visita_local' || item.type === 'visita_db') && (
                             <div className="space-y-1">
                               <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Tipo de Visita</label>
                               <select
@@ -674,33 +771,39 @@ export function VisitasHistoricoSection({
                                 {formatDate(item.date)}
                               </span>
  
-                              {/* Action buttons for Local Visits/Consultations */}
-                              {(item.type === 'visita_local' || item.type === 'consulta_geral') && !isReadOnly && (
-                                <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                              {/* Action buttons for Saved DB Visits and Local Visits/Consultations */}
+                              {(item.type === 'visita_db' || item.type === 'visita_local' || item.type === 'consulta_geral') && !isReadOnly && (
+                                <div className="opacity-70 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
                                   <button
                                     type="button"
-                                    onClick={() => handleStartEdit(
-                                      item.type === 'visita_local' ? 'visitasGerais' : 'consultasGerais', 
-                                      item.index!, 
-                                      item.originalData || { date: item.date, summary: item.summary }
-                                    )}
+                                    onClick={() =>
+                                      item.type === 'visita_db'
+                                        ? handleStartDbEdit(item.originalData)
+                                        : handleStartEdit(
+                                            item.type === 'visita_local' ? 'visitasGerais' : 'consultasGerais',
+                                            item.index!,
+                                            item.originalData || { date: item.date, summary: item.summary }
+                                          )
+                                    }
                                     className="p-1 hover:text-primary transition-colors text-slate-400"
-                                    title="Editar"
+                                    title="Alterar data ou editar visita"
                                   >
                                     <Edit2 className="w-3.5 h-3.5" />
                                   </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => removeDateFromList(
-                                      'root', 
-                                      item.type === 'visita_local' ? 'visitasGerais' : 'consultasGerais', 
-                                      item.index!
-                                    )}
-                                    className="p-1 hover:text-red-500 transition-colors text-slate-400"
-                                    title="Excluir"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
+                                  {(item.type === 'visita_local' || item.type === 'consulta_geral') && (
+                                    <button
+                                      type="button"
+                                      onClick={() => removeDateFromList(
+                                        'root', 
+                                        item.type === 'visita_local' ? 'visitasGerais' : 'consultasGerais', 
+                                        item.index!
+                                      )}
+                                      className="p-1 hover:text-red-500 transition-colors text-slate-400"
+                                      title="Excluir"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
                                 </div>
                               )}
                             </div>

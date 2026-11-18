@@ -643,6 +643,123 @@ export async function healPatientVisitDate(
 }
 
 /**
+ * Substitui ocorrências exatas de uma data (YYYY-MM-DD) dentro de clinical_data
+ * ao alterar a data de uma visita já registrada.
+ */
+export function replaceDateInClinicalData(
+  clinicalData: any,
+  fromDate: string,
+  toDate: string
+): { updated: any; changed: boolean } {
+  const fromDay = String(fromDate || '').split('T')[0];
+  const toDay = String(toDate || '').split('T')[0];
+
+  if (!clinicalData || typeof clinicalData !== 'object' || !fromDay || !toDay || fromDay === toDay) {
+    return { updated: clinicalData, changed: false };
+  }
+
+  let changed = false;
+  const updated = JSON.parse(JSON.stringify(clinicalData));
+
+  const replaceScalar = (val: any) => {
+    if (typeof val === 'string' && val.split('T')[0] === fromDay) {
+      changed = true;
+      return toDay;
+    }
+    return val;
+  };
+
+  if (Array.isArray(updated.visitasGerais)) {
+    updated.visitasGerais = updated.visitasGerais.map((v: any) => {
+      if (typeof v === 'string') return replaceScalar(v);
+      if (v && typeof v === 'object' && typeof v.date === 'string' && v.date.split('T')[0] === fromDay) {
+        changed = true;
+        return { ...v, date: toDay };
+      }
+      return v;
+    });
+  }
+
+  if (updated.crianca && typeof updated.crianca === 'object') {
+    if (Array.isArray(updated.crianca.visitasAcs)) {
+      updated.crianca.visitasAcs = updated.crianca.visitasAcs.map(replaceScalar);
+    }
+    if (updated.crianca.visita30dias) updated.crianca.visita30dias = replaceScalar(updated.crianca.visita30dias);
+    if (updated.crianca.visita6meses) updated.crianca.visita6meses = replaceScalar(updated.crianca.visita6meses);
+  }
+
+  if (updated.gestante && typeof updated.gestante === 'object') {
+    if (Array.isArray(updated.gestante.visitasAcs)) {
+      updated.gestante.visitasAcs = updated.gestante.visitasAcs.map(replaceScalar);
+    }
+    if (updated.gestante.puerperioVisita) {
+      updated.gestante.puerperioVisita = replaceScalar(updated.gestante.puerperioVisita);
+    }
+  }
+
+  const chronicSections = ['gestante', 'acamadodomiciliado', 'adulto', 'idoso', 'chronic'];
+  chronicSections.forEach((cat) => {
+    const section = updated[cat];
+    if (section && typeof section === 'object') {
+      if (Array.isArray(section.visitasAcsDiabetes)) {
+        section.visitasAcsDiabetes = section.visitasAcsDiabetes.map(replaceScalar);
+      }
+      if (section.diabetesData && typeof section.diabetesData === 'object') {
+        if (section.diabetesData.visitaAcs1) section.diabetesData.visitaAcs1 = replaceScalar(section.diabetesData.visitaAcs1);
+        if (section.diabetesData.visitaAcs2) section.diabetesData.visitaAcs2 = replaceScalar(section.diabetesData.visitaAcs2);
+      }
+      if (section.hipertensaoData && typeof section.hipertensaoData === 'object') {
+        if (section.hipertensaoData.visitaAcs1) section.hipertensaoData.visitaAcs1 = replaceScalar(section.hipertensaoData.visitaAcs1);
+        if (section.hipertensaoData.visitaAcs2) section.hipertensaoData.visitaAcs2 = replaceScalar(section.hipertensaoData.visitaAcs2);
+      }
+    }
+  });
+
+  if (updated.idoso && typeof updated.idoso === 'object') {
+    if (updated.idoso.visitaAcs1) updated.idoso.visitaAcs1 = replaceScalar(updated.idoso.visitaAcs1);
+    if (updated.idoso.visitaAcs2) updated.idoso.visitaAcs2 = replaceScalar(updated.idoso.visitaAcs2);
+  }
+
+  return { updated, changed };
+}
+
+/**
+ * Recalcula a verdadeira última data de visita do paciente combinando as visitas
+ * da tabela `visits` e os campos clínicos, ignorando o valor antigo de `last_visit_at`.
+ */
+export function recomputePatientLastVisitAt(
+  patient: any,
+  dbVisits: Array<{ date?: string | null }> = []
+): string | null {
+  let latestMs = -1;
+  let latestDay: string | null = null;
+
+  const considerDate = (raw: any) => {
+    if (!raw || typeof raw !== 'string') return;
+    const day = raw.split('T')[0];
+    const parsed = /^\d{4}-\d{2}-\d{2}$/.test(day)
+      ? new Date(`${day}T12:00:00`)
+      : new Date(raw);
+    if (!isNaN(parsed.getTime()) && parsed.getTime() > latestMs) {
+      latestMs = parsed.getTime();
+      latestDay = /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : parsed.toISOString().split('T')[0];
+    }
+  };
+
+  if (Array.isArray(dbVisits)) {
+    dbVisits.forEach((v) => considerDate(v?.date));
+  }
+
+  const clinicalMax = getPatientLastVisitAt({ ...(patient || {}), last_visit_at: null });
+  if (clinicalMax) {
+    considerDate(clinicalMax);
+  }
+
+  if (!latestDay) return null;
+  return new Date(`${latestDay}T12:00:00`).toISOString();
+}
+
+/**
  * Calcula a idade gestacional com base na DUM (Data da Última Menstruação).
  * Retorna { weeks, days, text, shortText } ou null caso DUM seja inválida, futura ou superior a 44 semanas.
  */

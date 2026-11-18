@@ -681,8 +681,8 @@ export function PatientForm({
     });
   };
 
-  const handleQuickVisit = (type: 'geral' | 'gestante' | 'cronicos') => {
-    const todayStr = new Date().toISOString().split('T')[0];
+  const handleQuickVisit = (type: 'geral' | 'gestante' | 'cronicos', customDate?: string) => {
+    const todayStr = customDate || new Date().toISOString().split('T')[0];
 
     setFormData((prev: any) => {
       const nextClinical = { ...(prev.clinicalData || {}) };
@@ -757,10 +757,10 @@ export function PatientForm({
     setIsDirty(true);
     success(
       type === 'gestante'
-        ? 'Visita de Gestante adicionada! A data de hoje foi somada nas visitas de pré-natal. Clique em "Salvar" para confirmar.'
+        ? `Visita de Gestante (${formatDate(todayStr)}) adicionada! Clique em "Salvar" para confirmar.`
         : type === 'cronicos'
-        ? 'Visita de Comorbidades registrada! As datas em Hipertensão/Diabetes foram atualizadas. Clique em "Salvar" para confirmar.'
-        : 'Visita ACS registrada com a data de hoje! Clique em "Salvar" para confirmar.'
+        ? `Visita de Comorbidades (${formatDate(todayStr)}) registrada! Clique em "Salvar" para confirmar.`
+        : `Visita ACS (${formatDate(todayStr)}) registrada! Clique em "Salvar" para confirmar.`
     );
   };
 
