@@ -10,6 +10,7 @@ import { useToast } from '../Toast';
 import { useConfirm } from '../ui/ConfirmDialog';
 import { patientFormSchema, initialDefaultValues } from '../patient-form/patientSchema';
 import { calculateAge, getAgeNumber, vaccineLabels, formatDate } from '../../lib/dateUtils';
+import { getTemplateForType, isDefaultVisitTemplate } from '../../constants/visitTemplates';
 
 // Extracted Hooks
 import { usePatientFormSave } from './hooks/usePatientFormSave';
@@ -685,11 +686,13 @@ export function PatientForm({
 
     setFormData((prev: any) => {
       const nextClinical = { ...(prev.clinicalData || {}) };
-      let summaryText = 'Visita de Rotina do ACS realizada hoje.';
+      let resolvedVisitType = 'Rotina';
+      let summaryText = getTemplateForType('Rotina')?.defaultText || 'Visita de Rotina do ACS realizada hoje.';
 
       // 1. Caso Gestante: adicione na lista de visitasAcs da gestante
       if (type === 'gestante' || (type === 'geral' && prev.categories?.includes('Gestante'))) {
-        summaryText = 'Visita de Acompanhamento de Gestante (Pré-Natal)';
+        resolvedVisitType = 'Visita Gestante';
+        summaryText = getTemplateForType('Visita Gestante')?.defaultText || 'Visita de Acompanhamento de Gestante (Pré-Natal)';
         const gestanteObj = { ...(nextClinical.gestante || {}) };
         const currentVisitas = Array.isArray(gestanteObj.visitasAcs) ? [...gestanteObj.visitasAcs] : [];
         if (!currentVisitas.includes(todayStr)) {
@@ -704,8 +707,9 @@ export function PatientForm({
       const hasHipertensao = prev.categories?.includes('Hipertenso') || nextClinical.chronic?.hipertensao === 'Sim';
 
       if (type === 'cronicos' || (type === 'geral' && (hasDiabetes || hasHipertensao))) {
-        if (summaryText === 'Visita de Rotina do ACS realizada hoje.') {
-          summaryText = 'Visita de Acompanhamento de Condição Crônica';
+        if (resolvedVisitType === 'Rotina') {
+          resolvedVisitType = 'Acompanhamento';
+          summaryText = getTemplateForType('Acompanhamento')?.defaultText || 'Visita de Acompanhamento de Condição Crônica';
         }
         const chronicObj = { ...(nextClinical.chronic || {}) };
 
@@ -738,11 +742,14 @@ export function PatientForm({
         nextClinical.chronic = chronicObj;
       }
 
+      const currentSummary = prev.visitSummary || '';
+      const shouldUpdateSummary = !currentSummary.trim() || isDefaultVisitTemplate(currentSummary);
+
       return {
         ...prev,
         visitDate: todayStr,
-        visitType: type === 'gestante' ? 'Acompanhamento' : type === 'cronicos' ? 'Acompanhamento' : 'Rotina',
-        visitSummary: prev.visitSummary || summaryText,
+        visitType: resolvedVisitType,
+        visitSummary: shouldUpdateSummary ? summaryText : currentSummary,
         clinicalData: nextClinical
       };
     });

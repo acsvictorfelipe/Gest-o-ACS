@@ -14,7 +14,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './Toast';
 import { formatDate } from '../lib/dateUtils';
-import { getTemplateForType } from '../constants/visitTemplates';
+import { getTemplateForType, isDefaultVisitTemplate } from '../constants/visitTemplates';
 
 type PeriodKey = 'hoje' | '7d' | '30d' | '90d' | 'todos';
 
@@ -193,7 +193,7 @@ export function VisitHistory({ user }: { user: any }) {
 
   const paginatedVisits = filteredVisits.slice((page - 1) * pageSize, page * pageSize);
 
-  const visitTypes = ['Todas', 'Rotina', 'Acompanhamento', 'Urgência', 'Pós-Parto', 'Recém-Nascido'];
+  const visitTypes = ['Todas', 'Rotina', 'Acompanhamento', 'Atualização de Cadastro', 'Visita Gestante', 'Busca Ativa', 'Urgência', 'Pós-Parto', 'Recém-Nascido'];
 
   return (
     <div className="space-y-6">
@@ -449,7 +449,7 @@ export function VisitHistory({ user }: { user: any }) {
                     const newType = e.target.value;
                     setEditType(newType);
                     const tmpl = getTemplateForType(newType);
-                    if (!editSummary.trim() && tmpl) {
+                    if ((!editSummary.trim() || isDefaultVisitTemplate(editSummary)) && tmpl) {
                       setEditSummary(tmpl.defaultText);
                     }
                   }}

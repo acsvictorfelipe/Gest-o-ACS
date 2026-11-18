@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, X, Plus, FileText, Check, ChevronDown, ChevronUp, Copy } from 'lucide-react';
-import { VISIT_TEMPLATES, VISIT_CATEGORIES, getTemplateForType, VisitTemplate } from '../../../constants/visitTemplates';
+import { VISIT_TEMPLATES, VISIT_CATEGORIES, getTemplateForType, isDefaultVisitTemplate, VisitTemplate } from '../../../constants/visitTemplates';
 
 interface VisitaSectionProps {
   formData: any;
@@ -25,9 +25,9 @@ export function VisitaSection({ formData, setFormData, isReadOnly }: VisitaSecti
   const handleSelectType = (selectedType: string) => {
     const template = getTemplateForType(selectedType);
     setFormData((prev: any) => {
-      // Auto-preenche o texto padrão caso o campo esteja vazio
+      // Auto-preenche o texto padrão caso o campo esteja vazio ou contenha apenas outro modelo padrão não editado
       const currentSummary = prev.visitSummary || '';
-      const shouldAutoFill = !currentSummary.trim() && template;
+      const shouldAutoFill = (!currentSummary.trim() || isDefaultVisitTemplate(currentSummary)) && template;
 
       return {
         ...prev,

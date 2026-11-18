@@ -3,7 +3,7 @@ import { supabase } from '../../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { formatDate, VACCINE_SCHEDULE } from '../../../lib/dateUtils';
 import { useToast } from '../../Toast';
-import { getTemplateForType } from '../../../constants/visitTemplates';
+import { getTemplateForType, isDefaultVisitTemplate } from '../../../constants/visitTemplates';
 import { 
   Calendar, 
   Trash2, 
@@ -397,7 +397,7 @@ export function VisitasHistoricoSection({
       ...prev,
       visitDate: new Date().toISOString().split('T')[0],
       visitType: 'Rotina',
-      visitSummary: ''
+      visitSummary: prev.visitSummary?.trim() ? prev.visitSummary : (getTemplateForType('Rotina')?.defaultText || '')
     }));
   };
 
@@ -609,7 +609,7 @@ export function VisitasHistoricoSection({
                                   const newType = e.target.value;
                                   setEditType(newType);
                                   const tmpl = getTemplateForType(newType);
-                                  if (!editSummary.trim() && tmpl) {
+                                  if ((!editSummary.trim() || isDefaultVisitTemplate(editSummary)) && tmpl) {
                                     setEditSummary(tmpl.defaultText);
                                   }
                                 }}
