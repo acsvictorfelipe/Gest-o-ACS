@@ -38,22 +38,31 @@ import {
   isPatientDiabetic, 
   isPatientInsulinUser, 
   isPatientHipertenso, 
-  isPatientBolsaFamilia 
+  isPatientBolsaFamilia,
+  isPatientAcamado,
+  isPatientDomiciliado,
+  isPatientWoman,
+  getPatientLastVisitAt
 } from '../lib/dateUtils';
 import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 
-export function Reports({ user }: { user: any }) {
+export function Reports({ user, initialCategory = 'Geral' }: { user: any; initialCategory?: string }) {
   const [patients, setPatients] = useState<any[]>([]);
   const [households, setHouseholds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('Geral');
+  const [categoryFilter, setCategoryFilter] = useState(initialCategory);
+  const [monthlyVisitScope, setMonthlyVisitScope] = useState<'todas' | 'mulheres'>('todas');
   const [domiciliosViewMode, setDomiciliosViewMode] = useState<'esus' | 'cards'>('esus');
   const [streetFilter, setStreetFilter] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [visits, setVisits] = useState<any[]>([]);
   const [fetchingVisits, setFetchingVisits] = useState(false);
+
+  useEffect(() => {
+    setCategoryFilter(initialCategory);
+  }, [initialCategory]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -104,6 +113,7 @@ export function Reports({ user }: { user: any }) {
               name,
               cns,
               birth_date,
+              gender,
               categories,
               clinical_data
             )
@@ -217,7 +227,18 @@ export function Reports({ user }: { user: any }) {
       if (!c || c === 'Geral' || c === 'Todas') return;
       if (c === 'Hipertensos' || c === 'Hipertenso') set.add('Hipertenso');
       else if (c === 'Diabéticos' || c === 'Diabético' || c === 'Diabetico') set.add('Diabético');
-      else if (c === 'AcamadoDomiciliado' || c === 'Acamado' || c === 'Domiciliado') set.add('Acamado');
+      else if (c === 'AcamadoDomiciliado') {
+        const cond = resident.clinical_data?.acamadodomiciliado?.condicao;
+        if (cond === 'Domiciliado') set.add('Domiciliado');
+        else if (cond === 'Acamado e Domiciliado') {
+          set.add('Acamado');
+          set.add('Domiciliado');
+        } else {
+          set.add('Acamado');
+        }
+      }
+      else if (c === 'Acamado') set.add('Acamado');
+      else if (c === 'Domiciliado') set.add('Domiciliado');
       else if (c === 'SaudeMental' || c === 'Saúde Mental') set.add('Saúde Mental');
       else if (c === 'Gestantes' || c === 'Gestante') set.add('Gestante');
       else if (c === 'Crianças' || c === 'Criança' || c === 'Crianca') set.add('Criança');
@@ -318,8 +339,12 @@ export function Reports({ user }: { user: any }) {
         return p.categories?.includes('Adulto') || (!isPatientChild(p) && ageNum < 60 && p.birth_date);
       }
 
-      if (categoryFilter === 'AcamadoDomiciliado') {
-        return p.categories?.includes('AcamadoDomiciliado') || p.categories?.includes('Acamado') || p.categories?.includes('Domiciliado');
+      if (categoryFilter === 'Acamado') {
+        return isPatientAcamado(p);
+      }
+
+      if (categoryFilter === 'Domiciliado') {
+        return isPatientDomiciliado(p);
       }
 
       if (categoryFilter === 'SaudeMental') {
@@ -329,6 +354,14 @@ export function Reports({ user }: { user: any }) {
       return true;
     });
   }, [patients, searchTerm, categoryFilter, householdsMap]);
+
+  const femaleVisits = useMemo(() => {
+    return visits.filter(v => isPatientWoman(v.patients || {}));
+  }, [visits]);
+
+  const displayedMonthlyVisits = useMemo(() => {
+    return monthlyVisitScope === 'mulheres' ? femaleVisits : visits;
+  }, [visits, femaleVisits, monthlyVisitScope]);
 
   const extractHouseNumber = (numStr?: string | null): { num: number; suffix: string; isSN: boolean } => {
     if (!numStr) return { num: Infinity, suffix: '', isSN: true };
@@ -458,9 +491,16 @@ export function Reports({ user }: { user: any }) {
       if (consultasCount > 0) info.push(`${consultasCount} Consultas Puericultura`);
     }
 
-    if (p.categories?.includes('AcamadoDomiciliado')) {
+    if (isPatientAcamado(p) || isPatientDomiciliado(p)) {
       const a = clinical.acamadodomiciliado || {};
-      info.push(`Dep: ${a.dependencia || 'Total'}`);
+      const condLabel = isPatientAcamado(p) && isPatientDomiciliado(p)
+        ? 'Acamado e Domiciliado'
+        : isPatientDomiciliado(p)
+        ? 'Domiciliado'
+        : 'Acamado';
+      info.push(`${condLabel} (Dep: ${a.dependencia || 'Total'})`);
+      if (a.cuidador === 'Sim') info.push('Com Cuidador');
+      if (a.curativos === 'Sim') info.push('Curativos');
       if (a.usoFralda === 'Sim') info.push(`Fralda ${a.tamanhoFralda || ''}`);
     }
 
@@ -553,7 +593,7 @@ export function Reports({ user }: { user: any }) {
     return { consultas, tomadas, pendentes, ageInMonths };
   };
 
-  const generatePDF = async () => {
+  const generatePDF = async (monthlyMode?: 'completo' | 'mulheres') => {
     const { default: jsPDFModule } = await import('jspdf');
     const { default: autoTableModule } = await import('jspdf-autotable');
     const autoTable = autoTableModule;
@@ -570,12 +610,93 @@ export function Reports({ user }: { user: any }) {
 
     // 1. PRODUÇÃO MENSAL
     if (categoryFilter === 'Produção Mensal') {
+      const resolvedMode = monthlyMode || (monthlyVisitScope === 'mulheres' ? 'mulheres' : 'completo');
       const doc = new jsPDFModule({ orientation: 'portrait' });
       const monthNames = [
         'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
         'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
       ];
       const compStr = `${monthNames[selectedMonth - 1]} / ${selectedYear}`;
+
+      if (resolvedMode === 'mulheres') {
+        doc.setFontSize(15);
+        doc.setTextColor(219, 39, 119);
+        doc.text('PRODUÇÃO MENSAL - VISITAS PARA MULHERES (ACS)', 14, 20);
+
+        doc.setFontSize(9);
+        doc.setTextColor(80);
+        doc.text(`Agente Comunitário: ${user.name} | Microárea: ${user.microarea || '-'} | Área: ${userColorLabel}`, 14, 27);
+        doc.text(`Competência: ${compStr} | Emitido em: ${emitDateStr}`, 14, 32);
+
+        const wRealizadas = femaleVisits.filter(v => v.outcome === 'Realizada' || !v.outcome).length;
+        const wAusentes = femaleVisits.filter(v => v.outcome === 'Ausente').length;
+        const wRecusadas = femaleVisits.filter(v => v.outcome === 'Recusada').length;
+        const wGestantes = femaleVisits.filter(v => v.patients?.categories?.includes('Gestante')).length;
+        const wIdosas = femaleVisits.filter(v => {
+          const p = v.patients || {};
+          const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
+          return p.categories?.includes('Idoso') || (ageNum >= 60 && !isPatientChild(p));
+        }).length;
+        const wAcamadas = femaleVisits.filter(v => isPatientAcamado(v.patients || {})).length;
+        const wDomiciliadas = femaleVisits.filter(v => isPatientDomiciliado(v.patients || {})).length;
+        const wHipertensas = femaleVisits.filter(v => isPatientHipertenso(v.patients || {})).length;
+        const wDiabeticas = femaleVisits.filter(v => isPatientDiabetic(v.patients || {})).length;
+        const wMental = femaleVisits.filter(v => v.patients?.categories?.includes('SaudeMental') || v.patients?.categories?.includes('Saúde Mental')).length;
+
+        const womanSummaryData = [
+          ['Total de Visitas para Mulheres na Competência', femaleVisits.length],
+          ['Visitas para Mulheres Realizadas', wRealizadas],
+          ['Visitas para Mulheres Ausentes', wAusentes],
+          ['Visitas para Mulheres Recusadas', wRecusadas],
+          ['Visitas a Gestantes (Pré-natal / Puerpério)', wGestantes],
+          ['Visitas a Mulheres Hipertensas', wHipertensas],
+          ['Visitas a Mulheres Diabéticas', wDiabeticas],
+          ['Visitas a Mulheres Idosas (60+)', wIdosas],
+          ['Visitas a Mulheres Acamadas', wAcamadas],
+          ['Visitas a Mulheres Domiciliadas', wDomiciliadas],
+          ['Visitas a Mulheres em Saúde Mental', wMental]
+        ];
+
+        doc.setFontSize(11);
+        doc.setTextColor(190, 24, 93);
+        doc.text('I. RESUMO DE VISITAS PARA MULHERES', 14, 42);
+
+        autoTable(doc, {
+          startY: 46,
+          head: [['Indicador - Saúde da Mulher', 'Quantidade']],
+          body: womanSummaryData,
+          headStyles: { fillColor: [219, 39, 119] },
+          styles: { fontSize: 8.5, cellPadding: 3 },
+          alternateRowStyles: { fillColor: [253, 242, 248] }
+        });
+
+        let nextY = (doc as any).lastAutoTable.finalY + 10;
+        doc.setFontSize(11);
+        doc.setTextColor(190, 24, 93);
+        doc.text('II. RELAÇÃO NOMINAL - VISITAS PARA MULHERES', 14, nextY);
+        nextY += 4;
+
+        const womanDetailData = femaleVisits.map((v, idx) => [
+          idx + 1,
+          formatDate(v.date),
+          v.patients?.name || 'Paciente não localizado',
+          v.patients?.cns ? v.patients.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS',
+          v.type || 'Rotina',
+          v.outcome || 'Realizada'
+        ]);
+
+        autoTable(doc, {
+          startY: nextY,
+          head: [['Nº', 'Data', 'Nome da Cidadã', 'Cartão SUS (CNS)', 'Tipo de Atendimento', 'Desfecho']],
+          body: womanDetailData,
+          headStyles: { fillColor: [219, 39, 119] },
+          styles: { fontSize: 7.5, cellPadding: 2.5 },
+          alternateRowStyles: { fillColor: [253, 242, 248] }
+        });
+
+        doc.save(`Producao_Mensal_Mulheres_MA_${user.microarea || 'Geral'}_${selectedMonth}_${selectedYear}.pdf`);
+        return;
+      }
 
       doc.setFontSize(16);
       doc.setTextColor(13, 148, 136);
@@ -597,8 +718,9 @@ export function Reports({ user }: { user: any }) {
         const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
         return p.categories?.includes('Idoso') || (ageNum >= 60 && !isPatientChild(p));
       }).length;
-      const vAcamados = visits.filter(v => v.patients?.categories?.includes('AcamadoDomiciliado')).length;
-      const vMental = visits.filter(v => v.patients?.categories?.includes('SaudeMental')).length;
+      const vAcamados = visits.filter(v => isPatientAcamado(v.patients || {})).length;
+      const vDomiciliados = visits.filter(v => isPatientDomiciliado(v.patients || {})).length;
+      const vMental = visits.filter(v => v.patients?.categories?.includes('SaudeMental') || v.patients?.categories?.includes('Saúde Mental')).length;
       const vHipertensos = visits.filter(v => isPatientHipertenso(v.patients || {})).length;
       const vDiabeticos = visits.filter(v => isPatientDiabetic(v.patients || {})).length;
 
@@ -606,12 +728,14 @@ export function Reports({ user }: { user: any }) {
         ['Total de Visitas Domiciliares Realizadas', vRealizadas],
         ['Total de Visitas Domiciliares Ausentes', vAusentes],
         ['Total de Visitas Domiciliares Recusadas', vRecusadas],
+        ['Visitas para Mulheres (Total Separado)', femaleVisits.length],
         ['Visitas a Gestantes (Pré-natal / Puerpério)', vGestantes],
         ['Visitas a Crianças (Puericultura e Vacinas)', vCriancas],
         ['Visitas a Hipertensos', vHipertensos],
         ['Visitas a Diabéticos (Acompanhamento Glicêmico/Pés)', vDiabeticos],
         ['Visitas a Idosos', vIdosos],
-        ['Visitas a Acamados e Domiciliados', vAcamados],
+        ['Visitas a Acamados', vAcamados],
+        ['Visitas a Domiciliados', vDomiciliados],
         ['Visitas a Usuários de Saúde Mental', vMental]
       ];
 
@@ -632,13 +756,14 @@ export function Reports({ user }: { user: any }) {
 
       doc.setFontSize(11);
       doc.setTextColor(0, 72, 141);
-      doc.text('II. RELAÇÃO NOMINAL DAS VISITAS REALIZADAS', 14, nextY);
+      doc.text('II. RELAÇÃO NOMINAL DE TODAS AS VISITAS', 14, nextY);
       nextY += 4;
 
       const detailData = visits.map((v, idx) => [
         idx + 1,
         formatDate(v.date),
         v.patients?.name || 'Paciente não localizado',
+        isPatientWoman(v.patients || {}) ? 'F' : (v.patients?.gender === 'Masculino' || v.patients?.gender === 'M' ? 'M' : '-'),
         v.patients?.cns ? v.patients.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS',
         v.type || 'Rotina',
         v.outcome || 'Realizada'
@@ -646,12 +771,41 @@ export function Reports({ user }: { user: any }) {
 
       autoTable(doc, {
         startY: nextY,
-        head: [['Nº', 'Data', 'Nome do Cidadão', 'Cartão SUS (CNS)', 'Tipo de Atendimento', 'Desfecho']],
+        head: [['Nº', 'Data', 'Nome do Cidadão', 'Sexo', 'Cartão SUS (CNS)', 'Tipo de Atendimento', 'Desfecho']],
         body: detailData,
         headStyles: { fillColor: [59, 130, 246] },
         styles: { fontSize: 7.5, cellPadding: 2.5 },
         alternateRowStyles: { fillColor: [245, 247, 250] }
       });
+
+      if (femaleVisits.length > 0) {
+        let womenY = (doc as any).lastAutoTable.finalY + 12;
+        if (womenY > 250) {
+          doc.addPage();
+          womenY = 20;
+        }
+        doc.setFontSize(11);
+        doc.setTextColor(190, 24, 93);
+        doc.text(`III. RELAÇÃO SEPARADA - VISITAS PARA MULHERES (${femaleVisits.length})`, 14, womenY);
+
+        const womenRows = femaleVisits.map((v, idx) => [
+          idx + 1,
+          formatDate(v.date),
+          v.patients?.name || 'Paciente não localizado',
+          v.patients?.cns ? v.patients.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS',
+          v.type || 'Rotina',
+          v.outcome || 'Realizada'
+        ]);
+
+        autoTable(doc, {
+          startY: womenY + 4,
+          head: [['Nº', 'Data', 'Nome da Cidadã', 'Cartão SUS (CNS)', 'Tipo de Atendimento', 'Desfecho']],
+          body: womenRows,
+          headStyles: { fillColor: [219, 39, 119] },
+          styles: { fontSize: 7.5, cellPadding: 2.5 },
+          alternateRowStyles: { fillColor: [253, 242, 248] }
+        });
+      }
 
       doc.save(`Producao_Mensal_MA_${user.microarea || 'Geral'}_${selectedMonth}_${selectedYear}.pdf`);
       return;
@@ -671,7 +825,7 @@ export function Reports({ user }: { user: any }) {
 
       const tableData = filteredPatients.map((p, idx) => {
         const age = p.birth_date ? calculateAge(p.birth_date) : '-';
-        const cats = p.categories?.join(', ') || 'Geral';
+        const cats = getResidentCategories(p).join(', ') || 'Geral';
         const c = p.clinical_data || {};
         
         let condicoes = [];
@@ -679,9 +833,10 @@ export function Reports({ user }: { user: any }) {
         if (isPatientDiabetic(p)) {
           condicoes.push(isPatientInsulinUser(p) ? 'Diabético (Insulina)' : 'Diabético');
         }
-        if (p.categories?.includes('AcamadoDomiciliado')) condicoes.push(`Acamado (${c.acamadodomiciliado?.dependencia || 'Total'})`);
+        if (isPatientAcamado(p)) condicoes.push(`Acamado (${c.acamadodomiciliado?.dependencia || 'Total'})`);
+        if (isPatientDomiciliado(p)) condicoes.push(`Domiciliado (${c.acamadodomiciliado?.dependencia || 'Parcial'})`);
         if (p.categories?.includes('Gestante')) condicoes.push('Gestante');
-        if (p.categories?.includes('SaudeMental')) condicoes.push('Saúde Mental');
+        if (p.categories?.includes('SaudeMental') || p.categories?.includes('Saúde Mental')) condicoes.push('Saúde Mental');
         const condicoesStr = condicoes.length > 0 ? condicoes.join(', ') : 'Nenhum agravo';
 
         const benefits = Array.isArray(c.socialBenefits) && c.socialBenefits.length > 0 
@@ -1202,7 +1357,86 @@ export function Reports({ user }: { user: any }) {
       return;
     }
 
-    // 9. OUTRAS CATEGORIAS (Idoso, Acamado, Saúde Mental, Beneficiários, Adulto)
+    // 9. RELATÓRIOS DE CONTROLE SEPARADOS: ACAMADOS E DOMICILIADOS
+    if (categoryFilter === 'Acamado' || categoryFilter === 'Domiciliado') {
+      const isDomiciliadoReport = categoryFilter === 'Domiciliado';
+      const doc = new jsPDFModule({ orientation: 'landscape' });
+
+      doc.setFontSize(16);
+      doc.setTextColor(isDomiciliadoReport ? 3 : 51, isDomiciliadoReport ? 105 : 65, isDomiciliadoReport ? 161 : 85);
+      doc.text(
+        isDomiciliadoReport
+          ? 'RELATÓRIO DE CONTROLE - PACIENTES DOMICILIADOS'
+          : 'RELATÓRIO DE CONTROLE - PACIENTES ACAMADOS',
+        14,
+        16
+      );
+
+      doc.setFontSize(9);
+      doc.setTextColor(80);
+      doc.text(
+        `Agente: ${user.name} | Microárea: ${user.microarea || '-'} | Total: ${filteredPatients.length} pacientes | Emitido em: ${emitDateStr}`,
+        14,
+        22
+      );
+
+      const tableData = filteredPatients.map((p, idx) => {
+        const age = p.birth_date ? calculateAge(p.birth_date) : '-';
+        const ac = p.clinical_data?.acamadodomiciliado || {};
+        const comorbidades = [
+          isPatientHipertenso(p) ? 'Hipertenso' : null,
+          isPatientDiabetic(p) ? (isPatientInsulinUser(p) ? 'Diabético (Insulina)' : 'Diabético') : null
+        ].filter(Boolean).join(', ') || 'Nenhuma';
+        const lastVisit = getPatientLastVisitAt(p);
+        return [
+          idx + 1,
+          p.name || 'Sem nome',
+          p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS',
+          p.birth_date ? `${formatDate(p.birth_date)} (${age})` : '-',
+          getPatientAddress(p),
+          getPatientContact(p),
+          ac.dependencia || (isDomiciliadoReport ? 'Parcial' : 'Total'),
+          ac.cuidador || 'Não',
+          ac.curativos || 'Não',
+          ac.usoFralda === 'Sim' ? `Sim (${ac.tamanhoFralda || '-'})` : 'Não',
+          comorbidades,
+          lastVisit ? formatDate(lastVisit.split('T')[0]) : 'Sem visita',
+          ac.observacoes || '-'
+        ];
+      });
+
+      autoTable(doc, {
+        startY: 27,
+        head: [[
+          'Nº',
+          'Nome do Cidadão',
+          'Cartão SUS (CNS)',
+          'Nascimento / Idade',
+          'Endereço Completo',
+          'Contato',
+          'Dependência',
+          'Cuidador',
+          'Curativos',
+          'Uso de Fralda',
+          'Comorbidades',
+          'Última Visita',
+          'Observações'
+        ]],
+        body: tableData,
+        headStyles: { fillColor: isDomiciliadoReport ? [2, 132, 199] : [71, 85, 105], fontSize: 7.5 },
+        styles: { fontSize: 6.8, cellPadding: 2 },
+        alternateRowStyles: { fillColor: isDomiciliadoReport ? [240, 249, 255] : [248, 250, 252] }
+      });
+
+      doc.save(
+        isDomiciliadoReport
+          ? `Relatorio_Controle_Domiciliados_MA_${user.microarea || 'Geral'}.pdf`
+          : `Relatorio_Controle_Acamados_MA_${user.microarea || 'Geral'}.pdf`
+      );
+      return;
+    }
+
+    // 10. OUTRAS CATEGORIAS (Idoso, Saúde Mental, Beneficiários, Adulto)
     const doc = new jsPDFModule({ orientation: 'landscape' });
 
     doc.setFontSize(16);
@@ -1266,6 +1500,7 @@ export function Reports({ user }: { user: any }) {
       'Diabético':    { bg: 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200 dark:border-purple-800', label: '🩸 Diabético' },
       'Adulto':       { bg: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800', label: '🧑 Adulto' },
       'Acamado':      { bg: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700', label: '🛏️ Acamado' },
+      'Domiciliado':  { bg: 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200 dark:border-sky-800', label: '🏡 Domiciliado' },
       'Saúde Mental': { bg: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800', label: '🧠 Saúde Mental' },
     };
 
@@ -1306,7 +1541,8 @@ export function Reports({ user }: { user: any }) {
       const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
       return p.categories?.includes('Idoso') || (ageNum >= 60 && !isPatientChild(p));
     }).length },
-    { id: 'AcamadoDomiciliado', label: '🛏️ Acamados / Domiciliados', count: patients.filter(p => p.categories?.includes('AcamadoDomiciliado') || p.categories?.includes('Acamado')).length },
+    { id: 'Acamado', label: '🛏️ Acamados', count: patients.filter(p => isPatientAcamado(p)).length },
+    { id: 'Domiciliado', label: '🏡 Domiciliados', count: patients.filter(p => isPatientDomiciliado(p)).length },
     { id: 'Adulto', label: '🧑 Adultos', count: patients.filter(p => {
       const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
       return p.categories?.includes('Adulto') || (!isPatientChild(p) && ageNum < 60 && p.birth_date);
@@ -1323,20 +1559,43 @@ export function Reports({ user }: { user: any }) {
         <header className="flex flex-col gap-1">
           <h2 className="text-2xl font-bold tracking-tight text-text-primary dark:text-white flex items-center gap-2">
             <BarChart3 className="w-6 h-6 text-teal-600" />
-            Relatórios e Consolidados
+            {categoryFilter === 'Produção Mensal' ? 'Produção Mensal (ACS)' : 'Relatórios e Consolidados'}
           </h2>
           <p className="text-xs text-text-secondary font-medium tracking-tight">
-            Gere relatórios nominais por categoria, listagem geral completa e acompanhamento do Bolsa Família.
+            {categoryFilter === 'Produção Mensal'
+              ? 'Gere o consolidado mensal de todas as visitas realizadas na competência e o relatório separado de visitas para mulheres.'
+              : 'Gere relatórios nominais por categoria, controle de Acamados e Domiciliados, listagem geral e Produção Mensal.'}
           </p>
         </header>
-        <button 
-          onClick={generatePDF}
-          disabled={categoryFilter === 'Produção Mensal' ? visits.length === 0 || fetchingVisits : categoryFilter === 'Domicílios' ? filteredHouseholds.length === 0 : filteredPatients.length === 0}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-xl font-bold shadow-md shadow-teal-600/20 hover:bg-teal-700 transition-all disabled:opacity-50 text-sm cursor-pointer"
-        >
-          <FileDown className="w-4 h-4" />
-          Gerar e Baixar PDF ({categoryFilter === 'Domicílios' ? filteredHouseholds.length : filteredPatients.length})
-        </button>
+        {categoryFilter === 'Produção Mensal' ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => generatePDF('completo')}
+              disabled={visits.length === 0 || fetchingVisits}
+              className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl font-bold shadow-md shadow-teal-600/20 hover:bg-teal-700 transition-all disabled:opacity-50 text-xs sm:text-sm cursor-pointer"
+            >
+              <FileDown className="w-4 h-4" />
+              PDF Todas as Visitas ({visits.length})
+            </button>
+            <button
+              onClick={() => generatePDF('mulheres')}
+              disabled={femaleVisits.length === 0 || fetchingVisits}
+              className="flex items-center gap-2 px-4 py-2.5 bg-pink-600 text-white rounded-xl font-bold shadow-md shadow-pink-600/20 hover:bg-pink-700 transition-all disabled:opacity-50 text-xs sm:text-sm cursor-pointer"
+            >
+              <FileDown className="w-4 h-4" />
+              PDF Visitas Mulheres ({femaleVisits.length})
+            </button>
+          </div>
+        ) : (
+          <button 
+            onClick={() => generatePDF()}
+            disabled={categoryFilter === 'Domicílios' ? filteredHouseholds.length === 0 : filteredPatients.length === 0}
+            className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-xl font-bold shadow-md shadow-teal-600/20 hover:bg-teal-700 transition-all disabled:opacity-50 text-sm cursor-pointer"
+          >
+            <FileDown className="w-4 h-4" />
+            Gerar e Baixar PDF ({categoryFilter === 'Domicílios' ? filteredHouseholds.length : filteredPatients.length})
+          </button>
+        )}
       </div>
 
       {/* Categories Bar */}
@@ -1463,7 +1722,7 @@ export function Reports({ user }: { user: any }) {
         ) : (
           <div className="space-y-6 animate-fade-in">
             {/* Stats Dashboard Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <div className="bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-2xl p-4 shadow-sm">
                 <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Visitas Realizadas</span>
                 <span className="text-2xl font-bold text-teal-600 dark:text-teal-400 mt-1 block">
@@ -1474,6 +1733,12 @@ export function Reports({ user }: { user: any }) {
                 <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Visitas Ausentes</span>
                 <span className="text-2xl font-bold text-amber-500 dark:text-amber-400 mt-1 block">
                   {visits.filter(v => v.outcome === 'Ausente').length}
+                </span>
+              </div>
+              <div className="bg-pink-50/70 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-900/40 rounded-2xl p-4 shadow-sm">
+                <span className="text-[10px] font-bold text-pink-700 dark:text-pink-300 uppercase tracking-wider block">Visitas para Mulheres</span>
+                <span className="text-2xl font-bold text-pink-600 dark:text-pink-400 mt-1 block">
+                  {femaleVisits.length}
                 </span>
               </div>
               <div className="bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-2xl p-4 shadow-sm">
@@ -1488,18 +1753,52 @@ export function Reports({ user }: { user: any }) {
                   {visits.filter(v => isPatientChild(v.patients || {})).length}
                 </span>
               </div>
+              <div className="bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-2xl p-4 shadow-sm">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Acamados / Domiciliados</span>
+                <span className="text-2xl font-bold text-slate-700 dark:text-slate-200 mt-1 block">
+                  {visits.filter(v => isPatientAcamado(v.patients || {})).length} / {visits.filter(v => isPatientDomiciliado(v.patients || {})).length}
+                </span>
+              </div>
             </div>
 
             {/* Main Visitas List Table Card */}
             <div className="bg-bg-secondary dark:bg-slate-900 border border-border dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-border dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/20">
+              <div className="px-6 py-4 border-b border-border dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-950/20">
                 <h3 className="text-sm font-bold text-text-primary dark:text-white uppercase tracking-wider flex items-center gap-2">
                   <Activity className="w-4 h-4 text-teal-600" />
-                  Detalhamento Nominal das Visitas da Competência
+                  {monthlyVisitScope === 'mulheres'
+                    ? 'Detalhamento Nominal - Visitas para Mulheres'
+                    : 'Detalhamento Nominal das Visitas da Competência'}
                 </h3>
-                <span className="px-2.5 py-1 bg-teal-50 dark:bg-teal-950 text-teal-600 dark:text-teal-400 font-bold text-xs rounded-full border border-teal-100 dark:border-teal-900/30">
-                  {visits.length} Visitas Registradas
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setMonthlyVisitScope('todas')}
+                      className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                        monthlyVisitScope === 'todas'
+                          ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-2xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                    >
+                      Todas as Visitas ({visits.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMonthlyVisitScope('mulheres')}
+                      className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                        monthlyVisitScope === 'mulheres'
+                          ? 'bg-pink-600 text-white shadow-2xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                    >
+                      Visitas para Mulheres ({femaleVisits.length})
+                    </button>
+                  </div>
+                  <span className="px-2.5 py-1 bg-teal-50 dark:bg-teal-950 text-teal-600 dark:text-teal-400 font-bold text-xs rounded-full border border-teal-100 dark:border-teal-900/30">
+                    {displayedMonthlyVisits.length} {displayedMonthlyVisits.length === 1 ? 'Visita' : 'Visitas'}
+                  </span>
+                </div>
               </div>
               
               <div className="overflow-x-auto">
@@ -1508,46 +1807,61 @@ export function Reports({ user }: { user: any }) {
                     <tr className="bg-bg-primary dark:bg-slate-800/30 border-b border-border dark:border-slate-800">
                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-text-muted">Data</th>
                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-text-muted">Cidadão</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-text-muted">Sexo</th>
                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-text-muted">Cartão SUS</th>
                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-text-muted">Atendimento</th>
                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-text-muted text-right">Desfecho</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                    {visits.length > 0 ? (
-                      visits.map((v) => (
-                        <tr key={v.id} className="hover:bg-bg-primary/50 transition-colors">
-                          <td className="px-6 py-4 font-semibold text-text-primary dark:text-white">
-                            {formatDate(v.date) || '-'}
-                          </td>
-                          <td className="px-6 py-4 font-bold text-teal-600 dark:text-teal-400">
-                            {v.patients?.name || 'Paciente não localizado'}
-                          </td>
-                          <td className="px-6 py-4 text-text-secondary font-semibold">
-                            {v.patients?.cns ? v.patients.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-[10px] font-bold rounded uppercase text-slate-600 dark:text-slate-300">
-                              {v.type || 'Rotina'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <span className={`px-2.5 py-0.5 text-[9px] font-bold rounded uppercase ${
-                              v.outcome === 'Ausente' 
-                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400' 
-                                : v.outcome === 'Recusada' 
-                                  ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' 
-                                  : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                            }`}>
-                              {v.outcome || 'Realizada'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
+                    {displayedMonthlyVisits.length > 0 ? (
+                      displayedMonthlyVisits.map((v) => {
+                        const isWoman = isPatientWoman(v.patients || {});
+                        return (
+                          <tr key={v.id} className="hover:bg-bg-primary/50 transition-colors">
+                            <td className="px-6 py-4 font-semibold text-text-primary dark:text-white">
+                              {formatDate(v.date) || '-'}
+                            </td>
+                            <td className="px-6 py-4 font-bold text-teal-600 dark:text-teal-400">
+                              {v.patients?.name || 'Paciente não localizado'}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                isWoman
+                                  ? 'bg-pink-100 text-pink-700 dark:bg-pink-950/50 dark:text-pink-300'
+                                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                              }`}>
+                                {isWoman ? 'Feminino' : (v.patients?.gender || 'Masculino')}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-text-secondary font-semibold">
+                              {v.patients?.cns ? v.patients.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-[10px] font-bold rounded uppercase text-slate-600 dark:text-slate-300">
+                                {v.type || 'Rotina'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <span className={`px-2.5 py-0.5 text-[9px] font-bold rounded uppercase ${
+                                v.outcome === 'Ausente' 
+                                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400' 
+                                  : v.outcome === 'Recusada' 
+                                    ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' 
+                                    : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                              }`}>
+                                {v.outcome || 'Realizada'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
-                        <td colSpan={5} className="px-6 py-20 text-center text-text-muted">
-                          Nenhuma visita registrada nesta competência.
+                        <td colSpan={6} className="px-6 py-20 text-center text-text-muted">
+                          {monthlyVisitScope === 'mulheres'
+                            ? 'Nenhuma visita para mulheres registrada nesta competência.'
+                            : 'Nenhuma visita registrada nesta competência.'}
                         </td>
                       </tr>
                     )}
@@ -1566,6 +1880,8 @@ export function Reports({ user }: { user: any }) {
                 {categoryFilter === 'Geral' ? '📋 Relatório Geral Completo de Cidadãos' :
                  categoryFilter === 'Bolsa Família' ? '🎁 Relação de Beneficiários do Bolsa Família' :
                  categoryFilter === 'Gestante' ? '🤰 Relatório de Acompanhamento - Gestantes' :
+                 categoryFilter === 'Acamado' ? '🛏️ Relatório de Controle - Acamados (Restritos ao Leito)' :
+                 categoryFilter === 'Domiciliado' ? '🏡 Relatório de Controle - Domiciliados (Restritos ao Lar)' :
                  categoryFilter === 'Domicílios' ? '🏠 Cadastro e Ficha Territorial de Domicílios' :
                  `👥 Relatório de Pacientes - ${categoryFilter}`}
               </h3>
@@ -1949,6 +2265,13 @@ export function Reports({ user }: { user: any }) {
                         <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Testes Rápidos</th>
                         <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">dTpa & Saúde Bucal</th>
                       </>
+                    ) : categoryFilter === 'Acamado' || categoryFilter === 'Domiciliado' ? (
+                      <>
+                        <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Dependência & Cuidador</th>
+                        <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Curativos & Fralda</th>
+                        <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Comorbidades & Última Visita</th>
+                        <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Observações</th>
+                      </>
                     ) : (
                       <>
                         <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-text-muted">Categorias</th>
@@ -2066,6 +2389,85 @@ export function Reports({ user }: { user: any }) {
                         </tr>
                       );
                     })
+                  ) : categoryFilter === 'Acamado' || categoryFilter === 'Domiciliado' ? (
+                    filteredPatients.map((p, idx) => {
+                      const age = p.birth_date ? calculateAge(p.birth_date) : '-';
+                      const ac = p.clinical_data?.acamadodomiciliado || {};
+                      const lastVisit = getPatientLastVisitAt(p);
+                      return (
+                        <tr key={p.id} className="hover:bg-bg-primary/50 transition-colors">
+                          <td className="px-4 py-3.5 font-bold text-slate-400 text-xs">{idx + 1}</td>
+                          <td className="px-4 py-3.5">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <p className={`font-bold ${categoryFilter === 'Domiciliado' ? 'text-sky-700 dark:text-sky-300' : 'text-slate-800 dark:text-slate-200'}`}>
+                                {p.name}
+                              </p>
+                              {isPatientAcamado(p) && isPatientDomiciliado(p) && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase">
+                                  Ambos
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-500 font-medium">
+                              {p.cns ? p.cns.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4') : 'Sem CNS'}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <p className="font-semibold text-text-primary dark:text-white text-xs">{p.birth_date ? formatDate(p.birth_date) : '-'}</p>
+                            <p className="text-[11px] text-slate-500 font-medium">{age}</p>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <p className="text-xs text-text-primary dark:text-white font-medium flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                              {getPatientAddress(p)}
+                            </p>
+                            <p className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1">
+                              <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                              {getPatientContact(p)}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3.5 text-xs">
+                            <p className="font-bold text-slate-800 dark:text-slate-200">
+                              Dependência: {ac.dependencia || (categoryFilter === 'Domiciliado' ? 'Parcial' : 'Total')}
+                            </p>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              Cuidador: <span className={ac.cuidador === 'Sim' ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>{ac.cuidador || 'Não'}</span>
+                            </p>
+                          </td>
+                          <td className="px-4 py-3.5 text-xs">
+                            <p className="text-slate-700 dark:text-slate-300 font-medium">
+                              Curativos: <strong>{ac.curativos || 'Não'}</strong>
+                            </p>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              Fralda: <strong>{ac.usoFralda === 'Sim' ? `Sim (${ac.tamanhoFralda || '-'})` : 'Não'}</strong>
+                            </p>
+                          </td>
+                          <td className="px-4 py-3.5 text-xs">
+                            <div className="flex flex-wrap gap-1 mb-1">
+                              {isPatientHipertenso(p) && (
+                                <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 text-[9px] font-bold uppercase">
+                                  Hipertenso
+                                </span>
+                              )}
+                              {isPatientDiabetic(p) && (
+                                <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 text-[9px] font-bold uppercase">
+                                  {isPatientInsulinUser(p) ? 'Diabético (Insulina)' : 'Diabético'}
+                                </span>
+                              )}
+                              {!isPatientHipertenso(p) && !isPatientDiabetic(p) && (
+                                <span className="text-[11px] text-slate-400">Sem crônicas</span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-500 font-medium">
+                              Últ. visita: <strong className="text-slate-700 dark:text-slate-200">{lastVisit ? formatDate(lastVisit.split('T')[0]) : 'Nenhuma'}</strong>
+                            </p>
+                          </td>
+                          <td className="px-4 py-3.5 text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed max-w-xs">
+                            {ac.observacoes || '-'}
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     filteredPatients.map((p, idx) => {
                       const age = p.birth_date ? calculateAge(p.birth_date) : '-';
@@ -2098,7 +2500,9 @@ export function Reports({ user }: { user: any }) {
                                   'Criança':            { primary: '#3B82F6', label: 'Criança' },
                                   'Idoso':              { primary: '#F97316', label: 'Idoso' },
                                   'Adulto':             { primary: '#10B981', label: 'Adulto' },
-                                  'AcamadoDomiciliado': { primary: '#64748B', label: 'Acamado' },
+                                  'Acamado':            { primary: '#64748B', label: 'Acamado' },
+                                  'Domiciliado':        { primary: '#0EA5E9', label: 'Domiciliado' },
+                                  'AcamadoDomiciliado': { primary: '#64748B', label: p.clinical_data?.acamadodomiciliado?.condicao === 'Domiciliado' ? 'Domiciliado' : 'Acamado' },
                                   'SaudeMental':        { primary: '#6366F1', label: 'S. Mental' },
                                 };
                                 const matched = catMap[cat];
@@ -2129,7 +2533,7 @@ export function Reports({ user }: { user: any }) {
 
                   {filteredPatients.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-8 py-20 text-center">
+                      <td colSpan={8} className="px-8 py-20 text-center">
                         <div className="flex flex-col items-center gap-2">
                           <BarChart3 className="w-8 h-8 text-slate-300" />
                           <p className="text-sm font-semibold text-text-muted">Nenhum registro encontrado para este relatório com os filtros atuais.</p>

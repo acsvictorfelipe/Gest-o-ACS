@@ -80,7 +80,9 @@ export const PATIENT_CATEGORIES = {
   GESTANTE:          'Gestante',
   ADULTO:            'Adulto',
   IDOSO:             'Idoso',
-  ACAMADO:           'AcamadoDomiciliado',
+  ACAMADO:           'Acamado',
+  DOMICILIADO:       'Domiciliado',
+  ACAMADO_LEGACY:    'AcamadoDomiciliado',
   SAUDE_MENTAL:      'SaudeMental',
 } as const;
 
@@ -187,6 +189,59 @@ export function isPatientBolsaFamilia(patient: any): boolean {
     clinical.bolsaFamilia === 'Sim' ||
     clinical.bolsaFamilia === 'sim'
   );
+}
+
+/**
+ * Verifica se um paciente é Acamado (restrito ao leito).
+ * Mantém retrocompatibilidade com registros legados 'AcamadoDomiciliado'.
+ */
+export function isPatientAcamado(patient: any): boolean {
+  if (!patient) return false;
+  const cats: string[] = Array.isArray(patient.categories) ? patient.categories : [];
+  const cond = patient.clinical_data?.acamadodomiciliado?.condicao;
+  if (cats.includes('Acamado')) return true;
+  if (cond === 'Acamado' || cond === 'Acamado e Domiciliado') return true;
+  if (
+    (cats.includes('AcamadoDomiciliado') || cats.includes('Acamado / Domiciliado')) &&
+    cond !== 'Domiciliado'
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Verifica se um paciente é Domiciliado (restrito ao domicílio, não necessariamente acamado).
+ */
+export function isPatientDomiciliado(patient: any): boolean {
+  if (!patient) return false;
+  const cats: string[] = Array.isArray(patient.categories) ? patient.categories : [];
+  const cond = patient.clinical_data?.acamadodomiciliado?.condicao;
+  if (cats.includes('Domiciliado')) return true;
+  if (cond === 'Domiciliado' || cond === 'Acamado e Domiciliado') return true;
+  return false;
+}
+
+/**
+ * Verifica se um paciente é Acamado ou Domiciliado.
+ */
+export function isPatientAcamadoOuDomiciliado(patient: any): boolean {
+  return isPatientAcamado(patient) || isPatientDomiciliado(patient);
+}
+
+/**
+ * Verifica se o paciente é do sexo feminino (para relatórios separados de saúde da mulher).
+ */
+export function isPatientWoman(patient: any): boolean {
+  if (!patient) return false;
+  const cats: string[] = Array.isArray(patient.categories) ? patient.categories : [];
+  if (cats.includes('Gestante')) return true;
+  const rawGender = String(patient.gender || patient.clinical_data?.gender || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  return rawGender === 'feminino' || rawGender === 'f' || rawGender === 'mulher' || rawGender === 'fem';
 }
 
 export const parseBirthDate = (birthDate: any): Date | null => {
@@ -447,7 +502,7 @@ export function getPatientVisitInterval(p: any): number {
   const clinical = p.clinical_data || {};
 
   const isGestante = categories.includes('Gestante');
-  const isAcamado = categories.includes('AcamadoDomiciliado') || categories.includes('Acamado / Domiciliado');
+  const isAcamadoOuDomiciliado = isPatientAcamadoOuDomiciliado(p);
   const isSaudeMental = categories.includes('SaudeMental') || categories.includes('Saúde Mental');
 
   const isDiabetico = clinical.chronic?.diabetes === 'Sim' || 
@@ -471,8 +526,8 @@ export function getPatientVisitInterval(p: any): number {
     return 60;
   }
 
-  // 2. Acamados e Saúde Mental de alta prioridade: acompanhamento a cada 60 dias
-  if (isAcamado || isSaudeMental) {
+  // 2. Acamados, Domiciliados e Saúde Mental de alta prioridade: acompanhamento a cada 60 dias
+  if (isAcamadoOuDomiciliado || isSaudeMental) {
     return 60;
   }
 

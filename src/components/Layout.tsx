@@ -150,6 +150,7 @@ export function Layout({
     { id: 'dashboard', label: 'Painel', icon: LayoutDashboard, path: '/' },
     { id: 'pacientes', label: 'Pacientes', icon: Users, path: '/pacientes', hideForAdmin: true },
     { id: 'domicilios', label: 'Domicílios', icon: Home, path: '/domicilios', hideForAdmin: true },
+    { id: 'producao', label: 'Produção Mensal', icon: CalendarDays, path: '/producao-mensal', hideForAdmin: true },
   ].filter(item => !((user?.role === 'Administrador' || user?.role === 'Gestor') && item.hideForAdmin));
 
   return (
@@ -290,6 +291,13 @@ export function Layout({
                   <div className="space-y-0.5 text-xs">
                     {(user?.role !== 'Administrador' && user?.role !== 'Gestor') && (
                       <>
+                        <button
+                          onClick={() => { navigate('/producao-mensal'); setIsSettingsMenuOpen(false); }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-bg-primary transition-colors text-left"
+                        >
+                          <CalendarDays className="w-4 h-4 text-teal-600" />
+                          <span>Produção Mensal (ACS)</span>
+                        </button>
                         <button
                           onClick={() => { navigate('/relatorios'); setIsSettingsMenuOpen(false); }}
                           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-bg-primary transition-colors text-left"

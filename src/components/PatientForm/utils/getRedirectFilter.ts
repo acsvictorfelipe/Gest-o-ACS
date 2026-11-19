@@ -5,6 +5,7 @@ export function getRedirectFilter(categories: string[]): string {
   if (categories.includes('Adulto')) return 'adultos';
   if (categories.includes('Hipertenso')) return 'hipertensos';
   if (categories.includes('Diabético')) return 'diabéticos';
-  if (categories.includes('AcamadoDomiciliado')) return 'acamados';
+  if (categories.includes('Acamado') || categories.includes('AcamadoDomiciliado')) return 'acamados';
+  if (categories.includes('Domiciliado')) return 'domiciliados';
   return 'all';
 }

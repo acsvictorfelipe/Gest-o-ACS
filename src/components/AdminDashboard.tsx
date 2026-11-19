@@ -27,7 +27,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useToast } from './Toast';
-import { formatDate, calculateAge, getAgeNumber, isPatientChild, isPatientHipertenso, isPatientDiabetic } from '../lib/dateUtils';
+import { formatDate, calculateAge, getAgeNumber, isPatientChild, isPatientHipertenso, isPatientDiabetic, isPatientAcamado, isPatientDomiciliado } from '../lib/dateUtils';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell
@@ -342,7 +342,16 @@ export function AdminDashboard({ user }: { user: AppUser | null }) {
       color: '#06b6d4',
       bgClass: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20',
       activeBgClass: 'bg-cyan-600 dark:bg-cyan-500 text-white border-cyan-600',
-      filterFn: (p: any) => p.categories?.includes('AcamadoDomiciliado') || p.categories?.includes('Acamado')
+      filterFn: (p: any) => isPatientAcamado(p)
+    },
+    {
+      id: 'domiciliados',
+      label: 'Domiciliados',
+      icon: Home,
+      color: '#0ea5e9',
+      bgClass: 'bg-sky-500/10 text-sky-500 border-sky-500/20',
+      activeBgClass: 'bg-sky-600 dark:bg-sky-500 text-white border-sky-600',
+      filterFn: (p: any) => isPatientDomiciliado(p)
     },
     {
       id: 'sem_domicilio',

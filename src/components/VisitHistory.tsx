@@ -536,12 +536,22 @@ export function VisitHistory({ user }: { user: any }) {
                               'Criança': 'bg-blue-100 text-blue-700',
                               'Idoso': 'bg-orange-100 text-orange-700',
                               'Adulto': 'bg-emerald-100 text-emerald-700',
+                              'Acamado': 'bg-slate-100 text-slate-700',
+                              'Domiciliado': 'bg-sky-100 text-sky-700',
                               'AcamadoDomiciliado': 'bg-slate-100 text-slate-600',
                               'SaudeMental': 'bg-purple-100 text-purple-700',
                             };
+                            const label =
+                              cat === 'AcamadoDomiciliado'
+                                ? v.patients?.clinical_data?.acamadodomiciliado?.condicao === 'Domiciliado'
+                                  ? 'Domiciliado'
+                                  : 'Acamado'
+                                : cat === 'SaudeMental'
+                                ? 'S. Mental'
+                                : cat;
                             return (
                               <span key={cat} className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${colors[cat] || 'bg-slate-100 text-slate-500'}`}>
-                                {cat === 'AcamadoDomiciliado' ? 'Acamado' : cat}
+                                {label}
                               </span>
                             );
                           })}

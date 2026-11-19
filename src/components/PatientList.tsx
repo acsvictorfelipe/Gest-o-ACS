@@ -132,7 +132,8 @@ export function PatientList({ user }: { user: AppUser | null }) {
             {activeFilter === 'gestantes' ? 'Gestantes' :
              activeFilter === 'criancas' || activeFilter === 'crianças' ? 'Crianças' :
              activeFilter === 'idosos' ? 'Idosos' :
-             activeFilter === 'acamados' ? 'Acamados / Domiciliados' :
+             activeFilter === 'acamados' ? 'Acamados' :
+             activeFilter === 'domiciliados' ? 'Domiciliados' :
              activeFilter === 'hipertensos' ? 'Hipertensos' :
              activeFilter === 'diabeticos' || activeFilter === 'diabéticos' ? 'Diabéticos' :
              activeFilter === 'diabeticos_insulina' || activeFilter === 'insulina' ? 'Diabéticos em Uso de Insulina' :
@@ -251,6 +252,7 @@ export function PatientList({ user }: { user: AppUser | null }) {
                   { id: 'diabeticos_insulina', label: '💉 Diabéticos em Uso de Insulina' },
                   { id: 'bolsa_familia', label: '🎁 Beneficiários: Bolsa Família' },
                   { id: 'acamados', label: 'Acamados' },
+                  { id: 'domiciliados', label: 'Domiciliados' },
                   { id: 'adultos', label: 'Adultos' },
                   { id: 'saudemental', label: 'Saúde Mental' },
                   { id: 'sem_domicilio', label: '🏠 Sem Domicílio Cadastrado' },
@@ -512,7 +514,9 @@ export function PatientList({ user }: { user: AppUser | null }) {
                                   'Criança':             { primary: '#3B82F6', label: 'Criança' },
                                   'Idoso':               { primary: '#F97316', label: 'Idoso' },
                                   'Adulto':              { primary: '#10B981', label: 'Adulto' },
-                                  'AcamadoDomiciliado':  { primary: '#64748B', label: 'Acamado' },
+                                  'Acamado':             { primary: '#64748B', label: 'Acamado' },
+                                  'Domiciliado':         { primary: '#0EA5E9', label: 'Domiciliado' },
+                                  'AcamadoDomiciliado':  { primary: '#64748B', label: p.clinical_data?.acamadodomiciliado?.condicao === 'Domiciliado' ? 'Domiciliado' : 'Acamado' },
                                   'SaudeMental':         { primary: '#6366F1', label: 'S. Mental' },
                                 };
                                 const matched = catMap[cat];
@@ -815,7 +819,9 @@ export function PatientList({ user }: { user: AppUser | null }) {
                           'Criança':             { primary: '#3B82F6', label: 'Criança' },
                           'Idoso':               { primary: '#F97316', label: 'Idoso' },
                           'Adulto':              { primary: '#10B981', label: 'Adulto' },
-                          'AcamadoDomiciliado':  { primary: '#64748B', label: 'Acamado' },
+                          'Acamado':             { primary: '#64748B', label: 'Acamado' },
+                          'Domiciliado':         { primary: '#0EA5E9', label: 'Domiciliado' },
+                          'AcamadoDomiciliado':  { primary: '#64748B', label: p.clinical_data?.acamadodomiciliado?.condicao === 'Domiciliado' ? 'Domiciliado' : 'Acamado' },
                           'SaudeMental':         { primary: '#6366F1', label: 'S. Mental' },
                         };
                         const matched = catMap[cat];

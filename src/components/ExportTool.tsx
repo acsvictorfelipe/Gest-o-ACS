@@ -29,6 +29,8 @@ import {
   isPatientInsulinUser, 
   isPatientHipertenso, 
   isPatientBolsaFamilia, 
+  isPatientAcamado,
+  isPatientDomiciliado,
   VACCINE_SCHEDULE 
 } from '../lib/dateUtils';
 import { useToast } from './Toast';
@@ -42,6 +44,7 @@ type ExportType =
   | 'hypertension'
   | 'idosos'
   | 'acamados'
+  | 'domiciliados'
   | 'saude_mental'
   | 'domicilios'
   | 'basic';
@@ -92,7 +95,8 @@ export function ExportTool({ user }: { user: any }) {
             const ageNum = p.birth_date ? getAgeNumber(p.birth_date) : 0;
             return p.categories?.includes('Idoso') || (ageNum >= 60 && !isPatientChild(p));
           }).length,
-          acamados: patients.filter(p => p.categories?.includes('AcamadoDomiciliado') || p.categories?.includes('Acamado')).length,
+          acamados: patients.filter(p => isPatientAcamado(p)).length,
+          domiciliados: patients.filter(p => isPatientDomiciliado(p)).length,
           saude_mental: patients.filter(p => p.categories?.includes('SaudeMental') || p.categories?.includes('Saúde Mental')).length,
           domicilios: households.length,
           basic: patients.length
@@ -165,7 +169,9 @@ export function ExportTool({ user }: { user: any }) {
             if (!c || c === 'Geral' || c === 'Todas') return;
             if (c === 'Hipertensos' || c === 'Hipertenso') set.add('Hipertenso');
             else if (c === 'Diabéticos' || c === 'Diabético' || c === 'Diabetico') set.add('Diabético');
-            else if (c === 'AcamadoDomiciliado' || c === 'Acamado' || c === 'Domiciliado') set.add('Acamado');
+            else if (c === 'AcamadoDomiciliado') set.add(p.clinical_data?.acamadodomiciliado?.condicao === 'Domiciliado' ? 'Domiciliado' : 'Acamado');
+            else if (c === 'Acamado') set.add('Acamado');
+            else if (c === 'Domiciliado') set.add('Domiciliado');
             else if (c === 'SaudeMental' || c === 'Saúde Mental') set.add('Saúde Mental');
             else if (c === 'Gestantes' || c === 'Gestante') set.add('Gestante');
             else if (c === 'Crianças' || c === 'Criança' || c === 'Crianca') set.add('Criança');
@@ -314,7 +320,9 @@ export function ExportTool({ user }: { user: any }) {
             return p.categories?.includes('Idoso') || (ageNum >= 60 && !isPatientChild(p));
           });
         } else if (selectedType === 'acamados') {
-          filteredData = patients.filter(p => p.categories?.includes('AcamadoDomiciliado') || p.categories?.includes('Acamado'));
+          filteredData = patients.filter(p => isPatientAcamado(p));
+        } else if (selectedType === 'domiciliados') {
+          filteredData = patients.filter(p => isPatientDomiciliado(p));
         } else if (selectedType === 'saude_mental') {
           filteredData = patients.filter(p => p.categories?.includes('SaudeMental') || p.categories?.includes('Saúde Mental'));
         }
@@ -803,12 +811,12 @@ export function ExportTool({ user }: { user: any }) {
               safeString(isPatientHipertenso(p) ? 'Sim' : 'Não'),
               safeString(isPatientDiabetic(p) ? 'Sim' : 'Não'),
               safeString(isPatientInsulinUser(p) ? 'Sim' : 'Não'),
-              safeString(p.categories?.includes('AcamadoDomiciliado') ? 'Sim' : 'Não')
+              safeString(isPatientAcamado(p) ? 'Acamado' : isPatientDomiciliado(p) ? 'Domiciliado' : 'Não')
             ]);
           });
 
-        // 8. ACAMADOS
-        } else if (selectedType === 'acamados') {
+        // 8. ACAMADOS E DOMICILIADOS (CONTROL SEPARADO)
+        } else if (selectedType === 'acamados' || selectedType === 'domiciliados') {
           headers = [
             'Nome do Cidadão',
             'Cartão SUS (CNS)',
@@ -1034,12 +1042,21 @@ export function ExportTool({ user }: { user: any }) {
     },
     {
       id: 'acamados',
-      title: 'Acamados e Domiciliados',
-      description: 'Grau de dependência física, uso e tamanho de fraldas, necessidade de curativos e cuidador.',
+      title: 'Acamados (Restritos ao Leito)',
+      description: 'Controle específico de acamados: grau de dependência, uso e tamanho de fraldas, curativos e cuidador.',
       icon: Bed,
       badgeColor: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
       color: 'bg-slate-50 text-slate-600 dark:bg-slate-900 border-slate-200 dark:border-slate-800',
       activeColor: 'ring-2 ring-slate-500 border-slate-500 bg-slate-50/60'
+    },
+    {
+      id: 'domiciliados',
+      title: 'Domiciliados (Restritos ao Lar)',
+      description: 'Controle específico de pacientes domiciliados não acamados, com suporte clínico, cuidador e visitas.',
+      icon: Home,
+      badgeColor: 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300',
+      color: 'bg-sky-50 text-sky-600 dark:bg-sky-950/30 dark:text-sky-400 border-sky-100 dark:border-sky-900/30',
+      activeColor: 'ring-2 ring-sky-500 border-sky-500 bg-sky-50/40'
     },
     {
       id: 'saude_mental',

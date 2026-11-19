@@ -52,6 +52,7 @@ export interface ChronicData {
 }
 
 export interface AcamadoDomiciliadoData {
+  condicao?: string;
   dependencia: string;
   curativos: string;
   cuidador: string;

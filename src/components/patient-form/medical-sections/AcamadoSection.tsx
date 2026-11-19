@@ -8,15 +8,74 @@ interface AcamadoSectionProps {
 }
 
 export function AcamadoSection({ formData, setFormData, isReadOnly }: AcamadoSectionProps) {
-  if (!formData.categories.includes('AcamadoDomiciliado')) return null;
+  const cats: string[] = Array.isArray(formData.categories) ? formData.categories : [];
+  const hasLegacy = cats.includes('AcamadoDomiciliado');
+  const hasAcamado = cats.includes('Acamado');
+  const hasDomiciliado = cats.includes('Domiciliado');
+
+  if (!hasLegacy && !hasAcamado && !hasDomiciliado) return null;
+
+  const currentCondicao =
+    formData.clinicalData?.acamadodomiciliado?.condicao ||
+    (hasAcamado && hasDomiciliado
+      ? 'Acamado e Domiciliado'
+      : hasDomiciliado
+      ? 'Domiciliado'
+      : 'Acamado');
+
+  const sectionTitle =
+    currentCondicao === 'Acamado e Domiciliado'
+      ? 'Categoria: Acamado e Domiciliado'
+      : currentCondicao === 'Domiciliado'
+      ? 'Categoria: Domiciliado (Restrito ao Domicílio)'
+      : 'Categoria: Acamado (Restrito ao Leito)';
+
+  const handleCondicaoChange = (newCond: string) => {
+    setFormData((prev: any) => {
+      const cleanedCats = (Array.isArray(prev.categories) ? prev.categories : []).filter(
+        (c: string) => c !== 'AcamadoDomiciliado' && c !== 'Acamado' && c !== 'Domiciliado'
+      );
+      if (newCond === 'Acamado' || newCond === 'Acamado e Domiciliado') {
+        cleanedCats.push('Acamado');
+      }
+      if (newCond === 'Domiciliado' || newCond === 'Acamado e Domiciliado') {
+        cleanedCats.push('Domiciliado');
+      }
+
+      return {
+        ...prev,
+        categories: cleanedCats,
+        clinicalData: {
+          ...prev.clinicalData,
+          acamadodomiciliado: {
+            ...(prev.clinicalData?.acamadodomiciliado || {}),
+            condicao: newCond
+          }
+        }
+      };
+    });
+  };
 
   return (
     <section className="bg-bg-secondary dark:bg-slate-900 rounded-2xl p-8 shadow-sm border-l-4 border-teal-500 animate-in fade-in slide-in-from-top-2 duration-300 mb-8">
-      <h3 className="text-xl font-bold text-teal-600 dark:text-teal-400 mb-8 font-headline flex items-center gap-2">
+      <h3 className="text-xl font-bold text-teal-600 dark:text-teal-400 mb-6 font-headline flex items-center gap-2">
         <Activity className="w-6 h-6" />
-        Categoria: Acamado / Domiciliado
+        {sectionTitle}
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div>
+          <label className="block text-[10px] font-bold uppercase text-text-muted mb-2">Situação / Classificação</label>
+          <select
+            disabled={isReadOnly}
+            value={currentCondicao}
+            onChange={e => handleCondicaoChange(e.target.value)}
+            className="w-full bg-bg-primary dark:bg-slate-800 border border-border dark:border-slate-700 rounded-xl p-3 text-sm font-semibold"
+          >
+            <option value="Acamado">Acamado (Restrito ao leito)</option>
+            <option value="Domiciliado">Domiciliado (Não acamado, restrito ao lar)</option>
+            <option value="Acamado e Domiciliado">Acamado e Domiciliado</option>
+          </select>
+        </div>
         <div>
           <label className="block text-[10px] font-bold uppercase text-text-muted mb-2">Grau de Dependência</label>
           <select 

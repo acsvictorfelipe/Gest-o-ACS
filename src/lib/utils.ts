@@ -28,8 +28,11 @@ export function normalizeCategories(raw: string): string[] {
   if (normalized.includes('crianca') || normalized.includes('bebe') || normalized.includes('infantil') || normalized.includes('pediatrico')) {
     categories.push('Criança');
   }
-  if (normalized.includes('acamado') || normalized.includes('domiciliado') || normalized.includes('acamada')) {
-    categories.push('AcamadoDomiciliado');
+  if (normalized.includes('acamado') || normalized.includes('acamada')) {
+    categories.push('Acamado');
+  }
+  if (normalized.includes('domiciliado') || normalized.includes('domiciliada')) {
+    categories.push('Domiciliado');
   }
   if (normalized.includes('adulto') || normalized.includes('jovem')) {
     categories.push('Adulto');

@@ -188,7 +188,21 @@ export function PatientForm({
             contact2: cleanClinical.contact2 || '',
             messageContact: cleanClinical.message_contact || '',
             householdId: data.household_id || '',
-            categories: data.categories || [],
+            categories: (() => {
+              const rawCats: string[] = Array.isArray(data.categories) ? [...data.categories] : [];
+              if (!rawCats.includes('AcamadoDomiciliado')) return rawCats;
+              const cond = cleanClinical.acamadodomiciliado?.condicao;
+              const filtered = rawCats.filter(c => c !== 'AcamadoDomiciliado');
+              if (cond === 'Domiciliado') {
+                if (!filtered.includes('Domiciliado')) filtered.push('Domiciliado');
+              } else if (cond === 'Acamado e Domiciliado') {
+                if (!filtered.includes('Acamado')) filtered.push('Acamado');
+                if (!filtered.includes('Domiciliado')) filtered.push('Domiciliado');
+              } else {
+                if (!filtered.includes('Acamado')) filtered.push('Acamado');
+              }
+              return filtered;
+            })(),
             clinicalData: {
               ...initialDefaultValues.clinicalData,
               ...cleanClinical,
@@ -585,8 +599,14 @@ export function PatientForm({
 
     let currentY = (doc as any).lastAutoTable.finalY + 10;
 
+    let acamadoClinicalExported = false;
     formData.categories?.forEach((cat: string) => {
-      const catId = cat.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      let catId = cat.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (cat === 'Acamado' || cat === 'Domiciliado' || cat === 'AcamadoDomiciliado') {
+        if (acamadoClinicalExported) return;
+        catId = 'acamadodomiciliado';
+        acamadoClinicalExported = true;
+      }
       const clinical = (formData.clinicalData as any)[catId];
       
       if (!clinical) return;
@@ -667,7 +687,11 @@ export function PatientForm({
   };
 
   const hasExpiredPrescription = () => {
-    const isMentalOrAcamado = formData.categories?.includes('SaudeMental') || formData.categories?.includes('AcamadoDomiciliado');
+    const isMentalOrAcamado =
+      formData.categories?.includes('SaudeMental') ||
+      formData.categories?.includes('Acamado') ||
+      formData.categories?.includes('Domiciliado') ||
+      formData.categories?.includes('AcamadoDomiciliado');
     if (!isMentalOrAcamado) return false;
 
     const recipes = formData.clinicalData?.receitas || [];

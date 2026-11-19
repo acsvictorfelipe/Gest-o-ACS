@@ -149,7 +149,7 @@ export function DadosClinicosTabs({ formData, setFormData, id, isReadOnly }: Dad
 
   // Check which tracking categories are selected to show on the Acompanhamentos header badge
   const activeTrackingCount = formData.categories.filter((cat: string) => 
-    ['Gestante', 'Criança', 'AcamadoDomiciliado', 'SaudeMental', 'Adulto', 'Idoso'].includes(cat)
+    ['Gestante', 'Criança', 'Acamado', 'Domiciliado', 'AcamadoDomiciliado', 'SaudeMental', 'Adulto', 'Idoso'].includes(cat)
   ).length;
 
   return (

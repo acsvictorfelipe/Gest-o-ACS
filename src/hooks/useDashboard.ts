@@ -12,7 +12,7 @@ import {
   ShieldAlert,
   Users
 } from 'lucide-react';
-import { getAgeInMonths, isChildAge, isPatientChild, isPatientDiabetic, isPatientHipertenso, VACCINE_SCHEDULE, getAgeNumber, getPatientLastVisitAt, isVisitLate } from '../lib/dateUtils';
+import { getAgeInMonths, isChildAge, isPatientChild, isPatientDiabetic, isPatientHipertenso, isPatientAcamado, isPatientDomiciliado, isPatientAcamadoOuDomiciliado, VACCINE_SCHEDULE, getAgeNumber, getPatientLastVisitAt, isVisitLate } from '../lib/dateUtils';
 import { generateUUID } from '../lib/utils';
 import { UI_CONFIG } from '../constants';
 import { useDashboardWeeklyChart } from './useDashboardWeeklyChart';
@@ -173,6 +173,7 @@ export function useDashboard(user: any) {
       hipertensos: 0,
       diabeticos: 0,
       acamados: 0,
+      domiciliados: 0,
       idosos: 0,
       adultos: 0,
       saudeMental: 0,
@@ -189,7 +190,8 @@ export function useDashboard(user: any) {
       newIdosos: 0,
       newHipertensos: 0,
       newDiabeticos: 0,
-      newAcamados: 0
+      newAcamados: 0,
+      newDomiciliados: 0
     };
 
     if (!queryData) return { stats: defaultStats, recentPatients: [] };
@@ -261,7 +263,8 @@ export function useDashboard(user: any) {
           newStats.gestantesPendentes++;
         }
       }
-      if (categories.includes('AcamadoDomiciliado')) newStats.acamados++;
+      if (isPatientAcamado(p)) newStats.acamados++;
+      if (isPatientDomiciliado(p)) newStats.domiciliados++;
       if (categories.includes('Idoso') || categories.includes('Idosos') || (ageNum >= 60 && !isChild)) newStats.idosos++;
       if (categories.includes('Adulto') || (!isChild && ageNum < 60 && p.birth_date)) newStats.adultos++;
       if (categories.includes('SaudeMental') || categories.includes('Saúde Mental')) newStats.saudeMental++;
@@ -274,7 +277,8 @@ export function useDashboard(user: any) {
         if (categories.includes('Gestante')) newStats.newGestantes++;
         if (isChild) newStats.newCriancas++;
         if (categories.includes('Idoso') || categories.includes('Idosos') || (ageNum >= 60 && !isChild)) newStats.newIdosos++;
-        if (categories.includes('AcamadoDomiciliado')) newStats.newAcamados++;
+        if (isPatientAcamado(p)) newStats.newAcamados++;
+        if (isPatientDomiciliado(p)) newStats.newDomiciliados++;
         if (isDiabetico) newStats.newDiabeticos++;
         if (isHipertenso) newStats.newHipertensos++;
       }
@@ -286,7 +290,7 @@ export function useDashboard(user: any) {
         }
       }
       
-      const isMentalOrAcamado = categories.includes('SaudeMental') || categories.includes('AcamadoDomiciliado');
+      const isMentalOrAcamado = categories.includes('SaudeMental') || isPatientAcamadoOuDomiciliado(p);
       const recipes = isMentalOrAcamado ? (clinical.receitas || []) : [];
       if (recipes.length > 0) {
         const hoje = new Date();
@@ -405,10 +409,20 @@ export function useDashboard(user: any) {
       icon: Bed,
       value: stats.acamados,
       label: 'ACAMADOS',
-      sublabel: 'Domiciliados',
+      sublabel: 'Restritos ao leito',
       trend: { direction: 'up' as const, value: `+${stats.newAcamados} este mês` },
       config: UI_CONFIG.categorias.acamados,
       filter: 'acamados'
+    },
+    {
+      id: 'domiciliados',
+      icon: UI_CONFIG.categorias.domiciliados.icon,
+      value: stats.domiciliados,
+      label: 'DOMICILIADOS',
+      sublabel: 'Acompanhamento no lar',
+      trend: { direction: 'up' as const, value: `+${stats.newDomiciliados} este mês` },
+      config: UI_CONFIG.categorias.domiciliados,
+      filter: 'domiciliados'
     }
   ];
 
@@ -421,7 +435,8 @@ export function useDashboard(user: any) {
     { name: 'Adultos', value: stats.adultos, color: UI_CONFIG.categorias.adultos.primary },
     { name: 'Saúde Mental', value: stats.saudeMental, color: UI_CONFIG.categorias.saudeMental.primary },
     { name: 'Acamados', value: stats.acamados, color: UI_CONFIG.categorias.acamados.primary },
-    { name: 'Outros', value: Math.max(0, stats.totalPatients - (stats.criancasTotal + stats.gestantes + stats.idosos + stats.hipertensos + stats.diabeticos + stats.adultos + stats.saudeMental + stats.acamados)), color: UI_CONFIG.categorias.outros.primary },
+    { name: 'Domiciliados', value: stats.domiciliados, color: UI_CONFIG.categorias.domiciliados.primary },
+    { name: 'Outros', value: Math.max(0, stats.totalPatients - (stats.criancasTotal + stats.gestantes + stats.idosos + stats.hipertensos + stats.diabeticos + stats.adultos + stats.saudeMental + stats.acamados + stats.domiciliados)), color: UI_CONFIG.categorias.outros.primary },
   ].filter(d => d.value > 0);
 
   const getCategoryStyle = (category: string) => {
@@ -431,9 +446,10 @@ export function useDashboard(user: any) {
           category === 'Criança' ? UI_CONFIG.categorias.criancas :
             category === 'Gestante' ? UI_CONFIG.categorias.gestantes :
               category === 'Adulto' ? UI_CONFIG.categorias.adultos :
-                category === 'Saúde Mental' ? UI_CONFIG.categorias.saudeMental :
-                  category === 'AcamadoDomiciliado' || category === 'Acamado / Domiciliado' ? UI_CONFIG.categorias.acamados :
-                    UI_CONFIG.categorias.outros;
+                category === 'Saúde Mental' || category === 'SaudeMental' ? UI_CONFIG.categorias.saudeMental :
+                  category === 'Domiciliado' ? UI_CONFIG.categorias.domiciliados :
+                    category === 'Acamado' || category === 'AcamadoDomiciliado' || category === 'Acamado / Domiciliado' ? UI_CONFIG.categorias.acamados :
+                      UI_CONFIG.categorias.outros;
 
     return { backgroundColor: cat.primary, color: '#fff', border: 'none' };
   };
@@ -445,9 +461,10 @@ export function useDashboard(user: any) {
           category === 'Criança' ? UI_CONFIG.categorias.criancas :
             category === 'Gestante' ? UI_CONFIG.categorias.gestantes :
               category === 'Adulto' ? UI_CONFIG.categorias.adultos :
-                category === 'Saúde Mental' ? UI_CONFIG.categorias.saudeMental :
-                  category === 'AcamadoDomiciliado' ? UI_CONFIG.categorias.acamados :
-                    UI_CONFIG.categorias.outros;
+                category === 'Saúde Mental' || category === 'SaudeMental' ? UI_CONFIG.categorias.saudeMental :
+                  category === 'Domiciliado' ? UI_CONFIG.categorias.domiciliados :
+                    category === 'Acamado' || category === 'AcamadoDomiciliado' ? UI_CONFIG.categorias.acamados :
+                      UI_CONFIG.categorias.outros;
 
     return { backgroundColor: cat.primary, color: '#fff' };
   };

@@ -107,7 +107,8 @@ export function Dashboard({ user }: { user: AppUser | null }) {
     { id: 'hipertensos', label: 'Hipertensos', count: stats.hipertensos, filter: 'hipertensos', icon: HeartPulse, color: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60' },
     { id: 'diabeticos', label: 'Diabéticos', count: stats.diabeticos, filter: 'diabeticos', icon: Droplet, color: 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/60' },
     { id: 'idosos', label: 'Idosos (60+)', count: stats.idosos, filter: 'idosos', icon: Users, color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60' },
-    { id: 'acamados', label: 'Acamados / Domiciliados', count: stats.acamados, filter: 'acamados', icon: Bed, color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60' },
+    { id: 'acamados', label: 'Acamados', count: stats.acamados, filter: 'acamados', icon: Bed, color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60' },
+    { id: 'domiciliados', label: 'Domiciliados', count: (stats as any).domiciliados || 0, filter: 'domiciliados', icon: Home, color: 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/60' },
     { id: 'saudemental', label: 'Saúde Mental', count: stats.saudeMental || 0, filter: 'saudemental', icon: Brain, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60' },
     { id: 'sem_domicilio', label: 'Sem Domicílio Cadastrado', count: (stats as any).semDomicilioAlerts || 0, filter: 'sem_domicilio', icon: Home, color: 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/60' },
     { id: 'domicilios', label: 'Domicílios', count: stats.totalHouseholds, filter: 'households', icon: Home, color: 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/60' },
@@ -162,6 +163,13 @@ export function Dashboard({ user }: { user: AppUser | null }) {
           >
             <MapPin className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
             Buscar Domicílio
+          </button>
+          <button
+            onClick={() => navigate('/producao-mensal')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/60 hover:bg-indigo-100 dark:hover:bg-indigo-950 shadow-xs transition-all cursor-pointer"
+          >
+            <CalendarIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            Produção Mensal
           </button>
         </div>
       </div>

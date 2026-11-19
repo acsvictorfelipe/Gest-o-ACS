@@ -11,7 +11,8 @@ import {
   Eye,
   Activity,
   Bed,
-  Brain
+  Brain,
+  Home
 } from 'lucide-react';
 
 export const CATEGORY_PALETTE = {
@@ -69,7 +70,14 @@ export const CATEGORY_PALETTE = {
     soft: '#E2E8F0',
     text: '#334155',
     icon: Bed,
-    label: 'Acamado / Domiciliado'
+    label: 'Acamado'
+  },
+  domiciliado: {
+    primary: '#0EA5E9',
+    soft: '#E0F2FE',
+    text: '#0369A1',
+    icon: Home,
+    label: 'Domiciliado'
   },
   outros: {
     primary: '#94A3B8',
@@ -90,6 +98,7 @@ export const UI_CONFIG = {
     adultos: CATEGORY_PALETTE.adulto,
     saudeMental: CATEGORY_PALETTE.saudeMental,
     acamados: CATEGORY_PALETTE.acamado,
+    domiciliados: CATEGORY_PALETTE.domiciliado,
     outros: CATEGORY_PALETTE.outros
   },
 

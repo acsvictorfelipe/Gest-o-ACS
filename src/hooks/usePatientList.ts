@@ -7,7 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useToast } from '../components/Toast';
 import { safeStorage } from '../lib/safeStorage';
 import { isSameDay } from 'date-fns';
-import { getAgeInMonths, getAgeNumber, isChildAge, isPatientChild, isPatientDiabetic, isPatientInsulinUser, isPatientBolsaFamilia, isPatientHipertenso, VACCINE_SCHEDULE, getPatientLastVisitAt, isVisitLate, getPatientVisitInterval } from '../lib/dateUtils';
+import { getAgeInMonths, getAgeNumber, isChildAge, isPatientChild, isPatientDiabetic, isPatientInsulinUser, isPatientBolsaFamilia, isPatientHipertenso, isPatientAcamado, isPatientDomiciliado, isPatientAcamadoOuDomiciliado, VACCINE_SCHEDULE, getPatientLastVisitAt, isVisitLate, getPatientVisitInterval } from '../lib/dateUtils';
 import { AppUser, Patient, Household } from '../types';
 import { isAdminRole, isGestorRole } from '../lib/roleUtils';
 
@@ -202,7 +202,7 @@ export function usePatientList(user: AppUser | null | undefined) {
   };
 
   const getPrescriptionStatus = (p: any): 'vencida' | 'vencendo' | 'ok' => {
-    const isMentalOrAcamado = p.categories?.includes('SaudeMental') || p.categories?.includes('AcamadoDomiciliado');
+    const isMentalOrAcamado = p.categories?.includes('SaudeMental') || isPatientAcamadoOuDomiciliado(p);
     if (!isMentalOrAcamado) return 'ok';
 
     const recipes = p.clinical_data?.receitas || [];
@@ -337,7 +337,8 @@ export function usePatientList(user: AppUser | null | undefined) {
     }
 
     if (activeFilter === 'gestantes') return matchesSearch && p.categories?.includes('Gestante');
-    if (activeFilter === 'acamados') return matchesSearch && p.categories?.includes('AcamadoDomiciliado');
+    if (activeFilter === 'acamados') return matchesSearch && isPatientAcamado(p);
+    if (activeFilter === 'domiciliados') return matchesSearch && isPatientDomiciliado(p);
 
     if (activeFilter === 'idosos') {
       const categories = Array.isArray(p.categories) ? p.categories : [];

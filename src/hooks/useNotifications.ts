@@ -5,7 +5,8 @@ import {
   getAgeInMonths,
   isChildAge,
   VACCINE_SCHEDULE,
-  getPatientVisitInterval
+  getPatientVisitInterval,
+  isPatientAcamadoOuDomiciliado
 } from '../lib/dateUtils';
 
 export type NotificationType =
@@ -182,12 +183,11 @@ export function useNotifications(allPatients: any[]) {
         }
       }
 
-      // ── 5. Receitas Vencendo (Saúde Mental / Acamado) ────────
+      // ── 5. Receitas Vencendo (Saúde Mental / Acamado / Domiciliado) ────────
       const isMentalOrAcamado =
         categories.includes('SaudeMental') ||
         categories.includes('Saúde Mental') ||
-        categories.includes('AcamadoDomiciliado') ||
-        categories.includes('Acamado / Domiciliado');
+        isPatientAcamadoOuDomiciliado(p);
 
       if (isMentalOrAcamado) {
         const recipes = clinical.receitas || [];

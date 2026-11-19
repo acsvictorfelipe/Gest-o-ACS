@@ -254,7 +254,8 @@ export default function App() {
                       <Route path="/pacientes" element={<PatientList user={user} />} />
                       <Route path="/domicilios" element={<HouseholdList user={user} />} />
                       <Route path="/configuracoes" element={<Settings user={user} onProfileUpdate={() => user && fetchProfile(user)} theme={theme} toggleTheme={toggleTheme} />} />
-                      <Route path="/relatorios" element={<Reports user={user} />} />
+                      <Route path="/relatorios" element={<Reports user={user} initialCategory="Geral" />} />
+                      <Route path="/producao-mensal" element={<Reports user={user} initialCategory="Produção Mensal" />} />
                       <Route path="/historico" element={<VisitHistory user={user} />} />
                       <Route path="/novo-cadastro" element={<PatientForm user={user} />} />
                       <Route path="/editar-paciente/:id" element={<PatientForm user={user} />} />
