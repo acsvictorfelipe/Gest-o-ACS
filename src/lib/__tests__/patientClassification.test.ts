@@ -5,6 +5,9 @@ import {
   isPatientDomiciliado,
   isPatientAcamadoOuDomiciliado,
   isPatientWoman,
+  isPatientBolsaFamilia,
+  isPatientLoas,
+  isPatientIdoso,
   getPatientVisitInterval,
 } from '../dateUtils';
 
@@ -82,6 +85,28 @@ describe('Patient Classification: Acamado, Domiciliado & Woman', () => {
       expect(isPatientWoman({ gender: 'M' })).toBe(false);
       expect(isPatientWoman({})).toBe(false);
       expect(isPatientWoman(null)).toBe(false);
+    });
+  });
+
+  describe('Benefits and Idoso classification', () => {
+    it('identifies Bolsa Família beneficiaries from socialBenefits and legacy flags', () => {
+      expect(isPatientBolsaFamilia({ clinical_data: { socialBenefits: ['Bolsa Família'] } })).toBe(true);
+      expect(isPatientBolsaFamilia({ clinical_data: { bolsa_familia: 'Sim' } })).toBe(true);
+      expect(isPatientBolsaFamilia({ clinical_data: { socialBenefits: ['BPC-LOAS'] } })).toBe(false);
+    });
+
+    it('identifies LOAS / BPC beneficiaries across naming variants', () => {
+      expect(isPatientLoas({ clinical_data: { socialBenefits: ['BPC-LOAS'] } })).toBe(true);
+      expect(isPatientLoas({ clinical_data: { socialBenefits: ['LOAS'] } })).toBe(true);
+      expect(isPatientLoas({ clinical_data: { socialBenefits: ['BPC'] } })).toBe(true);
+      expect(isPatientLoas({ clinical_data: { socialBenefits: ['Bolsa Família'] } })).toBe(false);
+      expect(isPatientLoas(null)).toBe(false);
+    });
+
+    it('identifies Idosos by category or age >= 60', () => {
+      expect(isPatientIdoso({ categories: ['Idoso'] })).toBe(true);
+      expect(isPatientIdoso({ birth_date: '1950-01-01', categories: ['Adulto'] })).toBe(true);
+      expect(isPatientIdoso({ birth_date: '1995-05-10', categories: ['Adulto'] })).toBe(false);
     });
   });
 });

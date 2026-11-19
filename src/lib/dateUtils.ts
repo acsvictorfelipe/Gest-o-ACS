@@ -244,6 +244,46 @@ export function isPatientWoman(patient: any): boolean {
   return rawGender === 'feminino' || rawGender === 'f' || rawGender === 'mulher' || rawGender === 'fem';
 }
 
+/**
+ * Verifica se um paciente é beneficiário do BPC / LOAS.
+ */
+export function isPatientLoas(patient: any): boolean {
+  if (!patient) return false;
+  const clinical = patient.clinical_data || {};
+  const benefits = Array.isArray(clinical.socialBenefits) ? clinical.socialBenefits : [];
+  const categories = Array.isArray(patient.categories) ? patient.categories : [];
+
+  const matchesLoas = (s: string) => {
+    if (!s || typeof s !== 'string') return false;
+    const norm = s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return norm.includes('loas') || norm.includes('bpc');
+  };
+
+  const isTrue = (val: any) => val === true || val === 'Sim' || val === 'sim' || val === 'true' || val === 1;
+
+  return (
+    benefits.some(matchesLoas) ||
+    categories.some(matchesLoas) ||
+    isTrue(clinical.loas) ||
+    isTrue(clinical.bpc) ||
+    isTrue(clinical.bpc_loas) ||
+    isTrue(clinical.bpcLoas)
+  );
+}
+
+/**
+ * Verifica se um paciente é Idoso (categoria Idoso ou idade >= 60 anos).
+ */
+export function isPatientIdoso(patient: any): boolean {
+  if (!patient) return false;
+  const categories = Array.isArray(patient.categories) ? patient.categories : [];
+  const ageNum = patient.birth_date ? getAgeNumber(patient.birth_date) : 0;
+  return (
+    categories.some((c: string) => c === 'Idoso' || c === 'Idosos' || c === 'idoso' || c === 'idosos') ||
+    (ageNum >= 60 && !isPatientChild(patient))
+  );
+}
+
 export const parseBirthDate = (birthDate: any): Date | null => {
   if (!birthDate) return null;
   if (birthDate instanceof Date) return isNaN(birthDate.getTime()) ? null : birthDate;
