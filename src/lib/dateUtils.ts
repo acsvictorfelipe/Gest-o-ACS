@@ -200,12 +200,8 @@ export function isPatientAcamado(patient: any): boolean {
   const cats: string[] = Array.isArray(patient.categories) ? patient.categories : [];
   const cond = patient.clinical_data?.acamadodomiciliado?.condicao;
   if (cats.includes('Acamado')) return true;
-  if (cond === 'Acamado' || cond === 'Acamado e Domiciliado') return true;
-  if (
-    (cats.includes('AcamadoDomiciliado') || cats.includes('Acamado / Domiciliado')) &&
-    cond !== 'Domiciliado'
-  ) {
-    return true;
+  if (cats.includes('AcamadoDomiciliado') || cats.includes('Acamado / Domiciliado')) {
+    return cond !== 'Domiciliado';
   }
   return false;
 }
@@ -218,7 +214,12 @@ export function isPatientDomiciliado(patient: any): boolean {
   const cats: string[] = Array.isArray(patient.categories) ? patient.categories : [];
   const cond = patient.clinical_data?.acamadodomiciliado?.condicao;
   if (cats.includes('Domiciliado')) return true;
-  if (cond === 'Domiciliado' || cond === 'Acamado e Domiciliado') return true;
+  if (
+    (cats.includes('AcamadoDomiciliado') || cats.includes('Acamado / Domiciliado')) &&
+    (cond === 'Domiciliado' || cond === 'Acamado e Domiciliado')
+  ) {
+    return true;
+  }
   return false;
 }
 

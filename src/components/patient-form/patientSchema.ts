@@ -73,7 +73,7 @@ export const patientFormSchema = z.object({
       }
     }),
     acamadodomiciliado: z.object({
-      condicao: z.string().default('Acamado'),
+      condicao: z.string().default(''),
       dependencia: z.string().default('Total'),
       curativos: z.string().default('Não'),
       cuidador: z.string().default('Não'),
@@ -106,7 +106,7 @@ export const patientFormSchema = z.object({
       }),
       observacoes: z.string().default('')
     }).default({
-      condicao: 'Acamado',
+      condicao: '',
       dependencia: 'Total',
       curativos: 'Não',
       cuidador: 'Não',
@@ -367,7 +367,7 @@ export const patientFormSchema = z.object({
       }
     },
     acamadodomiciliado: {
-      condicao: 'Acamado',
+      condicao: '',
       dependencia: 'Total',
       curativos: 'Não',
       cuidador: 'Não',
@@ -535,7 +535,7 @@ export const initialDefaultValues: PatientFormValues = {
       }
     },
     acamadodomiciliado: {
-      condicao: 'Acamado',
+      condicao: '',
       dependencia: 'Total',
       curativos: 'Não',
       cuidador: 'Não',

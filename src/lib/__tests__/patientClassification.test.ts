@@ -60,6 +60,38 @@ describe('Patient Classification: Acamado, Domiciliado & Woman', () => {
       expect(isPatientAcamadoOuDomiciliado(patient)).toBe(true);
     });
 
+    it('routes legacy AcamadoDomiciliado with condicao="Acamado e Domiciliado" to both', () => {
+      const patient = {
+        categories: ['AcamadoDomiciliado'],
+        clinical_data: { acamadodomiciliado: { condicao: 'Acamado e Domiciliado' } },
+      };
+      expect(isPatientAcamado(patient)).toBe(true);
+      expect(isPatientDomiciliado(patient)).toBe(true);
+      expect(isPatientAcamadoOuDomiciliado(patient)).toBe(true);
+    });
+
+    it('does NOT classify regular patients as Acamado or Domiciliado even if stale clinical_data condicao is set', () => {
+      const regularAdult = {
+        categories: ['Adulto'],
+        clinical_data: { acamadodomiciliado: { condicao: 'Acamado' } },
+      };
+      const regularChild = {
+        categories: ['Criança'],
+        clinical_data: { acamadodomiciliado: { condicao: 'Acamado e Domiciliado' } },
+      };
+      const regularEmpty = {
+        categories: [],
+        clinical_data: { acamadodomiciliado: { condicao: 'Domiciliado' } },
+      };
+
+      expect(isPatientAcamado(regularAdult)).toBe(false);
+      expect(isPatientDomiciliado(regularAdult)).toBe(false);
+      expect(isPatientAcamado(regularChild)).toBe(false);
+      expect(isPatientDomiciliado(regularChild)).toBe(false);
+      expect(isPatientAcamado(regularEmpty)).toBe(false);
+      expect(isPatientDomiciliado(regularEmpty)).toBe(false);
+    });
+
     it('applies 60-day visit interval to both Acamado and Domiciliado', () => {
       expect(getPatientVisitInterval({ categories: ['Acamado'] })).toBe(60);
       expect(getPatientVisitInterval({ categories: ['Domiciliado'] })).toBe(60);

@@ -16,12 +16,17 @@ export function AcamadoSection({ formData, setFormData, isReadOnly }: AcamadoSec
   if (!hasLegacy && !hasAcamado && !hasDomiciliado) return null;
 
   const currentCondicao =
-    formData.clinicalData?.acamadodomiciliado?.condicao ||
-    (hasAcamado && hasDomiciliado
+    hasAcamado && hasDomiciliado
       ? 'Acamado e Domiciliado'
       : hasDomiciliado
       ? 'Domiciliado'
-      : 'Acamado');
+      : hasAcamado
+      ? 'Acamado'
+      : formData.clinicalData?.acamadodomiciliado?.condicao === 'Domiciliado'
+      ? 'Domiciliado'
+      : formData.clinicalData?.acamadodomiciliado?.condicao === 'Acamado e Domiciliado'
+      ? 'Acamado e Domiciliado'
+      : 'Acamado';
 
   const sectionTitle =
     currentCondicao === 'Acamado e Domiciliado'

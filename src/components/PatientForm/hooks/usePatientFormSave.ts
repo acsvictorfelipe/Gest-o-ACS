@@ -164,6 +164,21 @@ export function usePatientFormSave({
     }
     formData.categories = finalCategories;
 
+    if (cleanClinicalData.acamadodomiciliado) {
+      const hasAcamadoCat = finalCategories.includes('Acamado');
+      const hasDomiciliadoCat = finalCategories.includes('Domiciliado');
+      const hasLegacyAcamadoCat = finalCategories.includes('AcamadoDomiciliado');
+      if (hasAcamadoCat && hasDomiciliadoCat) {
+        cleanClinicalData.acamadodomiciliado = { ...cleanClinicalData.acamadodomiciliado, condicao: 'Acamado e Domiciliado' };
+      } else if (hasAcamadoCat) {
+        cleanClinicalData.acamadodomiciliado = { ...cleanClinicalData.acamadodomiciliado, condicao: 'Acamado' };
+      } else if (hasDomiciliadoCat) {
+        cleanClinicalData.acamadodomiciliado = { ...cleanClinicalData.acamadodomiciliado, condicao: 'Domiciliado' };
+      } else if (!hasLegacyAcamadoCat) {
+        cleanClinicalData.acamadodomiciliado = { ...cleanClinicalData.acamadodomiciliado, condicao: '' };
+      }
+    }
+
     if (isArchived) {
       success("Visita de puerpério detectada: a gestação atual foi arquivada no histórico com sucesso, e a paciente foi removida da categoria Gestantes.");
     }

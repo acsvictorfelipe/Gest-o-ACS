@@ -52,7 +52,7 @@ export function CategoriesSection({ formData, setFormData, isReadOnly }: Categor
       if (cat === 'Acamado' || cat === 'Domiciliado') {
         const hasAcamado = nextCats.includes('Acamado');
         const hasDomiciliado = nextCats.includes('Domiciliado');
-        let nextCond = prev.clinicalData?.acamadodomiciliado?.condicao || 'Acamado';
+        let nextCond = '';
         if (hasAcamado && hasDomiciliado) nextCond = 'Acamado e Domiciliado';
         else if (hasAcamado) nextCond = 'Acamado';
         else if (hasDomiciliado) nextCond = 'Domiciliado';
